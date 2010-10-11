@@ -1,0 +1,655 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="nvtt">
+      <UniqueIdentifier>{cb20c5eb-3b58-406b-9b95-db7356ffe509}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="nvtt\nvtt">
+      <UniqueIdentifier>{9a3d7f88-019d-4fd6-8c4f-eb9e2b484c4f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="nvtt\nvcore">
+      <UniqueIdentifier>{0c37ce1e-109a-462f-bda3-cb52a57c7715}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="nvtt\nvimage">
+      <UniqueIdentifier>{09321ee1-d0ad-4395-bb60-d8afa0d4c29f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="nvtt\nvmath">
+      <UniqueIdentifier>{88476cdb-0ea4-4a22-b8d4-5109f2c114fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="nvtt\nvtt\cuda">
+      <UniqueIdentifier>{4e850535-794d-42ac-a712-bd8f0fe60afe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="nvtt\nvtt\bc6h">
+      <UniqueIdentifier>{89580653-9a8d-4906-baf2-fce3dd3da6cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="nvtt\nvtt\squish">
+      <UniqueIdentifier>{1b4cb94e-c205-4702-a476-29ac0932c221}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libjpeg">
+      <UniqueIdentifier>{e697f535-8494-4aa9-a328-bb10b7828e63}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libpng">
+      <UniqueIdentifier>{2f2a1866-8e70-4439-ad32-31d6e22d6717}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="zlib">
+      <UniqueIdentifier>{7631e7b9-c58b-48fd-a296-8a0ce8f4d8ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="extra">
+      <UniqueIdentifier>{5c1e5a12-7cda-416a-be24-3cd036e71933}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="nvtt\src\nvtt\CompressionOptions.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\CompressorDX10.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\CompressorDX11.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\CompressorDX9.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\CompressorDXT.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\CompressorRGB.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\CompressorRGBE.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\Context.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\InputOptions.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\nvtt.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\nvtt_wrapper.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\OptimalCompressDXT.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\OutputOptions.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\QuickCompressDXT.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\SingleColorLookup.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\TexImage.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvcore\Debug.cpp">
+      <Filter>nvtt\nvcore</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvcore\FileSystem.cpp">
+      <Filter>nvtt\nvcore</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvcore\Library.cpp">
+      <Filter>nvtt\nvcore</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvcore\Memory.cpp">
+      <Filter>nvtt\nvcore</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvcore\StrLib.cpp">
+      <Filter>nvtt\nvcore</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvcore\TextReader.cpp">
+      <Filter>nvtt\nvcore</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvcore\TextWriter.cpp">
+      <Filter>nvtt\nvcore</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvimage\BlockDXT.cpp">
+      <Filter>nvtt\nvimage</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvimage\ColorBlock.cpp">
+      <Filter>nvtt\nvimage</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvimage\ColorSpace.cpp">
+      <Filter>nvtt\nvimage</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvimage\DirectDrawSurface.cpp">
+      <Filter>nvtt\nvimage</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvimage\Filter.cpp">
+      <Filter>nvtt\nvimage</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvimage\FloatImage.cpp">
+      <Filter>nvtt\nvimage</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvimage\Image.cpp">
+      <Filter>nvtt\nvimage</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvimage\NormalMap.cpp">
+      <Filter>nvtt\nvimage</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvimage\Quantize.cpp">
+      <Filter>nvtt\nvimage</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvmath\Fitting.cpp">
+      <Filter>nvtt\nvmath</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvmath\Half.cpp">
+      <Filter>nvtt\nvmath</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvmath\Plane.cpp">
+      <Filter>nvtt\nvmath</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\cuda\CudaCompressorDXT.cpp">
+      <Filter>nvtt\nvtt\cuda</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\cuda\CudaUtils.cpp">
+      <Filter>nvtt\nvtt\cuda</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\bc6h\utils.cpp">
+      <Filter>nvtt\nvtt\bc6h</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\bc6h\zoh.cpp">
+      <Filter>nvtt\nvtt\bc6h</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\bc6h\zohone.cpp">
+      <Filter>nvtt\nvtt\bc6h</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\bc6h\zohtwo.cpp">
+      <Filter>nvtt\nvtt\bc6h</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\squish\weightedclusterfit.cpp">
+      <Filter>nvtt\nvtt\squish</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\squish\colourfit.cpp">
+      <Filter>nvtt\nvtt\squish</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\squish\colourset.cpp">
+      <Filter>nvtt\nvtt\squish</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\squish\colourblock.cpp">
+      <Filter>nvtt\nvtt\squish</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\squish\maths.cpp">
+      <Filter>nvtt\nvtt\squish</Filter>
+    </ClCompile>
+    <ClCompile Include="compressfile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdapimin.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdapistd.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdatadst.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdatasrc.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdcoefct.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdcolor.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jddctmgr.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdhuff.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdinput.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdmainct.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdmarker.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdmaster.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdmerge.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdphuff.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdpostct.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdsample.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jdtrans.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jerror.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jfdctflt.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jfdctfst.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jfdctint.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jidctflt.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jidctfst.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jidctint.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jidctred.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jmemnobs.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jutils.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jcomapi.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jmemmgr.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jquant1.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg-6b\jquant2.c">
+      <Filter>libjpeg</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\png.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\pngerror.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\pngget.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\pngmem.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\pngpread.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\pngread.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\pngrio.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\pngrtran.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\pngrutil.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\pngset.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\pngtrans.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\pngwio.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\pngwrite.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\pngwtran.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="libpng-1.4.4\pngwutil.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\adler32.c">
+      <Filter>zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\compress.c">
+      <Filter>zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\crc32.c">
+      <Filter>zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\deflate.c">
+      <Filter>zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\infback.c">
+      <Filter>zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\inffast.c">
+      <Filter>zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\inflate.c">
+      <Filter>zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\inftrees.c">
+      <Filter>zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\trees.c">
+      <Filter>zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\uncompr.c">
+      <Filter>zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\zutil.c">
+      <Filter>zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="extra\ImageIO.cpp">
+      <Filter>extra</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="nvtt\src\nvtt\TexImage.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\CompressionOptions.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\Compressor.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\CompressorDX10.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\CompressorDX11.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\CompressorDX9.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\CompressorDXT.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\CompressorRGB.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\CompressorRGBE.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\Context.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\InputOptions.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\nvtt.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\nvtt_wrapper.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\OptimalCompressDXT.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\OutputOptions.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\QuickCompressDXT.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\SingleColorLookup.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\Array.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\Debug.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\DefsGnucDarwin.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\DefsGnucLinux.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\DefsGnucWin32.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\DefsVcWin32.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\FileSystem.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\HashMap.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\Library.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\Memory.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\nvcore.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\Ptr.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\RefCounted.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\StdStream.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\Stream.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\StrLib.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\TextReader.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\TextWriter.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\Timer.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\Utils.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\BlockDXT.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\ColorBlock.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\ColorSpace.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\DirectDrawSurface.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\Filter.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\FloatImage.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\Image.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\ImageIO.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\NormalMap.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\nvimage.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\PixelFormat.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\PsdFile.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\Quantize.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\TgaFile.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvmath\Color.h">
+      <Filter>nvtt\nvmath</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvmath\Fitting.h">
+      <Filter>nvtt\nvmath</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvmath\Half.h">
+      <Filter>nvtt\nvmath</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvmath\Matrix.h">
+      <Filter>nvtt\nvmath</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvmath\nvmath.h">
+      <Filter>nvtt\nvmath</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvmath\Plane.h">
+      <Filter>nvtt\nvmath</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvmath\Vector.h">
+      <Filter>nvtt\nvmath</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\cuda\BitmapTable.h">
+      <Filter>nvtt\nvtt\cuda</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\cuda\CudaCompressorDXT.h">
+      <Filter>nvtt\nvtt\cuda</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\cuda\CudaMath.h">
+      <Filter>nvtt\nvtt\cuda</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\cuda\CudaUtils.h">
+      <Filter>nvtt\nvtt\cuda</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\bc6h\bits.h">
+      <Filter>nvtt\nvtt\bc6h</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\bc6h\shapes_two.h">
+      <Filter>nvtt\nvtt\bc6h</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\bc6h\tile.h">
+      <Filter>nvtt\nvtt\bc6h</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\bc6h\utils.h">
+      <Filter>nvtt\nvtt\bc6h</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\bc6h\zoh.h">
+      <Filter>nvtt\nvtt\bc6h</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\squish\colourfit.h">
+      <Filter>nvtt\nvtt\squish</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\squish\colourset.h">
+      <Filter>nvtt\nvtt\squish</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\squish\weightedclusterfit.h">
+      <Filter>nvtt\nvtt\squish</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\squish\colourblock.h">
+      <Filter>nvtt\nvtt\squish</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\squish\maths.h">
+      <Filter>nvtt\nvtt\squish</Filter>
+    </ClInclude>
+    <ClInclude Include="jpeg-6b\jdct.h">
+      <Filter>libjpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="jpeg-6b\jdhuff.h">
+      <Filter>libjpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="jpeg-6b\jerror.h">
+      <Filter>libjpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="jpeg-6b\jinclude.h">
+      <Filter>libjpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="jpeg-6b\jmemsys.h">
+      <Filter>libjpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="jpeg-6b\jmorecfg.h">
+      <Filter>libjpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="jpeg-6b\jpegint.h">
+      <Filter>libjpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="jpeg-6b\jpeglib.h">
+      <Filter>libjpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="jpeg-6b\jversion.h">
+      <Filter>libjpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="libpng-1.4.4\png.h">
+      <Filter>libpng</Filter>
+    </ClInclude>
+    <ClInclude Include="libpng-1.4.4\pngconf.h">
+      <Filter>libpng</Filter>
+    </ClInclude>
+    <ClInclude Include="libpng-1.4.4\pngpriv.h">
+      <Filter>libpng</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib-1.2.5\crc32.h">
+      <Filter>zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib-1.2.5\deflate.h">
+      <Filter>zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib-1.2.5\inffast.h">
+      <Filter>zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib-1.2.5\inffixed.h">
+      <Filter>zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib-1.2.5\inflate.h">
+      <Filter>zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib-1.2.5\inftrees.h">
+      <Filter>zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib-1.2.5\trees.h">
+      <Filter>zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib-1.2.5\zconf.h">
+      <Filter>zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib-1.2.5\zlib.h">
+      <Filter>zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="zlib-1.2.5\zutil.h">
+      <Filter>zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="extra\BmpFile.H">
+      <Filter>extra</Filter>
+    </ClInclude>
+    <ClInclude Include="extra\jconfig.h">
+      <Filter>extra</Filter>
+    </ClInclude>
+    <ClInclude Include="extra\nvconfig.h">
+      <Filter>extra</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
