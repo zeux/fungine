@@ -34,6 +34,16 @@ module NvTextureTools =
         | Triangle = 1
         | Kaiser = 2
 
+    type ColorTransform =
+        | None = 0
+        | Linear = 1
+
+    type RoundMode =
+        | None = 0
+        | ToNextPowerOfTwo = 1
+        | ToNearestPowerOfTwo = 2
+        | ToPreviousPowerOfTwo = 3
+
     type AlphaMode =
         | None = 0
         | Transparency = 1
@@ -79,7 +89,16 @@ module NvTextureTools =
     extern void nvttSetInputOptionsNormalizeMipmaps(IntPtr inputOptions, bool b)
 
     [<DllImport("nvtt")>]
+    extern void nvttSetInputOptionsColorTransform(IntPtr inputOptions, ColorTransform t);
+
+    [<DllImport("nvtt")>]
+    extern void nvttSetInputOptionsLinearTransform(IntPtr inputOptions, int channel, float w0, float w1, float w2, float w3);
+
+    [<DllImport("nvtt")>]
     extern void nvttSetInputOptionsMaxExtents(IntPtr inputOptions, int dim)
+
+    [<DllImport("nvtt")>]
+    extern void nvttSetInputOptionsRoundMode(IntPtr inputOptions, RoundMode mode);
 
     [<DllImport("nvtt")>]
     extern IntPtr nvttCreateCompressionOptions()
@@ -107,18 +126,17 @@ module NvTextureTools =
     [<DllImport("nvtt")>]
     extern bool nvttCompressFile(string source, string target, IntPtr inputOptions, IntPtr compressionOptions, ErrorCallback errorCallback)
 
-let buildInternal source target input compress =
-    NvTextureTools.nvttSetCompressionOptionsFormat(compress, NvTextureTools.Format.BC1)
+let private compressInternal source target input compress =
+    let callback = printf "Error building %s: %s" target
+    let result = NvTextureTools.nvttCompressFile(source, target, input, compress, NvTextureTools.ErrorCallback(callback))
 
-    NvTextureTools.nvttCompressFile(source, target, input, compress, NvTextureTools.ErrorCallback(printfn "Error building %s: %s" target))
+    NvTextureTools.nvttDestroyInputOptions(input)
+    NvTextureTools.nvttDestroyCompressionOptions(compress)
+
+    result
 
 let build source target =
     let input = NvTextureTools.nvttCreateInputOptions()
     let compress = NvTextureTools.nvttCreateCompressionOptions()
 
-    let result = buildInternal source target input compress
-
-    NvTextureTools.nvttDestroyCompressionOptions(compress)
-    NvTextureTools.nvttDestroyInputOptions(input)
-
-    result
+    compressInternal source target input compress
