@@ -36,7 +36,11 @@
 
 #include <nvtt/nvtt_wrapper.h>
 
-struct MyMessageHandler : public nv::MessageHandler
+typedef void (__stdcall *ErrorCallback)(const char* message);
+
+__declspec(thread) ErrorCallback g_errorCallback;
+
+struct MyMessageHandler: public nv::MessageHandler
 {
 	MyMessageHandler()
 	{
@@ -50,23 +54,43 @@ struct MyMessageHandler : public nv::MessageHandler
 
 	virtual void log( const char * str, va_list arg )
 	{
-		va_list val;
-		va_copy(val, arg);
-		vfprintf(stderr, str, arg);
-		va_end(val);		
+        if (g_errorCallback)
+        {
+            char buf[1024];
+            vsnprintf(buf, sizeof(buf), str, arg);
+
+            g_errorCallback(buf);
+        }
+        else
+        {
+            vfprintf(stderr, str, arg);
+        }
 	}
 } g_messageHandler;
 
 extern "C" {
 
-NVTT_API NvttBoolean __stdcall nvttCompressFile(const char* source, const char* target, const NvttInputOptions * inputOptionsP, const NvttCompressionOptions * compressionOptions)
+NVTT_API NvttBoolean __stdcall nvttCompressFile(const char* source, const char* target, const NvttInputOptions * inputOptionsP, const NvttCompressionOptions * compressionOptions, ErrorCallback errorCallback)
 {
+    struct ErrorCallbackScope
+    {
+        ErrorCallbackScope(ErrorCallback errorCallback)
+        {
+            g_errorCallback = errorCallback;
+        }
+
+        ~ErrorCallbackScope()
+        {
+            g_errorCallback = NULL;
+        }
+    } errorCallbackScope(errorCallback);
+
     nv::Path input = source;
 
     // Make sure input file exists.
     if (!nv::FileSystem::exists(input.str()))
     {
-        fprintf(stderr, "The file '%s' does not exist.\n", input.str());
+        nvDebug("The file '%s' does not exist.\n", input.str());
         return NVTT_False;
     }
 
@@ -80,13 +104,13 @@ NVTT_API NvttBoolean __stdcall nvttCompressFile(const char* source, const char* 
         
         if (!dds.isValid())
         {
-            fprintf(stderr, "The file '%s' is not a valid DDS file.\n", input.str());
+            nvDebug("The file '%s' is not a valid DDS file.\n", input.str());
             return NVTT_False;
         }
 
         if (!dds.isSupported() || dds.isTexture3D())
         {
-            fprintf(stderr, "The file '%s' is not a supported DDS file.\n", input.str());
+            nvDebug("The file '%s' is not a supported DDS file.\n", input.str());
             return NVTT_False;
         }
 
@@ -125,7 +149,7 @@ NVTT_API NvttBoolean __stdcall nvttCompressFile(const char* source, const char* 
 
             if (image == NULL)
             {
-                fprintf(stderr, "The file '%s' is not a supported image type.\n", input.str());
+                nvDebug("The file '%s' is not a supported image type.\n", input.str());
                 return NVTT_False;
             }
 
@@ -143,7 +167,7 @@ NVTT_API NvttBoolean __stdcall nvttCompressFile(const char* source, const char* 
             nv::Image image;
             if (!image.load(input.str()))
             {
-                fprintf(stderr, "The file '%s' is not a supported image type.\n", input.str());
+                nvDebug("The file '%s' is not a supported image type.\n", input.str());
                 return NVTT_False;
             }
 
