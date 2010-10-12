@@ -40,6 +40,7 @@
     <Compile Include="main.fs" />
     <None Include="..\sdks\nvtt\nvtt.dll">
       <Link>nvtt.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>
