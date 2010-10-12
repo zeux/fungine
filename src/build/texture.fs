@@ -102,13 +102,15 @@ module NvTextureTools =
     [<DllImport("nvtt")>]
     extern void nvttSetCompressionOptionsQuantization(IntPtr compressionOptions, bool colorDithering, bool alphaDithering, bool binaryAlpha, int alphaThreshold)
 
+    type ErrorCallback = delegate of string -> unit
+
     [<DllImport("nvtt")>]
-    extern bool nvttCompressFile(string source, string target, IntPtr inputOptions, IntPtr compressionOptions)
+    extern bool nvttCompressFile(string source, string target, IntPtr inputOptions, IntPtr compressionOptions, ErrorCallback errorCallback)
 
 let buildInternal source target input compress =
     NvTextureTools.nvttSetCompressionOptionsFormat(compress, NvTextureTools.Format.BC1)
 
-    NvTextureTools.nvttCompressFile(source, target, input, compress)
+    NvTextureTools.nvttCompressFile(source, target, input, compress, NvTextureTools.ErrorCallback(printfn "Error building %s: %s" target))
 
 let build source target =
     let input = NvTextureTools.nvttCreateInputOptions()
