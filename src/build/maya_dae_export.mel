@@ -1,0 +1,13 @@
+proc exportOpenCollada(string $source, string $target)
+{
+    string $options = "relativePaths=0;exportTriangles=1;exportInvisibleNodes=1;exportNormalsPerVertex=0;exportTexTangents=1;exportReferencedMaterials=1";
+
+    loadPlugin -quiet "COLLADAMaya.mll";
+    file -force -open $source;
+    file -type "OpenCOLLADA exporter" -options $options -exportAll $target;
+}
+
+global proc export(string $source, string $target)
+{
+    if (catch(exportOpenCollada($source, $target))) quit -abort -exitCode 1;
+}
