@@ -1,3 +1,5 @@
+module main
+
 open System
 open System.Drawing
 open SlimDX
@@ -5,6 +7,10 @@ open SlimDX.DXGI
 open SlimDX.Windows
 open SlimDX.D3DCompiler
 open SlimDX.Direct3D11
+
+System.Environment.CurrentDirectory <- System.IO.Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath) + "/.."
+
+assets.buildAll()
 
 type ObjectPool(creator) =
     let s = System.Collections.Concurrent.ConcurrentStack()
@@ -36,7 +42,7 @@ factory.SetWindowAssociation(form.Handle, WindowAssociationFlags.IgnoreAll) |> i
 let backBuffer = Texture2D.FromSwapChain<Texture2D>(swapChain, 0)
 let renderView = new RenderTargetView(device, backBuffer)
 
-let shader_path = "../src/shaders/passthrough_color.hlsl"
+let shader_path = "src/shaders/passthrough_color.hlsl"
 let bytecode_vs = ShaderBytecode.CompileFromFile(shader_path, "vs_main", "vs_5_0", ShaderFlags.None, EffectFlags.None)
 let bytecode_ps = ShaderBytecode.CompileFromFile(shader_path, "ps_main", "ps_5_0", ShaderFlags.None, EffectFlags.None)
 
