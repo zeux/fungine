@@ -40,11 +40,6 @@ let buildMesh source =
         let path = System.Uri.UnescapeDataString(System.UriBuilder(n.Value).Path)
         let relative_path = relativePath path (Environment.CurrentDirectory + "/")
         buildTexture relative_path
-
-let buildSlaveDriver () =
-    buildMesh "art/slave_driver/cc_slave_driver.mb"
-    buildTexture "art/slave_driver/ch_barb_slavedriver_01_nm.bmp"
-    buildTexture "art/slave_driver/ch_barb_slavedriver_01_ao.bmp"
     
 let buildAll () = 
-    buildSlaveDriver ()
+    buildMesh "art/slave_driver/cc_slave_driver.mb"
