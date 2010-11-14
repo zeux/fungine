@@ -34,10 +34,6 @@ module NvTextureTools =
         | Triangle = 1
         | Kaiser = 2
 
-    type ColorTransform =
-        | None = 0
-        | Linear = 1
-
     type RoundMode =
         | None = 0
         | ToNextPowerOfTwo = 1
@@ -87,12 +83,6 @@ module NvTextureTools =
 
     [<DllImport("nvtt")>]
     extern void nvttSetInputOptionsNormalizeMipmaps(IntPtr inputOptions, bool b)
-
-    [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsColorTransform(IntPtr inputOptions, ColorTransform t);
-
-    [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsLinearTransform(IntPtr inputOptions, int channel, float w0, float w1, float w2, float w3);
 
     [<DllImport("nvtt")>]
     extern void nvttSetInputOptionsMaxExtents(IntPtr inputOptions, int dim)
