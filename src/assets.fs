@@ -1,9 +1,5 @@
 ﻿module assets
 
-open System
-open System.Collections.Generic
-open System.Xml
-
 let build source target func =
     let source_info = System.IO.FileInfo(source)
     let target_info = System.IO.FileInfo(target)
@@ -38,7 +34,7 @@ let buildMesh source =
     let nodes = doc.Root.SelectNodes("/COLLADA/library_images/image/init_from/text()")
     for n in nodes do
         let path = System.Uri.UnescapeDataString(System.UriBuilder(n.Value).Path)
-        let relative_path = relativePath path (Environment.CurrentDirectory + "/")
+        let relative_path = relativePath path (System.Environment.CurrentDirectory + "/")
         buildTexture relative_path
     
 let buildAll () = 

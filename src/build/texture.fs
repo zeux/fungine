@@ -117,7 +117,7 @@ module NvTextureTools =
     extern bool nvttCompressFile(string source, string target, IntPtr inputOptions, IntPtr compressionOptions, ErrorCallback errorCallback)
 
 let private compressInternal source target input compress =
-    let callback = printf "Error building %s: %s" target
+    let callback = printf "Build.Texture[%s]: error %s" source
     let result = NvTextureTools.nvttCompressFile(source, target, input, compress, NvTextureTools.ErrorCallback(callback))
 
     NvTextureTools.nvttDestroyInputOptions(input)
