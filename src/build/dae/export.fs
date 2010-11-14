@@ -1,4 +1,4 @@
-﻿module Build.Dae
+﻿module Build.Dae.Export
 
 open System.Diagnostics
 open Microsoft.Win32
