@@ -28,7 +28,7 @@ let buildMesh source =
     build source target Build.Dae.Export.build
 
     // parse .dae file
-    let doc = Build.Dae.Parse.File(target)
+    let doc = Build.Dae.Parse.Document(target)
 
     // export textures
     let nodes = doc.Root.SelectNodes("/COLLADA/library_images/image/init_from/text()")

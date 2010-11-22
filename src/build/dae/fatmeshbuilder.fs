@@ -1,12 +1,7 @@
 ﻿module Build.Dae.FatMeshBuilder
 
 open System.Xml
-
-// XmlNode XPath helper
-type XmlNode with
-    member x.Select(expr) =
-        let nodes = x.SelectNodes(expr)
-        seq { for n in nodes -> n } |> Seq.toArray
+open Build.Dae.Parse
 
 // regex active pattern matcher
 let private (|Regex|_|) pattern input =
@@ -21,8 +16,8 @@ let private (|Regex|_|) pattern input =
 let private getUVRemap (material_instance: XmlNode) =
     material_instance.Select("bind_vertex_input")
     |> Seq.map (fun node ->
-        assert (node.Attributes.["input_semantic"].Value = "TEXCOORD")
-        node.Attributes.["semantic"].Value, node.Attributes.["input_set"].Value)
+        assert (node.Attribute "input_semantic" = "TEXCOORD")
+        node.Attribute "semantic", node.Attribute "input_set")
     |> Seq.map (fun (sem, set) ->
         match sem with
         | Regex @"TEX(\d+)" i -> int i, int set
@@ -32,47 +27,46 @@ let private getUVRemap (material_instance: XmlNode) =
 // get vertex input information as (semantics, set, id, offset) tuple
 let private getVertexInput (node: XmlNode) offset =
     let set = node.Attributes.["set"]
-    node.Attributes.["semantic"].Value, (if set <> null then (int set.Value) else 0), node.Attributes.["source"].Value, offset
+    node.Attribute "semantic", (if set <> null then (int set.Value) else 0), node.Attribute "source", offset
     
 // get vertex inputs information as (semantics, set, id, offset) list
-let private getVertexInputs (file: Build.Dae.Parse.File) (node: XmlNode) =
+let private getVertexInputs (doc: Document) (node: XmlNode) =
     node.Select("input")
     |> Array.collect (fun input ->
-        let offset = int input.Attributes.["offset"].Value
+        let offset = int (input.Attribute "offset")
 
-        if input.Attributes.["semantic"].Value = "VERTEX" then
+        if input.Attribute "semantic" = "VERTEX" then
             // expand VERTEX semantic to all referenced input semantics with the same offset
-            let vertices = file.Node input.Attributes.["source"].Value
+            let vertices = doc.Node (input.Attribute "source")
             vertices.Select("input") |> Array.map (fun input -> getVertexInput input offset)
         else
             [| getVertexInput input offset |])
 
 // build a single mesh
-let private buildInternal (file: Build.Dae.Parse.File) (geometry: XmlNode) (controller: XmlNode) (material_instance: XmlNode) =
+let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNode) (material_instance: XmlNode) =
     // get UV remap information
     let uv_remap = getUVRemap material_instance
 
     // get triangles node
-    let triangles = geometry.SelectSingleNode("mesh/triangles[@material = '" + material_instance.Attributes.["symbol"].Value + "']")
+    let triangles = geometry.SelectSingleNode("mesh/triangles[@material = '" + material_instance.Attribute "symbol" + "']")
 
     // get inputs
-    let inputs = getVertexInputs file triangles
+    let inputs = getVertexInputs doc triangles
 
     // get indices
-    let indices = Build.Dae.Parse.getIntArray (triangles.SelectSingleNode("p"))
+    let indices = getIntArray (triangles.SelectSingleNode("p"))
 
     0
 
 // build all meshes for <instance_controller> or <instance_geometry> node
-let build (file: Build.Dae.Parse.File) (instance: XmlNode) =
+let build (doc: Document) (instance: XmlNode) =
     // get controller and shape nodes
-    let instance_url = instance.Attributes.["url"].Value
-    let controller = if instance.Name = "instance_controller" then file.Node instance_url else null
-    let geometry = file.Node (if controller <> null then controller.SelectSingleNode("skin/@source").Value else instance_url)
+    let instance_url = instance.Attribute "url"
+    let controller = if instance.Name = "instance_controller" then doc.Node instance_url else null
+    let geometry = doc.Node (if controller <> null then controller.SelectSingleNode("skin/@source").Value else instance_url)
 
     // get material instances
     let material_instances = instance.Select("bind_material/technique_common/instance_material")
-    let m1 = instance.SelectNodes("bind_material/technique_common/instance_material")
 
     // build meshes
-    Seq.map (buildInternal file geometry controller) material_instances
+    Seq.map (buildInternal doc geometry controller) material_instances
