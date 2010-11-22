@@ -36,6 +36,11 @@ let buildMesh source =
         let path = System.Uri.UnescapeDataString(System.UriBuilder(n.Value).Path)
         let relative_path = relativePath path (System.Environment.CurrentDirectory + "/")
         buildTexture relative_path
+
+    // export meshes
+    let instances = doc.Root.SelectNodes("/COLLADA/library_visual_scenes//node/instance_geometry | /COLLADA/library_visual_scenes//node/instance_controller");
+    for n in instances do
+        Build.Dae.FatMeshBuilder.build doc n |> Seq.length |> ignore
     
 let buildAll () = 
     buildMesh "art/slave_driver/cc_slave_driver.mb"

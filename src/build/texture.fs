@@ -3,6 +3,7 @@ module Build.Texture
 open System
 open System.Runtime.InteropServices
 
+// nvtt.dll binding module
 module NvTextureTools =
     type Format =
         | RGB = 0
@@ -116,6 +117,7 @@ module NvTextureTools =
     [<DllImport("nvtt")>]
     extern bool nvttCompressFile(string source, string target, IntPtr inputOptions, IntPtr compressionOptions, ErrorCallback errorCallback)
 
+// compress the texture with the specified options
 let private compressInternal source target input compress =
     let callback = printf "Build.Texture[%s]: error %s" source
     let result = NvTextureTools.nvttCompressFile(source, target, input, compress, NvTextureTools.ErrorCallback(callback))
@@ -125,6 +127,7 @@ let private compressInternal source target input compress =
 
     result
 
+// convert the texture with default options
 let build source target =
     let input = NvTextureTools.nvttCreateInputOptions()
     let compress = NvTextureTools.nvttCreateCompressionOptions()
