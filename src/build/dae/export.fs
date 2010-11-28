@@ -7,8 +7,8 @@ open Microsoft.Win32
 let private getRegistryValue (reg: RegistryKey) (path: string) key =
     let pathTokens = path.Split('\\')
     let pathKey = Array.fold (fun (key: RegistryKey) subkey -> if key = null then null else key.OpenSubKey(subkey)) reg pathTokens
-    let pathValue = if pathKey = null then null else pathKey.GetValue(key)
-    if pathValue = null then None else Some(pathValue :?> string)
+    let pathValue = if pathKey = null then null else pathKey.GetValue(key) :?> string
+    if System.String.IsNullOrEmpty(pathValue) then None else Some(pathValue)
 
 // get the highest version of installed Maya, consider both 64 and 32 bit versions
 let private getMayaPath versions =

@@ -42,5 +42,8 @@ let buildMesh source =
     for n in instances do
         Build.Dae.FatMeshBuilder.build doc n |> Seq.length |> ignore
     
-let buildAll () = 
-    buildMesh "art/slave_driver/cc_slave_driver.mb"
+let buildMeshes path =
+    System.IO.Directory.GetFiles(path, "*.mb", System.IO.SearchOption.AllDirectories) |> Seq.iter buildMesh
+
+let buildAll () =
+    buildMeshes "art"

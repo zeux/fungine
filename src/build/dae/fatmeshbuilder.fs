@@ -12,7 +12,7 @@ let private (|Regex|_|) pattern input =
     else
         None
 
-// get UV remap information
+// get UV remap information (uv index => set index)
 let private getUVRemap (material_instance: XmlNode) =
     material_instance.Select("bind_vertex_input")
     |> Seq.map (fun node ->
