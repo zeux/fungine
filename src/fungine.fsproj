@@ -15,7 +15,7 @@
     <ProjectGuid>{1da9d6e3-6745-46c2-ade2-421f7039664c}</ProjectGuid>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>Client</TargetFrameworkProfile>
-    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+    <EnableUnmanagedDebugging>true</EnableUnmanagedDebugging>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Platform)' == 'x86' ">
     <PlatformTarget>x86</PlatformTarget>
