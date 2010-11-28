@@ -11,7 +11,7 @@ open SlimDX.Direct3D11
 System.Environment.CurrentDirectory <- System.IO.Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath) + "/.."
 System.Console.WindowWidth <- max System.Console.WindowWidth 140
 
-assets.buildAll()
+let meshes = assets.buildAll()
 
 type ObjectPool(creator) =
     let s = System.Collections.Concurrent.ConcurrentStack()
@@ -39,7 +39,7 @@ type Effect(device, vscode, pscode) =
     member x.PixelShader = ps
     member x.VertexSignature = signature
 
-let form = new RenderForm("fungine")
+let form = new RenderForm("fungine", Width = 1280, Height = 720)
 let desc = new SwapChainDescription(
             BufferCount = 1,
             ModeDescription = new ModeDescription(form.ClientSize.Width, form.ClientSize.Height, new Rational(60, 1), Format.R8G8B8A8_UNorm),
@@ -50,75 +50,106 @@ let desc = new SwapChainDescription(
             Usage = Usage.RenderTargetOutput
             )
 
-let (_, device, swapChain) = Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.None, desc)
+let (_, device, swapChain) = Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.Debug, desc)
 
 let factory = swapChain.GetParent<Factory>()
 factory.SetWindowAssociation(form.Handle, WindowAssociationFlags.IgnoreAll) |> ignore
 
 let backBuffer = Texture2D.FromSwapChain<Texture2D>(swapChain, 0)
-let renderView = new RenderTargetView(device, backBuffer)
+let backBufferView = new RenderTargetView(device, backBuffer)
 
-let passthrough = Effect(device, "src/shaders/passthrough_color.hlsl")
+let depthBuffer = new Texture2D(device, Texture2DDescription(Width = form.ClientSize.Width, Height = form.ClientSize.Height, Format = Format.D24_UNorm_S8_UInt, ArraySize = 1, MipLevels = 1, SampleDescription = SampleDescription(1, 0), BindFlags = BindFlags.DepthStencil))
+let depthBufferView = new DepthStencilView(device, depthBuffer)
 
-let layout = new InputLayout(device, passthrough.VertexSignature,
+let basic_textured = Effect(device, "src/shaders/basic_textured.hlsl")
+
+let layout = new InputLayout(device, basic_textured.VertexSignature,
                 [|
-                InputElement("POSITION", 0, Format.R32G32B32A32_Float, 0, 0);
-                InputElement("COLOR", 0, Format.R32G32B32A32_Float, 16, 0) 
+                InputElement("POSITION", 0, Format.R32G32B32_Float, 0, 0);
+                InputElement("NORMAL", 0, Format.R32G32B32_Float, 12, 0);
+                InputElement("TANGENT", 0, Format.R32G32B32_Float, 24, 0);
+                InputElement("BITANGENT", 0, Format.R32G32B32_Float, 36, 0);
+                InputElement("TEXCOORD", 0, Format.R32G32_Float, 48, 0) 
                 |])
 
-let stream = new DataStream(int64 (3 * 32), true, true)
+let createRenderVertexBuffer (vertices: Build.Geometry.FatVertex array) =
+    let stream = new DataStream(56L * vertices.LongLength, true, true)
 
-stream.WriteRange([|
-                    Vector4(0.0f, 0.5f, 0.5f, 1.0f); Vector4(1.0f, 0.0f, 0.0f, 1.0f);
-                    Vector4(0.5f, -0.5f, 0.5f, 1.0f); Vector4(0.0f, 1.0f, 0.0f, 1.0f);
-                    Vector4(-0.5f, -0.5f, 0.5f, 1.0f); Vector4(0.0f, 0.0f, 1.0f, 1.0f)
-                    |]
-                    )
+    for v in vertices do
+        stream.Write(v.position)
+        stream.Write(v.normal)
+        stream.Write(v.tangent)
+        stream.Write(v.bitangent)
+        stream.Write(v.texcoord.[0])
 
-stream.Position <- int64 0
+    stream.Position <- 0L
 
-let vertices = new Buffer(device, stream, new BufferDescription(
-                            BindFlags = BindFlags.VertexBuffer,
-                            CpuAccessFlags = CpuAccessFlags.None,
-                            OptionFlags = ResourceOptionFlags.None,
-                            SizeInBytes = 3 * 32,
-                            Usage = ResourceUsage.Default
-                            ))
+    new Buffer(device, stream, BufferDescription(int stream.Length, ResourceUsage.Default, BindFlags.VertexBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, 56))
+
+let createRenderIndexBuffer (indices: int array) =
+    let stream = new DataStream(4L * indices.LongLength, true, true)
+
+    stream.WriteRange(indices)
+    stream.Position <- 0L
+
+    new Buffer(device, stream, BufferDescription(int stream.Length, ResourceUsage.Default, BindFlags.IndexBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, 4))
+
+let renderMeshes =
+    meshes |> Array.map (fun mesh ->
+        mesh, createRenderVertexBuffer mesh.vertices, createRenderIndexBuffer mesh.indices)
+
+let stream = new DataStream(64L, true, true)
+
+let projection = Matrix.PerspectiveFovLH(45.0f, float32 form.ClientSize.Width / float32 form.ClientSize.Height, 1.0f, 1000.0f)
+let view = Matrix.LookAtLH(Vector3(0.0f, 30.0f, 10.0f), Vector3(0.0f, 25.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f))
+let view_projection = Matrix.Multiply(view, projection)
+
+stream.Write(view_projection)
+stream.Position <- 0L
+
+let constantBuffer = new Buffer(device, stream, BufferDescription(int stream.Length, ResourceUsage.Default, BindFlags.ConstantBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, 64))
+
+let albedo_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_slavedriver_01.dds")
+let normal_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_slavedriver_01_nm.dds")
+let specular_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_slavedriver_01_spec.dds")
 
 let contextHolder = new ObjectPool(fun _ -> new DeviceContext(device))
 
-let draw (context: DeviceContext) x y width height =
-    context.Rasterizer.SetViewports(new Viewport(float32 x, float32 y, float32 width, float32 height, 0.0f, 1.0f))
-
-    context.OutputMerger.SetTargets(renderView)
+let draw (context: DeviceContext) =
+    context.Rasterizer.SetViewports(new Viewport(0.0f, 0.0f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
+    context.OutputMerger.SetTargets(depthBufferView, backBufferView)
+    context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.Less))
 
     context.InputAssembler.InputLayout <- layout
     context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
-    context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vertices, 32, 0))
 
-    context.VertexShader.Set(passthrough.VertexShader)
-    context.PixelShader.Set(passthrough.PixelShader)
-    context.Draw(3, 0)
+    context.VertexShader.Set(basic_textured.VertexShader)
+    context.PixelShader.Set(basic_textured.PixelShader)
+
+    context.VertexShader.SetConstantBuffer(constantBuffer, 0)
+    context.PixelShader.SetSampler(SamplerState.FromDescription(device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = Filter.Anisotropic)), 0)
+
+    context.PixelShader.SetShaderResource(new ShaderResourceView(device, albedo_map :> Resource), 0)
+    context.PixelShader.SetShaderResource(new ShaderResourceView(device, normal_map :> Resource), 1)
+    context.PixelShader.SetShaderResource(new ShaderResourceView(device, specular_map :> Resource), 2)
+
+    for mesh, vb, ib in renderMeshes do
+        context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vb, 56, 0))
+        context.InputAssembler.SetIndexBuffer(ib, Format.R32_UInt, 0)
+        context.DrawIndexed(mesh.indices.Length, 0, 0)
 
     context.FinishCommandList(false)
 
-let viewports width height sx sy = [ for x in 1..sx do for y in 1..sy -> (x - 1) * width / sx, (y - 1) * height / sy, width / sx, height / sy ]
-
 MessagePump.Run(form, fun () ->
 
-    device.ImmediateContext.ClearRenderTargetView(renderView, Color4 Color.Black)
+    device.ImmediateContext.ClearRenderTargetView(backBufferView, Color4 Color.Black)
+    device.ImmediateContext.ClearDepthStencilView(depthBufferView, DepthStencilClearFlags.Depth, 1.0f, 0uy)
 
-    viewports form.ClientSize.Width form.ClientSize.Height 8 8
-    |> Seq.map (fun (x, y, width, height) ->
-        async {
-        let c = contextHolder.get()
-        let cl = draw c x y width height
-        contextHolder.put(c)
-        return cl
-        } )
-    |> Async.Parallel
-    |> Async.RunSynchronously
-    |> Seq.iter (fun cl -> use c = cl in device.ImmediateContext.ExecuteCommandList(c, false))
+    let context = contextHolder.get()
+    use cl = draw context
+    contextHolder.put(context)
+
+    device.ImmediateContext.ExecuteCommandList(cl, false)
 
     swapChain.Present(0, PresentFlags.None) |> ignore
 )
