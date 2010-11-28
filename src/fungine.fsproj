@@ -15,7 +15,7 @@
     <ProjectGuid>{1da9d6e3-6745-46c2-ade2-421f7039664c}</ProjectGuid>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>Client</TargetFrameworkProfile>
-    <EnableUnmanagedDebugging>true</EnableUnmanagedDebugging>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Platform)' == 'x86' ">
     <PlatformTarget>x86</PlatformTarget>
@@ -36,10 +36,10 @@
   <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <ItemGroup>
+    <Compile Include="build\geometry\fatmesh.fs" />
     <Compile Include="build\dae\parse.fs" />
     <Compile Include="build\dae\export.fs" />
     <Compile Include="build\dae\fatmeshbuilder.fs" />
-    <Compile Include="build\geometry\fatmesh.fs" />
     <Compile Include="build\texture.fs" />
     <Compile Include="assets.fs" />
     <Compile Include="main.fs" />
