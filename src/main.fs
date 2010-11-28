@@ -9,6 +9,7 @@ open SlimDX.D3DCompiler
 open SlimDX.Direct3D11
 
 System.Environment.CurrentDirectory <- System.IO.Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath) + "/.."
+System.Console.WindowWidth <- max System.Console.WindowWidth 140
 
 assets.buildAll()
 
@@ -22,6 +23,21 @@ type ObjectPool(creator) =
 
     member x.put(obj) =
         s.Push(obj)
+
+type Effect(device, vscode, pscode) =
+    let vs = new VertexShader(device, vscode)
+    let ps = new PixelShader(device, pscode)
+    let signature = ShaderSignature.GetInputSignature(vscode)
+
+    new (device, path) =
+        let bytecode_vs = ShaderBytecode.CompileFromFile(path, "vs_main", "vs_5_0", ShaderFlags.None, EffectFlags.None)
+        let bytecode_ps = ShaderBytecode.CompileFromFile(path, "ps_main", "ps_5_0", ShaderFlags.None, EffectFlags.None)
+
+        Effect(device, bytecode_vs, bytecode_ps)
+
+    member x.VertexShader = vs
+    member x.PixelShader = ps
+    member x.VertexSignature = signature
 
 let form = new RenderForm("fungine")
 let desc = new SwapChainDescription(
@@ -42,14 +58,9 @@ factory.SetWindowAssociation(form.Handle, WindowAssociationFlags.IgnoreAll) |> i
 let backBuffer = Texture2D.FromSwapChain<Texture2D>(swapChain, 0)
 let renderView = new RenderTargetView(device, backBuffer)
 
-let shader_path = "src/shaders/passthrough_color.hlsl"
-let bytecode_vs = ShaderBytecode.CompileFromFile(shader_path, "vs_main", "vs_5_0", ShaderFlags.None, EffectFlags.None)
-let bytecode_ps = ShaderBytecode.CompileFromFile(shader_path, "ps_main", "ps_5_0", ShaderFlags.None, EffectFlags.None)
+let passthrough = Effect(device, "src/shaders/passthrough_color.hlsl")
 
-let vs = new VertexShader(device, bytecode_vs)
-let ps = new PixelShader(device, bytecode_ps)
-
-let layout = new InputLayout(device, bytecode_vs,
+let layout = new InputLayout(device, passthrough.VertexSignature,
                 [|
                 InputElement("POSITION", 0, Format.R32G32B32A32_Float, 0, 0);
                 InputElement("COLOR", 0, Format.R32G32B32A32_Float, 16, 0) 
@@ -85,8 +96,8 @@ let draw (context: DeviceContext) x y width height =
     context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
     context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vertices, 32, 0))
 
-    context.VertexShader.Set(vs)
-    context.PixelShader.Set(ps)
+    context.VertexShader.Set(passthrough.VertexShader)
+    context.PixelShader.Set(passthrough.PixelShader)
     context.Draw(3, 0)
 
     context.FinishCommandList(false)
