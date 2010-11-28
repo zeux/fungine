@@ -1,5 +1,9 @@
 ﻿module assets
 
+open System.Collections.Generic
+
+open Build.Dae.Parse
+
 let build source target func =
     let source_info = System.IO.FileInfo(source)
     let target_info = System.IO.FileInfo(target)
@@ -28,7 +32,7 @@ let buildMesh source =
     build source target Build.Dae.Export.build
 
     // parse .dae file
-    let doc = Build.Dae.Parse.Document(target)
+    let doc = Document(target)
 
     // export textures
     let nodes = doc.Root.SelectNodes("/COLLADA/library_images/image/init_from/text()")
@@ -38,12 +42,13 @@ let buildMesh source =
         buildTexture relative_path
 
     // export meshes
-    let instances = doc.Root.SelectNodes("/COLLADA/library_visual_scenes//node/instance_geometry | /COLLADA/library_visual_scenes//node/instance_controller");
-    for n in instances do
-        Build.Dae.FatMeshBuilder.build doc n |> Seq.length |> ignore
+    let instances = doc.Root.Select("/COLLADA/library_visual_scenes//node/instance_geometry | /COLLADA/library_visual_scenes//node/instance_controller");
+    let meshes = instances |> Array.collect (fun i -> Build.Dae.FatMeshBuilder.build doc i)
+
+    meshes
     
 let buildMeshes path =
-    System.IO.Directory.GetFiles(path, "*.mb", System.IO.SearchOption.AllDirectories) |> Seq.iter buildMesh
+    System.IO.Directory.GetFiles(path, "*.mb", System.IO.SearchOption.AllDirectories) |> Array.collect buildMesh
 
 let buildAll () =
     buildMeshes "art"
