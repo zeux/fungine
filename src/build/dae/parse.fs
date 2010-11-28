@@ -42,15 +42,15 @@ let getFloatArray (doc: Document) id stride =
 
     // get the <float_array> node
     let array = doc.Node (accessor.Attribute "source")
-    assert (array.Attribute "count" = accessor.Attribute "count")
+    assert (int (array.Attribute "count") = stride * int (accessor.Attribute "count"))
 
     // parse whitespace-delimited string
     let result = splitWhitespace array.InnerText
-    assert (result.Length = int (accessor.Attribute "count"))
+    assert (result.Length = int (array.Attribute "count"))
     assert (result.Length % stride = 0)
 
     // convert strings to floats
-    Array.map (fun n -> float n) result
+    Array.map (fun n -> float32 n) result
 
 // parse node contents as an integer array
 let getIntArray (node: XmlNode) =
