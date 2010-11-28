@@ -2,6 +2,9 @@
 
 open System.Collections.Generic
 open System.Xml
+
+open SlimDX
+
 open Build.Dae.Parse
 open Build.Geometry
 
@@ -69,6 +72,17 @@ let private getVertexComponents inputs uv_remap fvf =
     // return a requested subset of provided components
     components |> Array.filter (fun (comp, id, offset) -> Array.exists (fun c -> comp = c) fvf)
 
+// get vertex data for a component
+let private getVertexComponentData (doc: Document) comp id =
+    match comp with
+    | Position
+    | Tangent
+    | Bitangent
+    | Normal -> getFloatArray doc id 3
+    | Color _ -> getFloatArray doc id 4
+    | TexCoord _ -> getFloatArray doc id 2
+    | _ -> [||]
+
 // build a single mesh
 let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNode) (material_instance: XmlNode) fvf =
     // get UV remap information
@@ -84,7 +98,7 @@ let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNo
     let index_stride = 1 + (inputs |> Array.map (fun (semantics, set, id, offset) -> offset) |> Array.max)
 
     // get components
-    let components = getVertexComponents inputs uv_remap fvf
+    let components = getVertexComponents inputs uv_remap fvf |> Array.map (fun (comp, id, offset) -> comp, (getVertexComponentData doc comp id), offset)
 
     // get indices
     let indices = getIntArray (triangles.SelectSingleNode("p"))
@@ -108,7 +122,34 @@ let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNo
             vertex_remap.Add(index_block, index)
             index)
 
-    0
+    // create the vertex buffer
+    let vb: FatVertex array = Array.zeroCreate vertex_remap.Count
+
+    for kvp in vertex_remap do
+        let index_block = kvp.Key
+        let index = kvp.Value
+
+        for (comp, data, index_offset) in components do
+            let offset = index_block.[index_offset]
+
+            let add (arr: 'a array) idx value =
+                let length = if arr <> null then arr.Length else 0
+                if length > idx then
+                    arr.[idx] <- value
+                    arr
+                else
+                    Array.init (idx + 1) (fun i -> if i < length then arr.[i] else if i = idx then value else Unchecked.defaultof<'a>)
+
+            match comp with
+            | Position -> vb.[index].position <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
+            | Tangent -> vb.[index].tangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
+            | Bitangent -> vb.[index].bitangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
+            | Normal -> vb.[index].normal <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
+            | Color n -> vb.[index].color <- add vb.[index].color n (Color4(data.[offset * 4 + 0], data.[offset * 4 + 1], data.[offset * 4 + 2], data.[offset * 4 + 3]))
+            | TexCoord n -> vb.[index].texcoord <- add vb.[index].texcoord n (Vector2(data.[offset * 2 + 0], 1.0f - data.[offset * 2 + 1]))
+            | _ -> failwith "Unknown vertex component"
+
+    { new FatMesh with vertices = vb and indices = ib }
 
 // build all meshes for <instance_controller> or <instance_geometry> node
 let build (doc: Document) (instance: XmlNode) =
@@ -124,4 +165,4 @@ let build (doc: Document) (instance: XmlNode) =
     let fvf = [|Position; Tangent; Bitangent; Normal; TexCoord 0; SkinningInfo 4|]
 
     // build meshes
-    Seq.map (fun mi -> buildInternal doc geometry controller mi fvf) material_instances
+    Array.map (fun mi -> buildInternal doc geometry controller mi fvf) material_instances

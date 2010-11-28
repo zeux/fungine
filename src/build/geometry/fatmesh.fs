@@ -1,5 +1,7 @@
 ﻿namespace Build.Geometry
 
+open SlimDX
+
 type FatVertexComponent =
     | Position
     | Tangent
@@ -11,5 +13,13 @@ type FatVertexComponent =
 
 type FatVertexFormat = FatVertexComponent array
 
-type FatMesh() =
-    member x.Foo = 1
+[<Struct>]
+type FatVertex =
+    val mutable position: Vector3
+    val mutable tangent: Vector3
+    val mutable bitangent: Vector3
+    val mutable normal: Vector3
+    val mutable color: Color4 array
+    val mutable texcoord: Vector2 array
+
+type FatMesh = { vertices: FatVertex array; indices: int array }
