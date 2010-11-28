@@ -1,7 +1,9 @@
 ﻿module Build.Dae.FatMeshBuilder
 
+open System.Collections.Generic
 open System.Xml
 open Build.Dae.Parse
+open Build.Geometry
 
 // regex active pattern matcher
 let private (|Regex|_|) pattern input =
@@ -15,10 +17,10 @@ let private (|Regex|_|) pattern input =
 // get UV remap information (uv index => set index)
 let private getUVRemap (material_instance: XmlNode) =
     material_instance.Select("bind_vertex_input")
-    |> Seq.map (fun node ->
+    |> Array.map (fun node ->
         assert (node.Attribute "input_semantic" = "TEXCOORD")
         node.Attribute "semantic", node.Attribute "input_set")
-    |> Seq.map (fun (sem, set) ->
+    |> Array.map (fun (sem, set) ->
         match sem with
         | Regex @"TEX(\d+)" i -> int i, int set
         | _ -> failwith ("Unknown semantic" + sem))
@@ -29,7 +31,7 @@ let private getVertexInput (node: XmlNode) offset =
     let set = node.Attributes.["set"]
     node.Attribute "semantic", (if set <> null then (int set.Value) else 0), node.Attribute "source", offset
     
-// get vertex inputs information as (semantics, set, id, offset) list
+// get vertex inputs information as (semantics, set, id, offset) array
 let private getVertexInputs (doc: Document) (node: XmlNode) =
     node.Select("input")
     |> Array.collect (fun input ->
@@ -42,19 +44,69 @@ let private getVertexInputs (doc: Document) (node: XmlNode) =
         else
             [| getVertexInput input offset |])
 
+// get vertex components information as (component, id, offset) array
+let private getVertexComponents inputs uv_remap fvf =
+    // assume that TBN is always for tex0
+    let tbn_set = defaultArg (Map.tryFind 0 uv_remap) 0
+
+    // convert inputs to vertex components, where applicable
+    let components = inputs |> Array.choose (fun (semantics, set, id, offset) ->
+        let comp =
+            match semantics, set with
+            | "POSITION", 0 -> Some Position
+            | "NORMAL", 0 -> Some Normal
+            | "COLOR", n -> Some (Color n)
+            | "TEXTANGENT", tbn_set -> Some Tangent
+            | "TEXBINORMAL", tbn_set -> Some Bitangent
+            | "TEXCOORD", n -> uv_remap |> Map.tryPick (fun uv set -> if set = n then Some (TexCoord uv) else None)
+            | _ -> None
+
+        match comp with
+        | Some c -> Some (c, id, offset)
+        | None -> None
+    )
+
+    // return a requested subset of provided components
+    components |> Array.filter (fun (comp, id, offset) -> Array.exists (fun c -> comp = c) fvf)
+
 // build a single mesh
-let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNode) (material_instance: XmlNode) =
+let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNode) (material_instance: XmlNode) fvf =
     // get UV remap information
     let uv_remap = getUVRemap material_instance
 
     // get triangles node
     let triangles = geometry.SelectSingleNode("mesh/triangles[@material = '" + material_instance.Attribute "symbol" + "']")
 
-    // get inputs
+    // get all vertex inputs
     let inputs = getVertexInputs doc triangles
+
+    // get index array stride (why it is not explicitly stated in the file is beyond me)
+    let index_stride = 1 + (inputs |> Array.map (fun (semantics, set, id, offset) -> offset) |> Array.max)
+
+    // get components
+    let components = getVertexComponents inputs uv_remap fvf
 
     // get indices
     let indices = getIntArray (triangles.SelectSingleNode("p"))
+    assert (indices.Length % index_stride = 0)
+
+    // create a mask which shows if a certain index is present in the target vertex
+    let index_mask = Array.init index_stride (fun i -> Array.tryFind (fun (comp, id, offset) -> i = offset) components |> Option.isSome)
+
+    // create the index buffer
+    let vertex_remap = Dictionary<int array, int>(HashIdentity.Structural)
+
+    let ib = Array.init (indices.Length / index_stride) (fun i ->
+        // replace unused indices with 0
+        let index_block = Array.sub indices (i * index_stride) index_stride |> Array.mapi (fun idx offset -> if index_mask.[idx] then offset else 0)
+
+        // add the block to dictionary, autogenerating index as necessary
+        match vertex_remap.TryGetValue(index_block) with
+        | true, index -> index
+        | false, _ ->
+            let index = vertex_remap.Count
+            vertex_remap.Add(index_block, index)
+            index)
 
     0
 
@@ -68,5 +120,8 @@ let build (doc: Document) (instance: XmlNode) =
     // get material instances
     let material_instances = instance.Select("bind_material/technique_common/instance_material")
 
+    // use a constant FVF for now
+    let fvf = [|Position; Tangent; Bitangent; Normal; TexCoord 0; SkinningInfo 4|]
+
     // build meshes
-    Seq.map (buildInternal doc geometry controller) material_instances
+    Seq.map (fun mi -> buildInternal doc geometry controller mi fvf) material_instances
