@@ -29,7 +29,7 @@ type Document(path: string) =
     member x.Node (id: string) = if id.[0] = '#' then ids.[id.Substring(1)] else ids.[id]
 
 // parse whitespace-delimited string into array
-let private splitWhitespace (contents: string) =
+let splitWhitespace (contents: string) =
     contents.Split(" \t\r\n".ToCharArray(), System.StringSplitOptions.RemoveEmptyEntries)
 
 // parse <source> with the given id as a float array with the desired stride

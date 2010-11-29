@@ -40,6 +40,7 @@
     <Compile Include="build\dae\parse.fs" />
     <Compile Include="build\dae\export.fs" />
     <Compile Include="build\dae\fatmeshbuilder.fs" />
+    <Compile Include="build\dae\skeletonbuilder.fs" />
     <Compile Include="build\texture.fs" />
     <Compile Include="assets.fs" />
     <Compile Include="main.fs" />
