@@ -43,7 +43,7 @@ let buildMesh source =
 
     // export meshes
     let instances = doc.Root.Select("/COLLADA/library_visual_scenes//node/instance_geometry | /COLLADA/library_visual_scenes//node/instance_controller");
-    let meshes = instances |> Array.collect (fun i -> Build.Dae.FatMeshBuilder.build doc i)
+    let meshes = instances |> Array.collect (fun i -> (Build.Dae.FatMeshBuilder.build doc i) |> Array.map (fun mesh -> mesh, Build.Dae.SkeletonBuilder.getNodeTransformAbsolute i.ParentNode))
 
     meshes
     

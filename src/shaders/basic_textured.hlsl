@@ -1,4 +1,5 @@
-float4x4 view_projection;
+float4x4 view_projection: register(c0);
+float4x4 world: register(c4);
 
 SamplerState default_sampler;
 
@@ -30,9 +31,11 @@ PS_IN vs_main(VS_IN I)
 {
 	PS_IN O;
 	
-	O.pos = mul(view_projection, I.pos);
+    float4 pos_ws = mul(I.pos, world);
 
-    O.pos_ws = I.pos.xyz;
+	O.pos = mul(pos_ws, view_projection);
+
+    O.pos_ws = pos_ws.xyz;
     O.tangent = I.tangent;
     O.bitangent = I.bitangent;
     O.normal = I.normal;

@@ -30,8 +30,8 @@ type Effect(device, vscode, pscode) =
     let signature = ShaderSignature.GetInputSignature(vscode)
 
     new (device, path) =
-        let bytecode_vs = ShaderBytecode.CompileFromFile(path, "vs_main", "vs_5_0", ShaderFlags.None, EffectFlags.None)
-        let bytecode_ps = ShaderBytecode.CompileFromFile(path, "ps_main", "ps_5_0", ShaderFlags.None, EffectFlags.None)
+        let bytecode_vs = ShaderBytecode.CompileFromFile(path, "vs_main", "vs_5_0", ShaderFlags.PackMatrixRowMajor, EffectFlags.None)
+        let bytecode_ps = ShaderBytecode.CompileFromFile(path, "ps_main", "ps_5_0", ShaderFlags.PackMatrixRowMajor, EffectFlags.None)
 
         Effect(device, bytecode_vs, bytecode_ps)
 
@@ -95,19 +95,14 @@ let createRenderIndexBuffer (indices: int array) =
     new Buffer(device, stream, BufferDescription(int stream.Length, ResourceUsage.Default, BindFlags.IndexBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, 4))
 
 let renderMeshes =
-    meshes |> Array.map (fun mesh ->
-        mesh, createRenderVertexBuffer mesh.vertices, createRenderIndexBuffer mesh.indices)
-
-let stream = new DataStream(64L, true, true)
+    meshes |> Array.map (fun (mesh, transform) ->
+        mesh, transform, createRenderVertexBuffer mesh.vertices, createRenderIndexBuffer mesh.indices)
 
 let projection = Matrix.PerspectiveFovLH(45.0f, float32 form.ClientSize.Width / float32 form.ClientSize.Height, 1.0f, 1000.0f)
-let view = Matrix.LookAtLH(Vector3(0.0f, 30.0f, 10.0f), Vector3(0.0f, 25.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f))
-let view_projection = Matrix.Multiply(view, projection)
+let view = Matrix.LookAtLH(Vector3(0.0f, 40.0f, 20.0f), Vector3(0.0f, 25.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f))
+let view_projection = view * projection
 
-stream.Write(view_projection)
-stream.Position <- 0L
-
-let constantBuffer = new Buffer(device, stream, BufferDescription(int stream.Length, ResourceUsage.Default, BindFlags.ConstantBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, 64))
+let constantBuffer = new Buffer(device, null, BufferDescription(128, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 128))
 
 let albedo_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_slavedriver_01.dds")
 let normal_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_slavedriver_01_nm.dds")
@@ -133,7 +128,12 @@ let draw (context: DeviceContext) =
     context.PixelShader.SetShaderResource(new ShaderResourceView(device, normal_map :> Resource), 1)
     context.PixelShader.SetShaderResource(new ShaderResourceView(device, specular_map :> Resource), 2)
 
-    for mesh, vb, ib in renderMeshes do
+    for mesh, transform, vb, ib in renderMeshes do
+        let box = context.MapSubresource(constantBuffer, 0, 128, MapMode.WriteDiscard, MapFlags.None)
+        box.Data.Write(view_projection)
+        box.Data.Write(transform)
+        context.UnmapSubresource(constantBuffer, 0)
+
         context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vb, 56, 0))
         context.InputAssembler.SetIndexBuffer(ib, Format.R32_UInt, 0)
         context.DrawIndexed(mesh.indices.Length, 0, 0)
