@@ -10,8 +10,7 @@ open Build.Geometry
 
 // regex active pattern matcher
 let private (|Regex|_|) pattern input =
-    let r = System.Text.RegularExpressions.Regex(pattern)
-    let m = r.Match(input)
+    let m = System.Text.RegularExpressions.Regex.Match(input, pattern)
     if m.Success && m.Groups.Count > 1 then
         Some m.Groups.[1].Value
     else
