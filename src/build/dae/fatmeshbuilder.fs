@@ -83,6 +83,40 @@ let private getVertexComponentData (doc: Document) comp id =
     | TexCoord _ -> getFloatArray doc id 2
     | _ -> [||]
 
+// build index buffer as (vertex remap, index buffer) pair
+let private buildIndexBuffer (indices: int array) index_stride =
+    let index_block_dummy = [|0..index_stride-1|]
+
+    // the remap stores a mapping from index blocks to indices; to avoid splicing the array, we provide a custom comparer
+    let index_block_comparer = { new IEqualityComparer<int> with
+        override x.Equals(lhs, rhs) =
+            let lofs = lhs * index_stride
+            let rofs = rhs * index_stride
+            index_block_dummy |> Array.forall (fun i -> indices.[lofs + i] = indices.[rofs + i])
+
+        override x.GetHashCode(obj) =
+            let ofs = obj * index_stride
+
+            let rec loop i acc =
+                if i = index_stride then acc
+                else loop (i + 1) (acc * 31 + indices.[ofs + i])
+
+            loop 0 0
+        }
+
+    let vertex_remap = Dictionary<int, int>(index_block_comparer)
+
+    let ib = Array.init (indices.Length / index_stride) (fun index_block ->
+        // add the block to dictionary, autogenerating index as necessary
+        match vertex_remap.TryGetValue(index_block) with
+        | true, index -> index
+        | false, _ ->
+            let index = vertex_remap.Count
+            vertex_remap.Add(index_block, index)
+            index)
+
+    vertex_remap, ib
+
 // build a single mesh
 let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNode) (material_instance: XmlNode) fvf =
     // get UV remap information
@@ -104,33 +138,24 @@ let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNo
     let indices = getIntArray (triangles.SelectSingleNode("p"))
     assert (indices.Length % index_stride = 0)
 
-    // create a mask which shows if a certain index is present in the target vertex
-    let index_mask = Array.init index_stride (fun i -> Array.tryFind (fun (comp, id, offset) -> i = offset) components |> Option.isSome)
+    // set indices that are not present in the target vertex to 0
+    for i in 0..index_stride-1 do
+        if Array.tryFind (fun (comp, id, offset) -> i = offset) components |> Option.isNone then
+            for idx in i..index_stride..indices.Length-1 do
+                indices.[idx] <- 0
 
     // create the index buffer
-    let vertex_remap = Dictionary<int array, int>(HashIdentity.Structural)
-
-    let ib = Array.init (indices.Length / index_stride) (fun i ->
-        // replace unused indices with 0
-        let index_block = Array.sub indices (i * index_stride) index_stride |> Array.mapi (fun idx offset -> if index_mask.[idx] then offset else 0)
-
-        // add the block to dictionary, autogenerating index as necessary
-        match vertex_remap.TryGetValue(index_block) with
-        | true, index -> index
-        | false, _ ->
-            let index = vertex_remap.Count
-            vertex_remap.Add(index_block, index)
-            index)
+    let vertex_remap, ib = buildIndexBuffer indices index_stride
 
     // create the vertex buffer
     let vb: FatVertex array = Array.zeroCreate vertex_remap.Count
 
     for kvp in vertex_remap do
-        let index_block = kvp.Key
+        let index_block_offset = kvp.Key * index_stride
         let index = kvp.Value
 
         for (comp, data, index_offset) in components do
-            let offset = index_block.[index_offset]
+            let offset = indices.[index_block_offset + index_offset]
 
             let add (arr: 'a array) idx value =
                 let length = if arr <> null then arr.Length else 0
