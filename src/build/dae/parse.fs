@@ -18,7 +18,7 @@ type Document(path: string) =
     let ids = Dictionary<string, XmlNode>()
     do
         // load the document without namespaces so that XPath works
-        use reader = { new XmlTextReader(path) with override x.NamespaceURI = "" }
+        use reader = new XmlTextReader(path, Namespaces = false)
         doc.Load(reader)
 
         // make id -> node mapping (ids should be unique)
