@@ -116,6 +116,36 @@ let private buildIndexBuffer (indices: int array) index_stride =
 
     vertex_remap, ib
 
+// build vertex buffer
+let private buildVertexBuffer (vertex_remap: Dictionary<int, int>) (indices: int array) index_stride (components: (FatVertexComponent * float32 array * int) array) =
+    let vb: FatVertex array = Array.zeroCreate vertex_remap.Count
+
+    for kvp in vertex_remap do
+        let index_block_offset = kvp.Key * index_stride
+        let index = kvp.Value
+
+        for (comp, data, index_offset) in components do
+            let offset = indices.[index_block_offset + index_offset]
+
+            let add (arr: 'a array) idx value =
+                let length = if arr <> null then arr.Length else 0
+                if length > idx then
+                    arr.[idx] <- value
+                    arr
+                else
+                    Array.init (idx + 1) (fun i -> if i < length then arr.[i] else if i = idx then value else Unchecked.defaultof<'a>)
+
+            match comp with
+            | Position -> vb.[index].position <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
+            | Tangent -> vb.[index].tangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
+            | Bitangent -> vb.[index].bitangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
+            | Normal -> vb.[index].normal <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
+            | Color n -> vb.[index].color <- add vb.[index].color n (Color4(data.[offset * 4 + 0], data.[offset * 4 + 1], data.[offset * 4 + 2], data.[offset * 4 + 3]))
+            | TexCoord n -> vb.[index].texcoord <- add vb.[index].texcoord n (Vector2(data.[offset * 2 + 0], 1.0f - data.[offset * 2 + 1]))
+            | _ -> failwith "Unknown vertex component"
+
+    vb
+
 // build a single mesh
 let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNode) (material_instance: XmlNode) fvf =
     // get UV remap information
@@ -147,31 +177,7 @@ let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNo
     let vertex_remap, ib = buildIndexBuffer indices index_stride
 
     // create the vertex buffer
-    let vb: FatVertex array = Array.zeroCreate vertex_remap.Count
-
-    for kvp in vertex_remap do
-        let index_block_offset = kvp.Key * index_stride
-        let index = kvp.Value
-
-        for (comp, data, index_offset) in components do
-            let offset = indices.[index_block_offset + index_offset]
-
-            let add (arr: 'a array) idx value =
-                let length = if arr <> null then arr.Length else 0
-                if length > idx then
-                    arr.[idx] <- value
-                    arr
-                else
-                    Array.init (idx + 1) (fun i -> if i < length then arr.[i] else if i = idx then value else Unchecked.defaultof<'a>)
-
-            match comp with
-            | Position -> vb.[index].position <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
-            | Tangent -> vb.[index].tangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
-            | Bitangent -> vb.[index].bitangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
-            | Normal -> vb.[index].normal <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
-            | Color n -> vb.[index].color <- add vb.[index].color n (Color4(data.[offset * 4 + 0], data.[offset * 4 + 1], data.[offset * 4 + 2], data.[offset * 4 + 3]))
-            | TexCoord n -> vb.[index].texcoord <- add vb.[index].texcoord n (Vector2(data.[offset * 2 + 0], 1.0f - data.[offset * 2 + 1]))
-            | _ -> failwith "Unknown vertex component"
+    let vb = buildVertexBuffer vertex_remap indices index_stride components
 
     { new FatMesh with vertices = vb and indices = ib }
 
