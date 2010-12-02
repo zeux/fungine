@@ -58,8 +58,8 @@ let private getVertexComponents inputs uv_remap fvf =
             | "POSITION", 0 -> Some Position
             | "NORMAL", 0 -> Some Normal
             | "COLOR", n -> Some (Color n)
-            | "TEXTANGENT", tbn_set -> Some Tangent
-            | "TEXBINORMAL", tbn_set -> Some Bitangent
+            | "TEXTANGENT", n when n = tbn_set -> Some Tangent
+            | "TEXBINORMAL", n when n = tbn_set -> Some Bitangent
             | "TEXCOORD", n -> uv_remap |> Map.tryPick (fun uv set -> if set = n then Some (TexCoord uv) else None)
             | _ -> None
 
