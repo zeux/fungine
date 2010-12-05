@@ -80,7 +80,7 @@ let createRenderVertexBuffer (vertices: Build.Geometry.FatVertex array) =
         stream.Write(v.normal)
         stream.Write(v.tangent)
         stream.Write(v.bitangent)
-        stream.Write(v.texcoord.[0])
+        stream.Write(if v.texcoord <> null then v.texcoord.[0] else Vector2(0.f, 0.f))
 
     stream.Position <- 0L
 
@@ -98,8 +98,8 @@ let renderMeshes =
     meshes |> Array.map (fun (mesh, transform) ->
         mesh, transform, createRenderVertexBuffer mesh.vertices, createRenderIndexBuffer mesh.indices)
 
-let projection = Matrix.PerspectiveFovLH(45.0f, float32 form.ClientSize.Width / float32 form.ClientSize.Height, 1.0f, 1000.0f)
-let view = Matrix.LookAtLH(Vector3(0.0f, 40.0f, 20.0f), Vector3(0.0f, 25.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f))
+let projection = Matrix.PerspectiveFovLH(45.f, float32 form.ClientSize.Width / float32 form.ClientSize.Height, 1.f, 1000.f)
+let view = Matrix.LookAtLH(Vector3(0.f, 30.f, 25.f), Vector3(0.f, 25.f, 0.f), Vector3(0.f, 1.f, 0.f)) * Matrix.Scaling(-1.f, 1.f, 1.f)
 let view_projection = view * projection
 
 let constantBuffer = new Buffer(device, null, BufferDescription(128, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 128))
@@ -111,9 +111,10 @@ let specular_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_s
 let contextHolder = new ObjectPool(fun _ -> new DeviceContext(device))
 
 let draw (context: DeviceContext) =
-    context.Rasterizer.SetViewports(new Viewport(0.0f, 0.0f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
+    context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
     context.OutputMerger.SetTargets(depthBufferView, backBufferView)
     context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.Less))
+    context.Rasterizer.State <- RasterizerState.FromDescription(device, RasterizerStateDescription(CullMode = CullMode.Back, FillMode = FillMode.Solid, IsFrontCounterclockwise = true))
 
     context.InputAssembler.InputLayout <- layout
     context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
@@ -143,7 +144,7 @@ let draw (context: DeviceContext) =
 MessagePump.Run(form, fun () ->
 
     device.ImmediateContext.ClearRenderTargetView(backBufferView, Color4 Color.Black)
-    device.ImmediateContext.ClearDepthStencilView(depthBufferView, DepthStencilClearFlags.Depth, 1.0f, 0uy)
+    device.ImmediateContext.ClearDepthStencilView(depthBufferView, DepthStencilClearFlags.Depth, 1.f, 0uy)
 
     let context = contextHolder.get()
     use cl = draw context
