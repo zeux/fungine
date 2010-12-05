@@ -1,7 +1,5 @@
 ﻿namespace Build.Geometry
 
-open SlimDX
-
 type FatVertexComponent =
     | Position
     | Tangent

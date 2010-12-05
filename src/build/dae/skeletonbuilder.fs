@@ -2,7 +2,6 @@
 
 open System.Xml
 open System.Collections.Generic
-open SlimDX
 open Build.Dae.Parse
 
 type Skeleton =

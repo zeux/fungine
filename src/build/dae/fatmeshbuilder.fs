@@ -3,8 +3,6 @@
 open System.Collections.Generic
 open System.Xml
 
-open SlimDX
-
 open Build.Dae.Parse
 open Build.Geometry
 
