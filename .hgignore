@@ -1,5 +1,8 @@
 syntax:regexp
 
+# art (temporary, should be an external repo?)
+^art/
+
 # build artifacts
 ^\.build/
 ^bin/.*\.(dll|exe|pdb)$
