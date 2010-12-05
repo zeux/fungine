@@ -5,16 +5,9 @@ open System.Collections.Generic
 open Build.Dae.Parse
 
 type Skeleton =
-    { transforms: Matrix array
-      parents: int array
+    { data: Render.Skeleton
       id_map: IDictionary<string, int>
       sid_map: IDictionary<string, int> }
-    member x.LocalTransform index = x.transforms.[index]
-    member x.AbsoluteTransform index =
-        if x.parents.[index] = -1 then
-            x.LocalTransform index
-        else
-            (x.LocalTransform index) * (x.AbsoluteTransform x.parents.[index])
 
 module SkeletonBuilder =
     let private getNodeTransformComponent (comp: XmlNode) =
@@ -60,4 +53,4 @@ module SkeletonBuilder =
                 -1)
 
         // build skeleton object
-        { new Skeleton with transforms = transforms and parents = parents and id_map = id_map and sid_map = sid_map }
+        { new Skeleton with data = Render.Skeleton(transforms, parents) and id_map = id_map and sid_map = sid_map }

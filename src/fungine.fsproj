@@ -37,6 +37,7 @@
   <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <ItemGroup>
     <Compile Include="math\types.fs" />
+    <Compile Include="render\skeleton.fs" />
     <Compile Include="build\geometry\fatmesh.fs" />
     <Compile Include="build\dae\parse.fs" />
     <Compile Include="build\dae\export.fs" />
