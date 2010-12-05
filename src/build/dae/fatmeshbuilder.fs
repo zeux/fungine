@@ -145,7 +145,7 @@ let private buildVertexBuffer (vertex_remap: Dictionary<int, int>) (indices: int
     vb
 
 // build a single mesh
-let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNode) (material_instance: XmlNode) fvf =
+let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNode) (material_instance: XmlNode) fvf skin =
     // get UV remap information
     let uv_remap = getUVRemap material_instance
 
@@ -180,11 +180,14 @@ let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNo
     { new FatMesh with vertices = vb and indices = ib }
 
 // build all meshes for <instance_controller> or <instance_geometry> node
-let build (doc: Document) (instance: XmlNode) =
+let build (doc: Document) (instance: XmlNode) skeleton =
     // get controller and shape nodes
     let instance_url = instance.Attribute "url"
     let controller = if instance.Name = "instance_controller" then doc.Node instance_url else null
     let geometry = doc.Node (if controller <> null then controller.SelectSingleNode("skin/@source").Value else instance_url)
+
+    // get skin data
+    let skin = if controller <> null then Some (Build.Dae.SkinBuilder.build doc controller skeleton) else None
 
     // get material instances
     let material_instances = instance.Select("bind_material/technique_common/instance_material")
@@ -193,4 +196,4 @@ let build (doc: Document) (instance: XmlNode) =
     let fvf = [|Position; Tangent; Bitangent; Normal; TexCoord 0; SkinningInfo 4|]
 
     // build meshes
-    Array.map (fun mi -> buildInternal doc geometry controller mi fvf) material_instances
+    Array.map (fun mi -> buildInternal doc geometry controller mi fvf skeleton) material_instances

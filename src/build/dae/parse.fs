@@ -151,3 +151,21 @@ let getFloatArray (doc: Document) id stride =
 // parse node contents as an integer array
 let getIntArray (node: XmlNode) =
     parseIntArray node.InnerText
+
+// parse <source> with the given id as a name array
+let getNameArray (doc: Document) id =
+    let source = doc.Node id
+
+    // get accessor (we ignore the accessor attributes
+    let accessor = source.SelectSingleNode("technique_common/accessor")
+    assert (accessor.Attribute "stride" = "1")
+
+    // get the <Name_array> node
+    let array = doc.Node (accessor.Attribute "source")
+    assert(array.Attribute "count" = accessor.Attribute "count")
+
+    // parse whitespace-delimited string
+    let result = splitWhitespace array.InnerText
+    assert(result.Length = int (array.Attribute "count"))
+
+    result
