@@ -32,7 +32,10 @@ let buildMesh source =
     build source target Build.Dae.Export.build
 
     // parse .dae file
+    let timer = System.Diagnostics.Stopwatch.StartNew()
+
     let doc = Document(target)
+    let time1 = timer.ElapsedMilliseconds
 
     // export textures
     let nodes = doc.Root.SelectNodes("/COLLADA/library_images/image/init_from/text()")
@@ -40,10 +43,19 @@ let buildMesh source =
         let path = System.Uri.UnescapeDataString(System.UriBuilder(n.Value).Path)
         let relative_path = relativePath path (System.Environment.CurrentDirectory + "/")
         buildTexture relative_path
+    let time2 = timer.ElapsedMilliseconds
+
+    // export skeleton
+    let skeleton = Build.Dae.SkeletonBuilder.build doc
+    let time3 = timer.ElapsedMilliseconds
 
     // export meshes
     let instances = doc.Root.Select("/COLLADA/library_visual_scenes//node/instance_geometry | /COLLADA/library_visual_scenes//node/instance_controller")
-    let meshes = instances |> Array.collect (fun i -> (Build.Dae.FatMeshBuilder.build doc i) |> Array.map (fun mesh -> mesh, Build.Dae.SkeletonBuilder.getNodeTransformAbsolute i.ParentNode))
+    let meshes = instances |> Array.collect (fun i -> (Build.Dae.FatMeshBuilder.build doc i) |> Array.map (fun mesh -> mesh, skeleton.AbsoluteTransform skeleton.id_map.[i.ParentNode.Attribute "id"]))
+
+    let time4 = timer.ElapsedMilliseconds
+
+    printfn "parse / export tex / skeleton / mesh %d / %d / %d / %d" time1 (time2 - time1) (time3 - time2) (time4 - time3)
 
     meshes
     
