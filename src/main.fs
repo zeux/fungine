@@ -63,28 +63,43 @@ let depthBufferView = new DepthStencilView(device, depthBuffer)
 
 let basic_textured = Effect(device, "src/shaders/basic_textured.hlsl")
 
+let vertex_size = 88
+
 let layout = new InputLayout(device, basic_textured.VertexSignature,
                 [|
-                InputElement("POSITION", 0, Format.R32G32B32_Float, 0, 0);
-                InputElement("NORMAL", 0, Format.R32G32B32_Float, 12, 0);
-                InputElement("TANGENT", 0, Format.R32G32B32_Float, 24, 0);
-                InputElement("BITANGENT", 0, Format.R32G32B32_Float, 36, 0);
-                InputElement("TEXCOORD", 0, Format.R32G32_Float, 48, 0) 
+                InputElement("POSITION", 0, Format.R32G32B32_Float, 0, 0)
+                InputElement("NORMAL", 0, Format.R32G32B32_Float, 12, 0)
+                InputElement("TANGENT", 0, Format.R32G32B32_Float, 24, 0)
+                InputElement("BITANGENT", 0, Format.R32G32B32_Float, 36, 0)
+                InputElement("TEXCOORD", 0, Format.R32G32_Float, 48, 0)
+                InputElement("BONEINDICES", 0, Format.R32G32B32A32_UInt, 56, 0)
+                InputElement("BONEWEIGHTS", 0, Format.R32G32B32A32_Float, 72, 0)
                 |])
 
 let createRenderVertexBuffer (vertices: Build.Geometry.FatVertex array) =
-    let stream = new DataStream(56L * vertices.LongLength, true, true)
+    let stream = new DataStream((int64 vertex_size) * vertices.LongLength, true, true)
 
     for v in vertices do
         stream.Write(v.position)
         stream.Write(v.normal)
         stream.Write(v.tangent)
         stream.Write(v.bitangent)
-        stream.Write(if v.texcoord <> null then v.texcoord.[0] else Vector2(0.f, 0.f))
+        stream.Write(if v.texcoord <> null then v.texcoord.[0] else Vector2())
+
+        let bone_indices : int array = Array.zeroCreate 4
+        let bone_weights : float32 array = Array.zeroCreate 4
+
+        if v.bones <> null then
+            v.bones |> Array.iteri (fun index bone ->
+                bone_indices.[index] <- bone.index
+                bone_weights.[index] <- bone.weight)
+
+        stream.WriteRange(bone_indices)
+        stream.WriteRange(bone_weights)
 
     stream.Position <- 0L
 
-    new Buffer(device, stream, BufferDescription(int stream.Length, ResourceUsage.Default, BindFlags.VertexBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, 56))
+    new Buffer(device, stream, BufferDescription(int stream.Length, ResourceUsage.Default, BindFlags.VertexBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, vertex_size))
 
 let createRenderIndexBuffer (indices: int array) =
     let stream = new DataStream(4L * indices.LongLength, true, true)
@@ -135,7 +150,7 @@ let draw (context: DeviceContext) =
         box.Data.Write(transform)
         context.UnmapSubresource(constantBuffer, 0)
 
-        context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vb, 56, 0))
+        context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vb, vertex_size, 0))
         context.InputAssembler.SetIndexBuffer(ib, Format.R32_UInt, 0)
         context.DrawIndexed(mesh.indices.Length, 0, 0)
 

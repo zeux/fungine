@@ -115,7 +115,7 @@ let private buildIndexBuffer (indices: int array) index_stride =
     vertex_remap, ib
 
 // build vertex buffer
-let private buildVertexBuffer (vertex_remap: Dictionary<int, int>) (indices: int array) index_stride (components: (FatVertexComponent * float32 array * int) array) =
+let private buildVertexBuffer (vertex_remap: Dictionary<int, int>) (indices: int array) index_stride (components: (FatVertexComponent * float32 array * int) array) (skin: Skin option) =
     let vb: FatVertex array = Array.zeroCreate vertex_remap.Count
 
     for kvp in vertex_remap do
@@ -140,6 +140,7 @@ let private buildVertexBuffer (vertex_remap: Dictionary<int, int>) (indices: int
             | Normal -> vb.[index].normal <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
             | Color n -> vb.[index].color <- add vb.[index].color n (Color4(data.[offset * 4 + 0], data.[offset * 4 + 1], data.[offset * 4 + 2], data.[offset * 4 + 3]))
             | TexCoord n -> vb.[index].texcoord <- add vb.[index].texcoord n (Vector2(data.[offset * 2 + 0], 1.0f - data.[offset * 2 + 1]))
+            | SkinningInfo _ when skin.IsSome -> vb.[index].bones <- skin.Value.vertices.[offset]
             | _ -> failwith "Unknown vertex component"
 
     vb
@@ -159,7 +160,17 @@ let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNo
     let index_stride = 1 + (inputs |> Array.map (fun (semantics, set, id, offset) -> offset) |> Array.max)
 
     // get components
-    let components = getVertexComponents inputs uv_remap fvf |> Array.map (fun (comp, id, offset) -> comp, (getVertexComponentData doc comp id), offset)
+    let static_components = getVertexComponents inputs uv_remap fvf |> Array.map (fun (comp, id, offset) -> comp, (getVertexComponentData doc comp id), offset)
+    let skinned_components =
+        if Option.isSome skin then
+            let _, _, position_offset = static_components |> Array.find (fun (comp, data, offset) -> comp = Position)
+            let skinning_info = fvf |> Array.find (fun comp -> match comp with SkinningInfo _ -> true | _ -> false)
+
+            Array.create 1 (skinning_info, [||], position_offset)
+        else
+            [||]
+
+    let components = Array.append static_components skinned_components
 
     // get indices
     let indices = getIntArray (triangles.SelectSingleNode("p"))
@@ -175,7 +186,7 @@ let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNo
     let vertex_remap, ib = buildIndexBuffer indices index_stride
 
     // create the vertex buffer
-    let vb = buildVertexBuffer vertex_remap indices index_stride components
+    let vb = buildVertexBuffer vertex_remap indices index_stride components skin
 
     { new FatMesh with vertices = vb and indices = ib and skin = None }
 
