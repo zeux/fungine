@@ -55,7 +55,7 @@ let buildMesh source =
 
     // export meshes
     let instances = doc.Root.Select("/COLLADA/library_visual_scenes//node/instance_geometry | /COLLADA/library_visual_scenes//node/instance_controller")
-    let meshes = instances |> Array.collect (fun i -> (Build.Dae.FatMeshBuilder.build doc i fvf skeleton) |> Array.map (fun mesh -> mesh, skeleton.data.AbsoluteTransform skeleton.id_map.[i.ParentNode.Attribute "id"]))
+    let meshes = instances |> Array.collect (fun i -> (Build.Dae.FatMeshBuilder.build doc i fvf skeleton) |> Array.map (fun mesh -> mesh, skeleton.data, skeleton.data.AbsoluteTransform skeleton.id_map.[i.ParentNode.Attribute "id"]))
 
     let time4 = timer.ElapsedMilliseconds
 

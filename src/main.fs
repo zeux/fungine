@@ -89,6 +89,9 @@ let createRenderVertexBuffer (vertices: Build.Geometry.FatVertex array) =
         let bone_indices : int array = Array.zeroCreate 4
         let bone_weights : float32 array = Array.zeroCreate 4
 
+        // hack for non-skinned objects
+        bone_weights.[0] <- 1.f
+
         if v.bones <> null then
             v.bones |> Array.iteri (fun index bone ->
                 bone_indices.[index] <- bone.index
@@ -110,14 +113,14 @@ let createRenderIndexBuffer (indices: int array) =
     new Buffer(device, stream, BufferDescription(int stream.Length, ResourceUsage.Default, BindFlags.IndexBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, 4))
 
 let renderMeshes =
-    meshes |> Array.map (fun (mesh, transform) ->
-        mesh, transform, createRenderVertexBuffer mesh.vertices, createRenderIndexBuffer mesh.indices)
+    meshes |> Array.map (fun (mesh, skeleton, transform) ->
+        mesh, skeleton, transform, createRenderVertexBuffer mesh.vertices, createRenderIndexBuffer mesh.indices)
 
 let projection = Matrix.PerspectiveFovLH(45.f, float32 form.ClientSize.Width / float32 form.ClientSize.Height, 1.f, 1000.f)
 let view = Matrix.LookAtLH(Vector3(0.f, 30.f, 25.f), Vector3(0.f, 25.f, 0.f), Vector3(0.f, 1.f, 0.f)) * Matrix.Scaling(-1.f, 1.f, 1.f)
 let view_projection = view * projection
 
-let constantBuffer = new Buffer(device, null, BufferDescription(128, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 128))
+let constantBuffer = new Buffer(device, null, BufferDescription(16448, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 16448))
 
 let albedo_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_slavedriver_01.dds")
 let normal_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_slavedriver_01_nm.dds")
@@ -144,10 +147,13 @@ let draw (context: DeviceContext) =
     context.PixelShader.SetShaderResource(new ShaderResourceView(device, normal_map :> Resource), 1)
     context.PixelShader.SetShaderResource(new ShaderResourceView(device, specular_map :> Resource), 2)
 
-    for mesh, transform, vb, ib in renderMeshes do
-        let box = context.MapSubresource(constantBuffer, 0, 128, MapMode.WriteDiscard, MapFlags.None)
+    for mesh, skeleton, transform, vb, ib in renderMeshes do
+        let box = context.MapSubresource(constantBuffer, 0, constantBuffer.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
         box.Data.Write(view_projection)
-        box.Data.Write(transform)
+        if mesh.skin.IsSome then
+            box.Data.WriteRange(mesh.skin.Value.ComputeBoneTransforms skeleton)
+        else
+            box.Data.Write(transform)
         context.UnmapSubresource(constantBuffer, 0)
 
         context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vb, vertex_size, 0))

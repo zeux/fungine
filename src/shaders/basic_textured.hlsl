@@ -1,5 +1,5 @@
 float4x4 view_projection: register(c0);
-float4x4 world: register(c4);
+float4x4 bones[256]: register(c4);
 
 SamplerState default_sampler;
 
@@ -14,6 +14,8 @@ struct VS_IN
     float3 bitangent: BITANGENT;
     float3 normal: NORMAL;
 	float2 uv0: TEXCOORD0;
+    uint4 bone_indices: BONEINDICES;
+    float4 bone_weights: BONEWEIGHTS;
 };
 
 struct PS_IN
@@ -31,7 +33,16 @@ PS_IN vs_main(VS_IN I)
 {
 	PS_IN O;
 	
+#if 0
     float4 pos_ws = mul(I.pos, world);
+#else
+    float4 pos_ws = 0;
+
+    [unroll] for (int i = 0; i < 4; ++i)
+    {
+        pos_ws += mul(I.pos, bones[I.bone_indices[i]]) * I.bone_weights[i];
+    }
+#endif
 
 	O.pos = mul(pos_ws, view_projection);
 

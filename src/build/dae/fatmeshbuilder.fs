@@ -188,7 +188,7 @@ let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNo
     // create the vertex buffer
     let vb = buildVertexBuffer vertex_remap indices index_stride components skin
 
-    { new FatMesh with vertices = vb and indices = ib and skin = None }
+    { new FatMesh with vertices = vb and indices = ib and skin = if skin.IsSome then Some skin.Value.binding else None }
 
 // build all meshes for <instance_controller> or <instance_geometry> node
 let build (doc: Document) (instance: XmlNode) fvf skeleton =
