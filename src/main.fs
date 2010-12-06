@@ -117,7 +117,7 @@ let renderMeshes =
         mesh, skeleton, transform, createRenderVertexBuffer mesh.vertices, createRenderIndexBuffer mesh.indices)
 
 let projection = Matrix.PerspectiveFovLH(45.f, float32 form.ClientSize.Width / float32 form.ClientSize.Height, 1.f, 1000.f)
-let view = Matrix.LookAtLH(Vector3(0.f, 30.f, 25.f), Vector3(0.f, 25.f, 0.f), Vector3(0.f, 1.f, 0.f)) * Matrix.Scaling(-1.f, 1.f, 1.f)
+let view = Matrix.LookAtLH(Vector3(0.f, 20.f, 35.f), Vector3(0.f, 15.f, 0.f), Vector3(0.f, 1.f, 0.f)) * Matrix.Scaling(-1.f, 1.f, 1.f)
 let view_projection = view * projection
 
 let constantBuffer = new Buffer(device, null, BufferDescription(16448, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 16448))
@@ -141,24 +141,37 @@ let draw (context: DeviceContext) =
     context.PixelShader.Set(basic_textured.PixelShader)
 
     context.VertexShader.SetConstantBuffer(constantBuffer, 0)
-    context.PixelShader.SetSampler(SamplerState.FromDescription(device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = Filter.Anisotropic)), 0)
+    context.PixelShader.SetSampler(SamplerState.FromDescription(device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = Filter.Anisotropic, MaximumAnisotropy = 16)), 0)
 
     context.PixelShader.SetShaderResource(new ShaderResourceView(device, albedo_map :> Resource), 0)
     context.PixelShader.SetShaderResource(new ShaderResourceView(device, normal_map :> Resource), 1)
     context.PixelShader.SetShaderResource(new ShaderResourceView(device, specular_map :> Resource), 2)
 
-    for mesh, skeleton, transform, vb, ib in renderMeshes do
-        let box = context.MapSubresource(constantBuffer, 0, constantBuffer.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
-        box.Data.Write(view_projection)
-        if mesh.skin.IsSome then
-            box.Data.WriteRange(mesh.skin.Value.ComputeBoneTransforms skeleton)
-        else
-            box.Data.Write(transform)
-        context.UnmapSubresource(constantBuffer, 0)
+    let drawSingle offset =
+        for mesh, skeleton, transform, vb, ib in renderMeshes do
+            let box = context.MapSubresource(constantBuffer, 0, constantBuffer.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
+            box.Data.Write(view_projection)
+            if mesh.skin.IsSome then
+                box.Data.WriteRange(mesh.skin.Value.ComputeBoneTransforms skeleton |> Array.map (fun m -> m * offset))
+            else
+                box.Data.Write(transform * offset)
+            context.UnmapSubresource(constantBuffer, 0)
 
-        context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vb, vertex_size, 0))
-        context.InputAssembler.SetIndexBuffer(ib, Format.R32_UInt, 0)
-        context.DrawIndexed(mesh.indices.Length, 0, 0)
+            context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vb, vertex_size, 0))
+            context.InputAssembler.SetIndexBuffer(ib, Format.R32_UInt, 0)
+            context.DrawIndexed(mesh.indices.Length, 0, 0)
+
+    if true then
+        drawSingle Matrix.Identity
+    else
+        let rng = System.Random(123456789)
+
+        for i in 0..1000 do
+            let x = -20.f + 40.f * float32 (rng.NextDouble())
+            let y = -25.f + 40.f * float32 (rng.NextDouble())
+            let offset = Matrix.Scaling(0.1f, 0.1f, 0.1f) * Matrix.Translation(x, 7.f, y)
+
+            drawSingle offset
 
     context.FinishCommandList(false)
 
