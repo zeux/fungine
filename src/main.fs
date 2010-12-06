@@ -50,7 +50,7 @@ let desc = new SwapChainDescription(
             Usage = Usage.RenderTargetOutput
             )
 
-let (_, device, swapChain) = Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.Debug, desc)
+let (_, device, swapChain) = Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.None, desc)
 
 let factory = swapChain.GetParent<Factory>()
 factory.SetWindowAssociation(form.Handle, WindowAssociationFlags.IgnoreAll) |> ignore
@@ -120,7 +120,8 @@ let projection = Matrix.PerspectiveFovLH(45.f, float32 form.ClientSize.Width / f
 let view = Matrix.LookAtLH(Vector3(0.f, 20.f, 35.f), Vector3(0.f, 15.f, 0.f), Vector3(0.f, 1.f, 0.f)) * Matrix.Scaling(-1.f, 1.f, 1.f)
 let view_projection = view * projection
 
-let constantBuffer = new Buffer(device, null, BufferDescription(16448, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 16448))
+let constantBuffer0 = new Buffer(device, null, BufferDescription(16448, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 16448))
+let constantBuffer1 = new Buffer(device, null, BufferDescription(65536, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 65536))
 
 let albedo_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_slavedriver_01.dds")
 let normal_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_slavedriver_01_nm.dds")
@@ -140,38 +141,43 @@ let draw (context: DeviceContext) =
     context.VertexShader.Set(basic_textured.VertexShader)
     context.PixelShader.Set(basic_textured.PixelShader)
 
-    context.VertexShader.SetConstantBuffer(constantBuffer, 0)
+    context.VertexShader.SetConstantBuffer(constantBuffer0, 0)
+    context.VertexShader.SetConstantBuffer(constantBuffer1, 1)
     context.PixelShader.SetSampler(SamplerState.FromDescription(device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = Filter.Anisotropic, MaximumAnisotropy = 16)), 0)
 
     context.PixelShader.SetShaderResource(new ShaderResourceView(device, albedo_map :> Resource), 0)
     context.PixelShader.SetShaderResource(new ShaderResourceView(device, normal_map :> Resource), 1)
     context.PixelShader.SetShaderResource(new ShaderResourceView(device, specular_map :> Resource), 2)
 
-    let drawSingle offset =
+    let drawInstanced offsets =
+        let box = context.MapSubresource(constantBuffer1, 0, constantBuffer1.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
+        box.Data.WriteRange(offsets)
+        context.UnmapSubresource(constantBuffer1, 0)
+
         for mesh, skeleton, transform, vb, ib in renderMeshes do
-            let box = context.MapSubresource(constantBuffer, 0, constantBuffer.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
+            let box = context.MapSubresource(constantBuffer0, 0, constantBuffer0.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
             box.Data.Write(view_projection)
             if mesh.skin.IsSome then
-                box.Data.WriteRange(mesh.skin.Value.ComputeBoneTransforms skeleton |> Array.map (fun m -> m * offset))
+                box.Data.WriteRange(mesh.skin.Value.ComputeBoneTransforms skeleton)
             else
-                box.Data.Write(transform * offset)
-            context.UnmapSubresource(constantBuffer, 0)
+                box.Data.Write(transform)
+            context.UnmapSubresource(constantBuffer0, 0)
 
             context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vb, vertex_size, 0))
             context.InputAssembler.SetIndexBuffer(ib, Format.R32_UInt, 0)
-            context.DrawIndexed(mesh.indices.Length, 0, 0)
+            context.DrawIndexedInstanced(mesh.indices.Length, offsets.Length, 0, 0, 0)
 
-    if true then
-        drawSingle Matrix.Identity
+    if false then
+        drawInstanced [| Matrix.Identity |]
     else
         let rng = System.Random(123456789)
 
-        for i in 0..1000 do
+        let offsets = [|0..1000|] |> Array.map (fun _ ->
             let x = -20.f + 40.f * float32 (rng.NextDouble())
             let y = -25.f + 40.f * float32 (rng.NextDouble())
-            let offset = Matrix.Scaling(0.1f, 0.1f, 0.1f) * Matrix.Translation(x, 7.f, y)
+            Matrix.Scaling(0.1f, 0.1f, 0.1f) * Matrix.Translation(x, 7.f, y))
 
-            drawSingle offset
+        drawInstanced offsets
 
     context.FinishCommandList(false)
 

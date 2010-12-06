@@ -1,5 +1,13 @@
-float4x4 view_projection: register(c0);
-float4x4 bones[256]: register(c4);
+cbuffer c0: register(cb0)
+{
+    float4x4 view_projection: register(c0);
+    float4x4 bones[256]: register(c4);
+}
+
+cbuffer c1: register(cb1)
+{
+    float4x4 offsets[1024];
+}
 
 SamplerState default_sampler;
 
@@ -29,20 +37,18 @@ struct PS_IN
 	float2 uv0: TEXCOORD0;
 };
 
-PS_IN vs_main(VS_IN I)
+PS_IN vs_main(VS_IN I, uint instance: SV_InstanceId)
 {
 	PS_IN O;
 	
-#if 0
-    float4 pos_ws = mul(I.pos, world);
-#else
-    float4 pos_ws = 0;
+    float4 pos_ls = 0;
 
     [unroll] for (int i = 0; i < 4; ++i)
     {
-        pos_ws += mul(I.pos, bones[I.bone_indices[i]]) * I.bone_weights[i];
+        pos_ls += mul(I.pos, bones[I.bone_indices[i]]) * I.bone_weights[i];
     }
-#endif
+
+    float4 pos_ws = mul(pos_ls, offsets[instance]);
 
 	O.pos = mul(pos_ws, view_projection);
 
@@ -58,7 +64,7 @@ PS_IN vs_main(VS_IN I)
 float4 ps_main(PS_IN I): SV_Target
 {
     float3 normal_ts = normal_map.Sample(default_sampler, I.uv0) * 2 - 1;
-    float3 normal = normal_ts.x * I.tangent + normal_ts.y * I.bitangent + normal_ts.z * I.normal;
+    float3 normal = normalize(normal_ts.x * I.tangent + normal_ts.y * I.bitangent + normal_ts.z * I.normal);
 
     float4 albedo = albedo_map.Sample(default_sampler, I.uv0);
 
@@ -69,7 +75,7 @@ float4 ps_main(PS_IN I): SV_Target
     float3 light = normalize(float3(0, 1, 1));
     float diffuse = saturate(dot(normal, light) * 0.5 + 0.5);
 
-    float3 view = normalize(float3(0, 30, 10) - I.pos_ws);
+    float3 view = normalize(float3(0, 20, 35) - I.pos_ws);
     float3 reflected = reflect(-view, normal);
 
     float3 specular = spec * pow(saturate(dot(reflected, light)), 20);
