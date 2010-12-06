@@ -3,8 +3,9 @@
 open System.Xml
 open System.Collections.Generic
 open Build.Dae.Parse
+open Build.Geometry
 
-type SkinVertex = Build.Geometry.BoneInfluence array
+type SkinVertex = BoneInfluence array
 
 type Skin =
     { binding: Render.SkinBinding
@@ -30,7 +31,18 @@ module SkinBuilder =
 
         Render.SkinBinding(bones, inv_bind_pose)
 
-    let private buildVertexWeights doc (skin: XmlNode) =
+    let private normalizeWeights (weights: BoneInfluence array) max_weights =
+        // get at most max_weights largest weights
+        let sorted_weights = weights |> Array.sortBy (fun i -> -i.weight)
+        let important_weights = Array.sub sorted_weights 0 (min weights.Length max_weights)
+
+        // normalize weights
+        let total_weight = important_weights |> Array.sumBy (fun i -> i.weight)
+        let inv_total_weight = if total_weight > 0.f then 1.f / total_weight else 1.f
+
+        important_weights |> Array.map (fun i -> BoneInfluence(index = i.index, weight = i.weight / total_weight))
+
+    let private buildVertexWeights doc (skin: XmlNode) max_weights =
         // get vertex weights node (should be unique)
         let vertex_weights = skin.SelectSingleNode "vertex_weights"
 
@@ -58,14 +70,19 @@ module SkinBuilder =
 
         // build vertex data
         Array.map2 (fun offset count ->
-            [|0..count-1|] |> Array.map (fun index ->
+            // get basic weights, as stored in .dae
+            let weights = [|0..count-1|] |> Array.map (fun index ->
                 let influence_offset = offset + index * v_stride
                 let bone_index = v_data.[influence_offset + vertex_joint_offset]
                 let weight_index = v_data.[influence_offset + vertex_weight_offset]
-                Build.Geometry.BoneInfluence(index = bone_index, weight = vertex_weight_data.[weight_index]))
+
+                BoneInfluence(index = bone_index, weight = vertex_weight_data.[weight_index]))
+
+            // sort, cut excessive weights and normalize
+            normalizeWeights weights max_weights
         ) voffset vcount_data
 
-    let build doc (controller: XmlNode) skeleton =
+    let build doc (controller: XmlNode) skeleton max_weights =
         // get controller skin (should be unique)
         let skin = controller.SelectSingleNode "skin"
 
@@ -73,6 +90,6 @@ module SkinBuilder =
         let binding = buildBinding doc skin skeleton
 
         // parse vertex binding
-        let vertices = buildVertexWeights doc skin
+        let vertices = buildVertexWeights doc skin max_weights
 
         { new Skin with binding = binding and vertices = vertices }

@@ -177,23 +177,23 @@ let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNo
     // create the vertex buffer
     let vb = buildVertexBuffer vertex_remap indices index_stride components
 
-    { new FatMesh with vertices = vb and indices = ib }
+    { new FatMesh with vertices = vb and indices = ib and skin = None }
 
 // build all meshes for <instance_controller> or <instance_geometry> node
-let build (doc: Document) (instance: XmlNode) skeleton =
+let build (doc: Document) (instance: XmlNode) fvf skeleton =
     // get controller and shape nodes
     let instance_url = instance.Attribute "url"
     let controller = if instance.Name = "instance_controller" then doc.Node instance_url else null
     let geometry = doc.Node (if controller <> null then controller.SelectSingleNode("skin/@source").Value else instance_url)
 
-    // get skin data
-    let skin = if controller <> null then Some (Build.Dae.SkinBuilder.build doc controller skeleton) else None
+    // get skin data (if we have controller and we need skinning info)
+    let skin = Array.tryPick (fun comp ->
+        match comp with
+        | SkinningInfo n when controller <> null -> Some (Build.Dae.SkinBuilder.build doc controller skeleton n)
+        | _ -> None) fvf
 
     // get material instances
     let material_instances = instance.Select("bind_material/technique_common/instance_material")
 
-    // use a constant FVF for now
-    let fvf = [|Position; Tangent; Bitangent; Normal; TexCoord 0; SkinningInfo 4|]
-
     // build meshes
-    Array.map (fun mi -> buildInternal doc geometry controller mi fvf skeleton) material_instances
+    Array.map (fun mi -> buildInternal doc geometry controller mi fvf skin) material_instances

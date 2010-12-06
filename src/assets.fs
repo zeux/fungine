@@ -2,6 +2,7 @@
 
 open System.Collections.Generic
 
+open Build.Geometry
 open Build.Dae.Parse
 
 let build source target func =
@@ -49,9 +50,12 @@ let buildMesh source =
     let skeleton = Build.Dae.SkeletonBuilder.build doc
     let time3 = timer.ElapsedMilliseconds
 
+    // use a constant FVF for now
+    let fvf = [|Position; Tangent; Bitangent; Normal; TexCoord 0; SkinningInfo 4|]
+
     // export meshes
     let instances = doc.Root.Select("/COLLADA/library_visual_scenes//node/instance_geometry | /COLLADA/library_visual_scenes//node/instance_controller")
-    let meshes = instances |> Array.collect (fun i -> (Build.Dae.FatMeshBuilder.build doc i skeleton) |> Array.map (fun mesh -> mesh, skeleton.data.AbsoluteTransform skeleton.id_map.[i.ParentNode.Attribute "id"]))
+    let meshes = instances |> Array.collect (fun i -> (Build.Dae.FatMeshBuilder.build doc i fvf skeleton) |> Array.map (fun mesh -> mesh, skeleton.data.AbsoluteTransform skeleton.id_map.[i.ParentNode.Attribute "id"]))
 
     let time4 = timer.ElapsedMilliseconds
 
