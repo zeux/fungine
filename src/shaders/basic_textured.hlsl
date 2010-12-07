@@ -1,12 +1,12 @@
 cbuffer c0: register(cb0)
 {
     float4x4 view_projection: register(c0);
-    float4x4 bones[256]: register(c4);
+    float4x4 bones[2]: register(c4);
 }
 
 cbuffer c1: register(cb1)
 {
-    float4x4 offsets[1024];
+    float4x4 offsets[2];
 }
 
 SamplerState default_sampler;
