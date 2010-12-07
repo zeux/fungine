@@ -30,8 +30,8 @@ type Effect(device, vscode, pscode) =
     let signature = ShaderSignature.GetInputSignature(vscode)
 
     new (device, path) =
-        let bytecode_vs = ShaderBytecode.CompileFromFile(path, "vs_main", "vs_5_0", ShaderFlags.PackMatrixRowMajor, EffectFlags.None)
-        let bytecode_ps = ShaderBytecode.CompileFromFile(path, "ps_main", "ps_5_0", ShaderFlags.PackMatrixRowMajor, EffectFlags.None)
+        let bytecode_vs = ShaderBytecode.CompileFromFile(path, "vs_main", "vs_5_0", ShaderFlags.PackMatrixRowMajor ||| ShaderFlags.WarningsAreErrors, EffectFlags.None)
+        let bytecode_ps = ShaderBytecode.CompileFromFile(path, "ps_main", "ps_5_0", ShaderFlags.PackMatrixRowMajor ||| ShaderFlags.WarningsAreErrors, EffectFlags.None)
 
         Effect(device, bytecode_vs, bytecode_ps)
 
@@ -63,17 +63,16 @@ let depthBufferView = new DepthStencilView(device, depthBuffer)
 
 let basic_textured = Effect(device, "src/shaders/basic_textured.hlsl")
 
-let vertex_size = 88
+let vertex_size = 36
 
 let layout = new InputLayout(device, basic_textured.VertexSignature,
                 [|
                 InputElement("POSITION", 0, Format.R32G32B32_Float, 0, 0)
-                InputElement("NORMAL", 0, Format.R32G32B32_Float, 12, 0)
-                InputElement("TANGENT", 0, Format.R32G32B32_Float, 24, 0)
-                InputElement("BITANGENT", 0, Format.R32G32B32_Float, 36, 0)
-                InputElement("TEXCOORD", 0, Format.R32G32_Float, 48, 0)
-                InputElement("BONEINDICES", 0, Format.R32G32B32A32_UInt, 56, 0)
-                InputElement("BONEWEIGHTS", 0, Format.R32G32B32A32_Float, 72, 0)
+                InputElement("NORMAL", 0, Format.R8G8B8A8_SNorm, 12, 0)
+                InputElement("TANGENT", 0, Format.R8G8B8A8_SNorm, 16, 0)
+                InputElement("TEXCOORD", 0, Format.R32G32_Float, 20, 0)
+                InputElement("BONEINDICES", 0, Format.R8G8B8A8_UInt, 28, 0)
+                InputElement("BONEWEIGHTS", 0, Format.R8G8B8A8_UNorm, 32, 0)
                 |])
 
 let createRenderVertexBuffer (vertices: Build.Geometry.FatVertex array) =
@@ -81,21 +80,20 @@ let createRenderVertexBuffer (vertices: Build.Geometry.FatVertex array) =
 
     for v in vertices do
         stream.Write(v.position)
-        stream.Write(v.normal)
-        stream.Write(v.tangent)
-        stream.Write(v.bitangent)
+        stream.Write(Math.Pack.packDirectionR8G8B8(v.normal))
+        stream.Write(Math.Pack.packDirectionR8G8B8(v.tangent) ||| (if Vector3.Dot(Vector3.Cross(v.normal, v.tangent), v.bitangent) > 0.f then 0x7F000000u else 0x80000000u))
         stream.Write(if v.texcoord <> null then v.texcoord.[0] else Vector2())
 
-        let bone_indices : int array = Array.zeroCreate 4
-        let bone_weights : float32 array = Array.zeroCreate 4
+        let bone_indices : byte array = Array.zeroCreate 4
+        let bone_weights : byte array = Array.zeroCreate 4
 
         // hack for non-skinned objects
-        bone_weights.[0] <- 1.f
+        bone_weights.[0] <- 255uy
 
         if v.bones <> null then
             v.bones |> Array.iteri (fun index bone ->
-                bone_indices.[index] <- bone.index
-                bone_weights.[index] <- bone.weight)
+                bone_indices.[index] <- byte bone.index
+                bone_weights.[index] <- byte (Math.Pack.packFloatUNorm bone.weight 8))
 
         stream.WriteRange(bone_indices)
         stream.WriteRange(bone_weights)

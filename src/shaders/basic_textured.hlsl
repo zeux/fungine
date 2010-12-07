@@ -18,9 +18,8 @@ Texture2D<float3> specular_map: register(t2);
 struct VS_IN
 {
 	float4 pos: POSITION;
-    float3 tangent: TANGENT;
-    float3 bitangent: BITANGENT;
     float3 normal: NORMAL;
+    float4 tangent: TANGENT;
 	float2 uv0: TEXCOORD0;
     uint4 bone_indices: BONEINDICES;
     float4 bone_weights: BONEWEIGHTS;
@@ -53,9 +52,9 @@ PS_IN vs_main(VS_IN I, uint instance: SV_InstanceId)
 	O.pos = mul(pos_ws, view_projection);
 
     O.pos_ws = pos_ws.xyz;
-    O.tangent = I.tangent;
-    O.bitangent = I.bitangent;
     O.normal = I.normal;
+    O.tangent = I.tangent.xyz;
+    O.bitangent = cross(O.normal, O.tangent) * I.tangent.w;
     O.uv0 = I.uv0;
 	
 	return O;
