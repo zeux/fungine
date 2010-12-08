@@ -63,26 +63,53 @@ let depthBufferView = new DepthStencilView(device, depthBuffer)
 
 let basic_textured = Effect(device, "src/shaders/basic_textured.hlsl")
 
-let vertex_size = 36
+let vertex_size = 28
 
 let layout = new InputLayout(device, basic_textured.VertexSignature,
                 [|
-                InputElement("POSITION", 0, Format.R32G32B32_Float, 0, 0)
-                InputElement("NORMAL", 0, Format.R8G8B8A8_SNorm, 12, 0)
-                InputElement("TANGENT", 0, Format.R8G8B8A8_SNorm, 16, 0)
-                InputElement("TEXCOORD", 0, Format.R32G32_Float, 20, 0)
-                InputElement("BONEINDICES", 0, Format.R8G8B8A8_UInt, 28, 0)
-                InputElement("BONEWEIGHTS", 0, Format.R8G8B8A8_UNorm, 32, 0)
+                InputElement("POSITION", 0, Format.R16G16B16A16_UNorm, 0, 0)
+                InputElement("NORMAL", 0, Format.R8G8B8A8_SNorm, 8, 0)
+                InputElement("TANGENT", 0, Format.R8G8B8A8_SNorm, 12, 0)
+                InputElement("TEXCOORD", 0, Format.R16G16_UNorm, 16, 0)
+                InputElement("BONEINDICES", 0, Format.R8G8B8A8_UInt, 20, 0)
+                InputElement("BONEWEIGHTS", 0, Format.R8G8B8A8_UNorm, 24, 0)
                 |])
+
+type CompressionInfo =
+    { position_offset: Vector3
+      position_scale: Vector3
+      texcoord_offset: Vector2
+      texcoord_scale: Vector2 }
 
 let createRenderVertexBuffer (vertices: Build.Geometry.FatVertex array) =
     let stream = new DataStream((int64 vertex_size) * vertices.LongLength, true, true)
 
+    // get position and texcoord bounds for compression
+    let positions = vertices |> Array.map (fun v -> v.position)
+    let position_min = positions |> Array.reduce (fun a b -> Vector3.Minimize(a, b))
+    let position_max = positions |> Array.reduce (fun a b -> Vector3.Maximize(a, b))
+    let position_scale = position_max - position_min
+
+    let texcoords = vertices |> Array.map (fun v -> if v.texcoord <> null then v.texcoord.[0] else Vector2())
+    let texcoord_min = texcoords |> Array.reduce (fun a b -> Vector2.Minimize(a, b))
+    let texcoord_max = texcoords |> Array.reduce (fun a b -> Vector2.Maximize(a, b))
+    let texcoord_scale = texcoord_max - texcoord_min
+
+    let compression_info = { new CompressionInfo with position_offset = position_min and position_scale = position_scale and texcoord_offset = texcoord_min and texcoord_scale = texcoord_scale }
+
     for v in vertices do
-        stream.Write(v.position)
+        stream.Write(uint16 (Math.Pack.packFloatUNorm ((v.position.X - position_min.X) / position_scale.X) 16))
+        stream.Write(uint16 (Math.Pack.packFloatUNorm ((v.position.Y - position_min.Y) / position_scale.Y) 16))
+        stream.Write(uint16 (Math.Pack.packFloatUNorm ((v.position.Z - position_min.Z) / position_scale.Z) 16))
+        stream.Write(uint16 0)
+        
         stream.Write(Math.Pack.packDirectionR8G8B8(v.normal))
         stream.Write(Math.Pack.packDirectionR8G8B8(v.tangent) ||| (if Vector3.Dot(Vector3.Cross(v.normal, v.tangent), v.bitangent) > 0.f then 0x7F000000u else 0x80000000u))
-        stream.Write(if v.texcoord <> null then v.texcoord.[0] else Vector2())
+
+        let uv0 = if v.texcoord <> null then v.texcoord.[0] else Vector2()
+
+        stream.Write(uint16 (Math.Pack.packFloatUNorm ((uv0.X - texcoord_min.X) / texcoord_scale.X) 16))
+        stream.Write(uint16 (Math.Pack.packFloatUNorm ((uv0.Y - texcoord_min.Y) / texcoord_scale.Y) 16))
 
         let bone_indices : byte array = Array.zeroCreate 4
         let bone_weights : byte array = Array.zeroCreate 4
@@ -100,7 +127,7 @@ let createRenderVertexBuffer (vertices: Build.Geometry.FatVertex array) =
 
     stream.Position <- 0L
 
-    new Buffer(device, stream, BufferDescription(int stream.Length, ResourceUsage.Default, BindFlags.VertexBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, vertex_size))
+    compression_info, new Buffer(device, stream, BufferDescription(int stream.Length, ResourceUsage.Default, BindFlags.VertexBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, vertex_size))
 
 let createRenderIndexBuffer (indices: int array) =
     let stream = new DataStream(4L * indices.LongLength, true, true)
@@ -152,9 +179,15 @@ let draw (context: DeviceContext) =
         box.Data.WriteRange(offsets)
         context.UnmapSubresource(constantBuffer1, 0)
 
-        for mesh, skeleton, transform, vb, ib in renderMeshes do
+        for mesh, skeleton, transform, (compression_info, vb), ib in renderMeshes do
             let box = context.MapSubresource(constantBuffer0, 0, constantBuffer0.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
             box.Data.Write(view_projection)
+            box.Data.Write(compression_info.position_offset)
+            box.Data.Write(0.f)
+            box.Data.Write(compression_info.position_scale)
+            box.Data.Write(0.f)
+            box.Data.Write(compression_info.texcoord_offset)
+            box.Data.Write(compression_info.texcoord_scale)
             if mesh.skin.IsSome then
                 box.Data.WriteRange(mesh.skin.Value.ComputeBoneTransforms skeleton)
             else

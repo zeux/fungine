@@ -1,7 +1,11 @@
 cbuffer c0: register(cb0)
 {
-    float4x4 view_projection: register(c0);
-    float4x4 bones[2]: register(c4);
+    float4x4 view_projection;
+    float3 position_offset;
+    float3 position_scale;
+    float2 texcoord_offset;
+    float2 texcoord_scale;
+    float4x4 bones[2];
 }
 
 cbuffer c1: register(cb1)
@@ -40,6 +44,9 @@ PS_IN vs_main(VS_IN I, uint instance: SV_InstanceId)
 {
 	PS_IN O;
 	
+    I.pos.xyz = I.pos.xyz * position_scale + position_offset;
+    I.pos.w = 1;
+
     float4 pos_ls = 0;
 
     [unroll] for (int i = 0; i < 4; ++i)
@@ -55,7 +62,7 @@ PS_IN vs_main(VS_IN I, uint instance: SV_InstanceId)
     O.normal = I.normal;
     O.tangent = I.tangent.xyz;
     O.bitangent = cross(O.normal, O.tangent) * I.tangent.w;
-    O.uv0 = I.uv0;
+    O.uv0 = I.uv0 * texcoord_scale + texcoord_offset;
 	
 	return O;
 }
