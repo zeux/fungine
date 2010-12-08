@@ -114,13 +114,15 @@ let createRenderVertexBuffer (vertices: Build.Geometry.FatVertex array) =
         let bone_indices : byte array = Array.zeroCreate 4
         let bone_weights : byte array = Array.zeroCreate 4
 
-        // hack for non-skinned objects
-        bone_weights.[0] <- 255uy
-
         if v.bones <> null then
             v.bones |> Array.iteri (fun index bone ->
                 bone_indices.[index] <- byte bone.index
                 bone_weights.[index] <- byte (Math.Pack.packFloatUNorm bone.weight 8))
+
+        // correct the first (largest, since weights are sorted by mesh builder) weight, so that the sum is exactly 255
+        let weight_sum = Array.sumBy (fun i -> int i) (Array.sub bone_weights 1 (bone_weights.Length - 1))
+        assert (weight_sum <= 255)
+        bone_weights.[0] <- byte (255 - weight_sum)
 
         stream.WriteRange(bone_indices)
         stream.WriteRange(bone_weights)
@@ -130,9 +132,9 @@ let createRenderVertexBuffer (vertices: Build.Geometry.FatVertex array) =
     compression_info, new Buffer(device, stream, BufferDescription(int stream.Length, ResourceUsage.Default, BindFlags.VertexBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, vertex_size))
 
 let createRenderIndexBuffer (indices: int array) =
-    let stream = new DataStream(4L * indices.LongLength, true, true)
+    let stream = new DataStream(2L * indices.LongLength, true, true)
 
-    stream.WriteRange(indices)
+    stream.WriteRange(indices |> Array.map (fun i -> uint16 i))
     stream.Position <- 0L
 
     new Buffer(device, stream, BufferDescription(int stream.Length, ResourceUsage.Default, BindFlags.IndexBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, 4))
@@ -195,7 +197,7 @@ let draw (context: DeviceContext) =
             context.UnmapSubresource(constantBuffer0, 0)
 
             context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vb, vertex_size, 0))
-            context.InputAssembler.SetIndexBuffer(ib, Format.R32_UInt, 0)
+            context.InputAssembler.SetIndexBuffer(ib, Format.R16_UInt, 0)
             context.DrawIndexedInstanced(mesh.indices.Length, offsets.Length, 0, 0, 0)
 
     if false then
