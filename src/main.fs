@@ -81,6 +81,15 @@ type CompressionInfo =
       texcoord_offset: Vector2
       texcoord_scale: Vector2 }
 
+let project v n =
+    Vector3.Dot(v, n) * n
+
+let orthonormalize e0 e1 e2 =
+    let r0 = Vector3.Normalize(e0)
+    let r1 = Vector3.Normalize(e1 - project e1 r0)
+    let r2 = Vector3.Normalize(e2 - project e2 r0 - project e2 r1)
+    r0, r1, r2
+
 let createRenderVertexBuffer (vertices: Build.Geometry.FatVertex array) =
     let stream = new DataStream((int64 vertex_size) * vertices.LongLength, true, true)
 
@@ -102,9 +111,11 @@ let createRenderVertexBuffer (vertices: Build.Geometry.FatVertex array) =
         stream.Write(uint16 (Math.Pack.packFloatUNorm ((v.position.Y - position_min.Y) / position_scale.Y) 16))
         stream.Write(uint16 (Math.Pack.packFloatUNorm ((v.position.Z - position_min.Z) / position_scale.Z) 16))
         stream.Write(uint16 0)
+
+        let normal, tangent, bitangent = orthonormalize v.normal v.tangent v.bitangent
         
-        stream.Write(Math.Pack.packDirectionR8G8B8(v.normal))
-        stream.Write(Math.Pack.packDirectionR8G8B8(v.tangent) ||| (if Vector3.Dot(Vector3.Cross(v.normal, v.tangent), v.bitangent) > 0.f then 0x7F000000u else 0x80000000u))
+        stream.Write(Math.Pack.packDirectionR8G8B8(normal))
+        stream.Write(Math.Pack.packDirectionR8G8B8(tangent) ||| (if Vector3.Dot(Vector3.Cross(normal, tangent), bitangent) > 0.f then 0x7F000000u else 0x80000000u))
 
         let uv0 = if v.texcoord <> null then v.texcoord.[0] else Vector2()
 
