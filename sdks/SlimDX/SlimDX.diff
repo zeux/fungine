@@ -1,6 +1,6 @@
 Index: build/vs2010/SlimDX.vcxproj.filters
 ===================================================================
---- build/vs2010/SlimDX.vcxproj.filters	(revision 1652)
+--- build/vs2010/SlimDX.vcxproj.filters	(revision 1792)
 +++ build/vs2010/SlimDX.vcxproj.filters	(working copy)
 @@ -1,129 +1,6 @@
  ﻿<?xml version="1.0" encoding="utf-8"?>
@@ -3732,7 +3732,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
    </ItemGroup>
 Index: build/vs2010/SlimDX.vcxproj
 ===================================================================
---- build/vs2010/SlimDX.vcxproj	(revision 1652)
+--- build/vs2010/SlimDX.vcxproj	(revision 1792)
 +++ build/vs2010/SlimDX.vcxproj	(working copy)
 @@ -67,7 +67,8 @@
      <CLRSupport>true</CLRSupport>
@@ -3831,17 +3831,16 @@ Index: build/vs2010/SlimDX.vcxproj
        <CLRUnmanagedCodeCheck>true</CLRUnmanagedCodeCheck>
      </Link>
    </ItemDefinitionGroup>
-@@ -255,7 +270,8 @@
+@@ -249,7 +264,7 @@
+       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+     </ClCompile>
+     <Link>
+-      <AdditionalDependencies>user32.lib;gdi32.lib;dxguid.lib;d3d9.lib;d3dx9.lib;dxgi.lib;d3d10.lib;d3dx10.lib;d3d10_1.lib;dinput8.lib;xinput.lib;dxerr.lib;ole32.lib;x3daudio.lib;xapobase.lib;winmm.lib;dsound.lib;d3dcompiler.lib;d3d11.lib;d3dx11.lib;d2d1.lib;dwrite.lib;d3dcsx.lib;Effects11.lib;advapi32.lib</AdditionalDependencies>
++      <AdditionalDependencies>user32.lib;gdi32.lib;dxguid.lib;d3d9.lib;d3dx9.lib;dxgi.lib;d3d10.lib;d3dx10.lib;d3d10_1.lib;dinput8.lib;xinput.lib;dxerr.lib;ole32.lib;x3daudio.lib;xapobase.lib;winmm.lib;dsound.lib;d3dcompiler.lib;d3d11.lib;d3dx11.lib;d2d1.lib;dwrite.lib;d3dcsx.lib;advapi32.lib</AdditionalDependencies>
+       <Version>4.0.10.43</Version>
+       <AdditionalLibraryDirectories>$(OutDir);$(DXSDK_DIR)Lib\x86;$(OutDir)..\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
        <DelayLoadDLLs>d3d9.dll;d3dx9_43.dll;d3dx10_43.dll;d3dx11_43.dll;d3dcompiler_43.dll;d3dcsx_43.dll;d3d10.dll;d3d10_1.dll;d3d11.dll;d2d1.dll;dwrite.dll;dxgi.dll;dinput8.dll;x3daudio1_7.dll;xinput1_3.dll;dsound.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
-       <GenerateDebugInformation>true</GenerateDebugInformation>
-       <RandomizedBaseAddress>false</RandomizedBaseAddress>
--      <DataExecutionPrevention></DataExecutionPrevention>
-+      <DataExecutionPrevention>
-+      </DataExecutionPrevention>
-       <TargetMachine>MachineX86</TargetMachine>
-       <KeyFile>D:\slimdxKey.snk</KeyFile>
-       <DelaySign>false</DelaySign>
-@@ -290,7 +306,8 @@
+@@ -290,7 +305,8 @@
        <DelayLoadDLLs>d3d9.dll;d3dx9_43.dll;d3dx10_43.dll;d3dx11_43.dll;d3dcompiler_43.dll;d3dcsx_43.dll;d3d10.dll;d3d10_1.dll;d3d11.dll;d2d1.dll;dwrite.dll;dxgi.dll;dinput8.dll;x3daudio1_7.dll;xinput1_3.dll;dsound.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
        <GenerateDebugInformation>true</GenerateDebugInformation>
        <RandomizedBaseAddress>false</RandomizedBaseAddress>
@@ -3851,7 +3850,7 @@ Index: build/vs2010/SlimDX.vcxproj
        <TargetMachine>MachineX64</TargetMachine>
        <KeyFile>D:\slimdxKey.snk</KeyFile>
        <DelaySign>false</DelaySign>
-@@ -315,97 +332,6 @@
+@@ -315,97 +331,6 @@
      </Reference>
    </ItemGroup>
    <ItemGroup>
@@ -3949,7 +3948,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClCompile Include="..\..\source\ComObject.cpp" />
      <ClCompile Include="..\..\source\CompilationException.cpp" />
      <ClCompile Include="..\..\source\Configuration.cpp" />
-@@ -417,174 +343,6 @@
+@@ -417,174 +342,6 @@
      <ClCompile Include="..\..\source\DataRectangle.cpp" />
      <ClCompile Include="..\..\source\DataStream.cpp" />
      <ClCompile Include="..\..\source\Performance.cpp" />
@@ -4124,7 +4123,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClCompile Include="..\..\source\math\BoundingBox.cpp" />
      <ClCompile Include="..\..\source\math\BoundingSphere.cpp" />
      <ClCompile Include="..\..\source\math\Color3.cpp" />
-@@ -601,34 +359,6 @@
+@@ -601,34 +358,6 @@
      <ClCompile Include="..\..\source\math\Half2.cpp" />
      <ClCompile Include="..\..\source\math\Half3.cpp" />
      <ClCompile Include="..\..\source\math\Half4.cpp" />
@@ -4159,7 +4158,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClCompile Include="..\..\source\dxgi\DXGIException.cpp" />
      <ClCompile Include="..\..\source\dxgi\ResultCodeDxgi.cpp" />
      <ClCompile Include="..\..\source\dxgi\SwapChainDescription.cpp" />
-@@ -672,146 +402,15 @@
+@@ -672,146 +401,15 @@
      <ClCompile Include="..\..\source\design\Vector2Converter.cpp" />
      <ClCompile Include="..\..\source\design\Vector3Converter.cpp" />
      <ClCompile Include="..\..\source\design\Vector4Converter.cpp" />
@@ -4306,7 +4305,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClCompile Include="..\..\source\direct3d11\Direct3D11Exception.cpp" />
      <ClCompile Include="..\..\source\direct3d11\ResultCode11.cpp" />
      <ClCompile Include="..\..\source\direct3d11\Buffer11.cpp" />
-@@ -891,59 +490,11 @@
+@@ -891,59 +489,11 @@
      <ClCompile Include="..\..\source\direct3d11\Texture3DDescription11.cpp" />
      <ClCompile Include="..\..\source\direct3d11\Asynchronous11.cpp" />
      <ClCompile Include="..\..\source\direct3d11\Viewport11.cpp" />
@@ -4366,7 +4365,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClCompile Include="..\..\source\d3dcompiler\D3DCompilerException.cpp" />
      <ClCompile Include="..\..\source\d3dcompiler\IncludeDC.cpp" />
      <ClCompile Include="..\..\source\d3dcompiler\ShaderMacroDC.cpp" />
-@@ -975,99 +526,6 @@
+@@ -975,99 +525,6 @@
      </ClCompile>
    </ItemGroup>
    <ItemGroup>
@@ -4466,7 +4465,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClInclude Include="..\..\source\auto_array.h" />
      <ClInclude Include="..\..\source\CollectionShim.h" />
      <ClInclude Include="..\..\source\ComObject.h" />
-@@ -1086,193 +544,6 @@
+@@ -1086,193 +543,6 @@
      <ClInclude Include="..\..\source\DataRectangle.h" />
      <ClInclude Include="..\..\source\DataStream.h" />
      <ClInclude Include="..\..\source\Performance.h" />
@@ -4660,7 +4659,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClInclude Include="..\..\source\math\Enums.h" />
      <ClInclude Include="..\..\source\math\BoundingBox.h" />
      <ClInclude Include="..\..\source\math\BoundingSphere.h" />
-@@ -1290,39 +561,6 @@
+@@ -1290,39 +560,6 @@
      <ClInclude Include="..\..\source\math\Half2.h" />
      <ClInclude Include="..\..\source\math\Half3.h" />
      <ClInclude Include="..\..\source\math\Half4.h" />
@@ -4700,7 +4699,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClInclude Include="..\..\source\dxgi\DXGIException.h" />
      <ClInclude Include="..\..\source\dxgi\Enums.h" />
      <ClInclude Include="..\..\source\dxgi\ResultCodeDxgi.h" />
-@@ -1367,14 +605,6 @@
+@@ -1367,14 +604,6 @@
      <ClInclude Include="..\..\source\design\Vector2Converter.h" />
      <ClInclude Include="..\..\source\design\Vector3Converter.h" />
      <ClInclude Include="..\..\source\design\Vector4Converter.h" />
@@ -4715,7 +4714,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClInclude Include="..\..\source\rawinput\Enums.h" />
      <ClInclude Include="..\..\source\rawinput\DeviceRI.h" />
      <ClInclude Include="..\..\source\rawinput\InputMessageFilter.h" />
-@@ -1385,49 +615,6 @@
+@@ -1385,49 +614,6 @@
      <ClInclude Include="..\..\source\rawinput\HidInfo.h" />
      <ClInclude Include="..\..\source\rawinput\KeyboardInfo.h" />
      <ClInclude Include="..\..\source\rawinput\MouseInfo.h" />
@@ -4765,7 +4764,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClInclude Include="..\..\source\multimedia\Enums.h" />
      <ClInclude Include="..\..\source\multimedia\WaveFormat.h" />
      <ClInclude Include="..\..\source\multimedia\WaveFormatExtensible.h" />
-@@ -1435,104 +622,6 @@
+@@ -1435,104 +621,6 @@
      <ClInclude Include="..\..\source\windows\MessagePump.h" />
      <ClInclude Include="..\..\source\windows\RenderForm.h" />
      <ClInclude Include="..\..\source\windows\DisplayMonitor.h" />
@@ -4870,7 +4869,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClInclude Include="..\..\source\direct3d11\Direct3D11Exception.h" />
      <ClInclude Include="..\..\source\direct3d11\Enums11.h" />
      <ClInclude Include="..\..\source\direct3d11\ResultCode11.h" />
-@@ -1614,60 +703,11 @@
+@@ -1614,60 +702,11 @@
      <ClInclude Include="..\..\source\direct3d11\Texture3DDescription11.h" />
      <ClInclude Include="..\..\source\direct3d11\Asynchronous11.h" />
      <ClInclude Include="..\..\source\direct3d11\Viewport11.h" />
@@ -4931,7 +4930,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClInclude Include="..\..\source\d3dcompiler\D3DCompilerException.h" />
      <ClInclude Include="..\..\source\d3dcompiler\EnumsDC.h" />
      <ClInclude Include="..\..\source\d3dcompiler\IncludeDC.h" />
-@@ -1687,17 +727,10 @@
+@@ -1687,17 +726,10 @@
      <ClInclude Include="..\..\source\stdafx.h" />
    </ItemGroup>
    <ItemGroup>
@@ -4948,13 +4947,14 @@ Index: build/vs2010/SlimDX.vcxproj
    </ItemGroup>
    <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 -  <ImportGroup Label="ExtensionTargets"></ImportGroup>
+-</Project>
+\ No newline at end of file
 +  <ImportGroup Label="ExtensionTargets">
 +  </ImportGroup>
- </Project>
-\ No newline at end of file
++</Project>
 Index: build/vs2010/SlimDX.sln
 ===================================================================
---- build/vs2010/SlimDX.sln	(revision 1652)
+--- build/vs2010/SlimDX.sln	(revision 1792)
 +++ build/vs2010/SlimDX.sln	(working copy)
 @@ -2,12 +2,7 @@
  Microsoft Visual Studio Solution File, Format Version 11.00
@@ -4994,7 +4994,7 @@ Index: build/vs2010/SlimDX.sln
  		HideSolutionNode = FALSE
 Index: source/ComObject.cpp
 ===================================================================
---- source/ComObject.cpp	(revision 1652)
+--- source/ComObject.cpp	(revision 1792)
 +++ source/ComObject.cpp	(working copy)
 @@ -34,38 +34,21 @@
  
@@ -5098,7 +5098,7 @@ Index: source/ComObject.cpp
  
 Index: source/windows/RenderForm.cpp
 ===================================================================
---- source/windows/RenderForm.cpp	(revision 1652)
+--- source/windows/RenderForm.cpp	(revision 1792)
 +++ source/windows/RenderForm.cpp	(working copy)
 @@ -22,7 +22,6 @@
  #include "stdafx.h"
@@ -5119,7 +5119,7 @@ Index: source/windows/RenderForm.cpp
  	void RenderForm::OnResizeBegin( EventArgs^ e )
 Index: source/Result.cpp
 ===================================================================
---- source/Result.cpp	(revision 1652)
+--- source/Result.cpp	(revision 1792)
 +++ source/Result.cpp	(working copy)
 @@ -53,7 +53,17 @@
  
@@ -5158,9 +5158,67 @@ Index: source/Result.cpp
  	}
  
  	int Result::GetHashCode()
+Index: source/direct3d11/DeviceChild11.cpp
+===================================================================
+--- source/direct3d11/DeviceChild11.cpp	(revision 1792)
++++ source/direct3d11/DeviceChild11.cpp	(working copy)
+@@ -40,5 +40,32 @@
+ 		InternalPointer->GetDevice( &device );
+ 		return SlimDX::Direct3D11::Device::FromPointer( device );
+ 	}
++
++	System::String^ DeviceChild::DebugName::get()
++	{
++		char name[1024];
++		UINT size = sizeof(name) - 1;
++
++		if (FAILED(InternalPointer->GetPrivateData(WKPDID_D3DDebugObjectName, &size, name))) return "";
++
++		name[size] = 0;
++
++		return gcnew System::String(name);
++	}
++	
++	void DeviceChild::DebugName::set(System::String^ value)
++	{
++		if (value->Length > 0)
++		{
++			array<Byte>^ valueBytes = System::Text::ASCIIEncoding::ASCII->GetBytes(value);
++			pin_ptr<Byte> pinnedValue = &valueBytes[0];
++
++			InternalPointer->SetPrivateData(WKPDID_D3DDebugObjectName, value->Length, pinnedValue);
++		}
++		else
++		{
++			InternalPointer->SetPrivateData(WKPDID_D3DDebugObjectName, 0, NULL);
++		}
++	}
+ }
+ }
+Index: source/direct3d11/DeviceChild11.h
+===================================================================
+--- source/direct3d11/DeviceChild11.h	(revision 1792)
++++ source/direct3d11/DeviceChild11.h	(working copy)
+@@ -52,6 +52,15 @@
+ 			{
+ 				SlimDX::Direct3D11::Device^ get();
+ 			}
++
++			/// <summary>
++			/// Gets or sets the debug object name
++			/// </summary>
++			property System::String^ DebugName
++			{
++				System::String^ get();
++				void set(System::String^ value);
++			}
+ 		};
+ 	}
+ };
+\ No newline at end of file
 Index: source/ObjectTable.h
 ===================================================================
---- source/ObjectTable.h	(revision 1652)
+--- source/ObjectTable.h	(revision 1792)
 +++ source/ObjectTable.h	(working copy)
 @@ -27,99 +27,10 @@
  {
@@ -5266,7 +5324,7 @@ Index: source/ObjectTable.h
 \ No newline at end of file
 Index: source/ComObject.h
 ===================================================================
---- source/ComObject.h	(revision 1652)
+--- source/ComObject.h	(revision 1792)
 +++ source/ComObject.h	(working copy)
 @@ -61,10 +61,7 @@
  	{
@@ -5372,7 +5430,7 @@ Index: source/ComObject.h
 \ No newline at end of file
 Index: source/ObjectTable.cpp
 ===================================================================
---- source/ObjectTable.cpp	(revision 1652)
+--- source/ObjectTable.cpp	(revision 1792)
 +++ source/ObjectTable.cpp	(working copy)
 @@ -34,180 +34,17 @@
  
