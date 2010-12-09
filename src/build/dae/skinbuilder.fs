@@ -12,7 +12,7 @@ type Skin =
       vertices: SkinVertex array }
 
 module SkinBuilder =
-    let private buildBinding doc (skin: XmlNode) (skeleton: Build.Dae.Skeleton) =
+    let private buildBinding doc (skin: XmlNode) (sid_map: IDictionary<string, int>) =
         // get bind shape matrix (no such concept in our data model, use it to transform inv_bind_pose)
         let bind_shape_matrix = Build.Dae.SkeletonBuilder.parseMatrixNode (skin.SelectSingleNode "bind_shape_matrix")
 
@@ -26,7 +26,7 @@ module SkinBuilder =
         assert (joints.Length * 16 = inv_bind_matrix.Length)
 
         // create binding
-        let bones = joints |> Array.map (fun sid -> skeleton.sid_map.[sid])
+        let bones = joints |> Array.map (fun sid -> sid_map.[sid])
         let inv_bind_pose = [|0..bones.Length-1|] |> Array.map (fun idx -> bind_shape_matrix * Build.Dae.SkeletonBuilder.parseMatrixArray inv_bind_matrix (idx * 16))
 
         Render.SkinBinding(bones, inv_bind_pose)
@@ -82,12 +82,24 @@ module SkinBuilder =
             normalizeWeights weights max_weights
         ) voffset vcount_data
 
-    let build doc (controller: XmlNode) skeleton max_weights =
+    let build (doc: Document) (instance_controller: XmlNode) skeleton max_weights =
+        // get controller
+        let controller = doc.Node (instance_controller.Attribute "url")
+
+        // get skeleton nodes (joints reference nodes via sids from skeleton subtrees)
+        let skeletons = instance_controller.Select "skeleton/text()" |> Array.map (fun ref -> doc.Node ref.Value)
+
+        // get nodes with sids from skeleton subtrees
+        let joints = skeletons |> Array.collect (fun node -> node.Select "descendant-or-self::node[@sid]")
+
+        // build sid -> index map
+        let sid_map = joints |> Array.map (fun node -> node.Attribute "sid", skeleton.node_map.[node]) |> dict
+
         // get controller skin (should be unique)
         let skin = controller.SelectSingleNode "skin"
 
         // create skin binding
-        let binding = buildBinding doc skin skeleton
+        let binding = buildBinding doc skin sid_map
 
         // parse vertex binding
         let vertices = buildVertexWeights doc skin max_weights

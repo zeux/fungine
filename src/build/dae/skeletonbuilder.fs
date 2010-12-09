@@ -6,8 +6,7 @@ open Build.Dae.Parse
 
 type Skeleton =
     { data: Render.Skeleton
-      id_map: IDictionary<string, int>
-      sid_map: IDictionary<string, int> }
+      node_map: IDictionary<XmlNode, int> }
 
 module SkeletonBuilder =
     let parseMatrixArray (data: float32 array) offset =
@@ -36,15 +35,8 @@ module SkeletonBuilder =
         // get all document nodes in document order (so that parent is always before child)
         let nodes = doc.Root.Select "/COLLADA/library_visual_scenes//node"
 
-        // build id -> index map (id is obligatory)
-        let id_map = nodes |> Array.mapi (fun index node -> node.Attribute "id", index) |> dict
-
-        // build sid -> index map (sid is optional, used for skinning binding)
-        let sid_list = nodes |> Array.mapi (fun index node ->
-            let sid = node.Attributes.["sid"]
-            if sid <> null then Some (sid.Value, index) else None)
-        
-        let sid_map = Array.choose id sid_list |> dict
+        // build node -> index map
+        let node_map = nodes |> Array.mapi (fun index node -> node, index) |> dict
 
         // get local transform matrices
         let transforms = Array.map getNodeTransformLocal nodes
@@ -53,9 +45,9 @@ module SkeletonBuilder =
         let parents = nodes |> Array.map (fun node ->
             let parent = node.ParentNode
             if parent.Name = "node" then
-                id_map.[parent.Attribute "id"]
+                node_map.[parent]
             else
                 -1)
 
         // build skeleton object
-        { new Skeleton with data = Render.Skeleton(transforms, parents) and id_map = id_map and sid_map = sid_map }
+        { new Skeleton with data = Render.Skeleton(transforms, parents) and node_map = node_map }

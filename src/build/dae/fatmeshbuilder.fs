@@ -200,7 +200,7 @@ let build (doc: Document) (instance: XmlNode) fvf skeleton =
     // get skin data (if we have controller and we need skinning info)
     let skin = Array.tryPick (fun comp ->
         match comp with
-        | SkinningInfo n when controller <> null -> Some (Build.Dae.SkinBuilder.build doc controller skeleton n)
+        | SkinningInfo n when controller <> null -> Some (Build.Dae.SkinBuilder.build doc instance skeleton n)
         | _ -> None) fvf
 
     // get material instances
