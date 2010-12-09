@@ -11,7 +11,7 @@ libjpeg:
 http://sourceforge.net/projects/libjpeg/files/libjpeg/6b/jpegsr6.zip
 
 libpng:
-http://sourceforge.net/projects/libpng/files/01-libpng-master/1.4.4/libpng-1.4.4.tar.gz
+http://sourceforge.net/projects/libpng/files/libpng14/1.4.4/libpng-1.4.4.tar.gz
 
 zlib:
 http://zlib.net/zlib-1.2.5.tar.gz
