@@ -9,7 +9,7 @@ let packFloatUNorm value bits =
 
 let packFloatSNorm value bits =
     let scale = (1 <<< bits) - 1
-    let signed = int ((clamp value -1.f 1.f) * (float32 scale) * 0.5f + 0.5f)
+    let signed = int ((clamp value -1.f 1.f) * (float32 scale) * 0.5f)
     (uint32 signed) &&& (uint32 scale)
 
 let packDirectionR8G8B8 (v: Vector3) =
