@@ -1,6 +1,6 @@
 namespace Build.Geometry
 
-open SlimDX
+open System.Collections.Generic
 
 type PackedMeshCompressionInfo =
     { position_offset: Vector3
@@ -55,7 +55,7 @@ module MeshPacker =
 
         // prepare a stream for writing
         let result : byte array = Array.zeroCreate (vertices.Length * format.size)
-        use stream = new DataStream(result, canRead = false, canWrite = true)
+        use stream = new SlimDX.DataStream(result, canRead = false, canWrite = true)
 
         // get position and texcoord bounds for compression
         let (position_offset, position_scale) = getComponentBounds vertices (fun v -> v.position) Vector3.Minimize Vector3.Maximize
@@ -98,7 +98,26 @@ module MeshPacker =
         let vertices, compression_info = packVertices mesh.vertices format
 
         // build index data
-        let indices = mesh.indices
+        let remap = Dictionary<byte array, int>(HashIdentity.Structural)
+
+        let indices = Array.init mesh.vertices.Length (fun i ->
+            let vertex = Array.sub vertices (i * format.size) format.size
+
+            match remap.TryGetValue(vertex) with
+            | true, index -> index
+            | false, _ ->
+                let index = remap.Count
+                remap.Add(vertex, index)
+                index)
+
+        // build indexed vertex data
+        let indexed_vertices = Array.zeroCreate (remap.Count * format.size)
+
+        for kvp in remap do
+            let vertex = kvp.Key
+            let index = kvp.Value
+
+            Array.blit vertex 0 indexed_vertices (index * format.size) format.size
 
         // build the mesh
-        { new PackedMesh with compression_info = compression_info and format = format and vertices = vertices and indices = indices and skin = mesh.skin }
+        { new PackedMesh with compression_info = compression_info and format = format and vertices = indexed_vertices and indices = indices and skin = mesh.skin }

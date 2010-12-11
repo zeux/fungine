@@ -80,47 +80,12 @@ let private getVertexComponentData (doc: Document) comp id =
     | TexCoord _ -> getFloatArray doc id 2
     | _ -> [||]
 
-// build index buffer as (vertex remap, index buffer) pair
-let private buildIndexBuffer (indices: int array) index_stride =
-    let index_block_dummy = [|0..index_stride-1|]
-
-    // the remap stores a mapping from index blocks to indices; to avoid splicing the array, we provide a custom comparer
-    let index_block_comparer = { new IEqualityComparer<int> with
-        override x.Equals(lhs, rhs) =
-            let lofs = lhs * index_stride
-            let rofs = rhs * index_stride
-            index_block_dummy |> Array.forall (fun i -> indices.[lofs + i] = indices.[rofs + i])
-
-        override x.GetHashCode(obj) =
-            let ofs = obj * index_stride
-
-            let rec loop i acc =
-                if i = index_stride then acc
-                else loop (i + 1) (acc * 31 + indices.[ofs + i])
-
-            loop 0 0
-        }
-
-    let vertex_remap = Dictionary<int, int>(index_block_comparer)
-
-    let ib = Array.init (indices.Length / index_stride) (fun index_block ->
-        // add the block to dictionary, autogenerating index as necessary
-        match vertex_remap.TryGetValue(index_block) with
-        | true, index -> index
-        | false, _ ->
-            let index = vertex_remap.Count
-            vertex_remap.Add(index_block, index)
-            index)
-
-    vertex_remap, ib
-
 // build vertex buffer
-let private buildVertexBuffer (vertex_remap: Dictionary<int, int>) (indices: int array) index_stride (components: (FatVertexComponent * float32 array * int) array) (skin: Skin option) =
-    let vb: FatVertex array = Array.zeroCreate vertex_remap.Count
+let private buildVertexBuffer (indices: int array) index_stride (components: (FatVertexComponent * float32 array * int) array) (skin: Skin option) =
+    Array.init (indices.Length / index_stride) (fun index_block ->
+        let index_block_offset = index_block * index_stride
 
-    for kvp in vertex_remap do
-        let index_block_offset = kvp.Key * index_stride
-        let index = kvp.Value
+        let mutable v = FatVertex()
 
         for (comp, data, index_offset) in components do
             let offset = indices.[index_block_offset + index_offset]
@@ -134,16 +99,16 @@ let private buildVertexBuffer (vertex_remap: Dictionary<int, int>) (indices: int
                     Array.init (idx + 1) (fun i -> if i < length then arr.[i] else if i = idx then value else Unchecked.defaultof<'a>)
 
             match comp with
-            | Position -> vb.[index].position <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
-            | Tangent -> vb.[index].tangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
-            | Bitangent -> vb.[index].bitangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
-            | Normal -> vb.[index].normal <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
-            | Color n -> vb.[index].color <- add vb.[index].color n (Color4(data.[offset * 4 + 0], data.[offset * 4 + 1], data.[offset * 4 + 2], data.[offset * 4 + 3]))
-            | TexCoord n -> vb.[index].texcoord <- add vb.[index].texcoord n (Vector2(data.[offset * 2 + 0], 1.0f - data.[offset * 2 + 1]))
-            | SkinningInfo _ when skin.IsSome -> vb.[index].bones <- skin.Value.vertices.[offset]
+            | Position -> v.position <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
+            | Tangent -> v.tangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
+            | Bitangent -> v.bitangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
+            | Normal -> v.normal <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
+            | Color n -> v.color <- add v.color n (Color4(data.[offset * 4 + 0], data.[offset * 4 + 1], data.[offset * 4 + 2], data.[offset * 4 + 3]))
+            | TexCoord n -> v.texcoord <- add v.texcoord n (Vector2(data.[offset * 2 + 0], 1.0f - data.[offset * 2 + 1]))
+            | SkinningInfo _ when skin.IsSome -> v.bones <- skin.Value.vertices.[offset]
             | _ -> failwith "Unknown vertex component"
 
-    vb
+        v)
 
 // build a single mesh
 let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNode) (material_instance: XmlNode) fvf skin =
@@ -172,23 +137,14 @@ let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNo
 
     let components = Array.append static_components skinned_components
 
-    // get indices
+    // get indices of the individual components
     let indices = getIntArray (triangles.SelectSingleNode("p"))
     assert (indices.Length % index_stride = 0)
 
-    // set indices that are not present in the target vertex to 0
-    for i in 0..index_stride-1 do
-        if Array.tryFind (fun (comp, id, offset) -> i = offset) components |> Option.isNone then
-            for idx in i..index_stride..indices.Length-1 do
-                indices.[idx] <- 0
-
-    // create the index buffer
-    let vertex_remap, ib = buildIndexBuffer indices index_stride
-
     // create the vertex buffer
-    let vb = buildVertexBuffer vertex_remap indices index_stride components skin
+    let vertices = buildVertexBuffer indices index_stride components skin
 
-    { new FatMesh with vertices = vb and indices = ib and skin = if skin.IsSome then Some skin.Value.binding else None }
+    { new FatMesh with vertices = vertices and skin = if skin.IsSome then Some skin.Value.binding else None }
 
 // build all meshes for <instance_controller> or <instance_geometry> node
 let build (doc: Document) (instance: XmlNode) fvf skeleton =

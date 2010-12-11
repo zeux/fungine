@@ -26,4 +26,4 @@ type FatVertex =
     val mutable texcoord: Vector2 array
     val mutable bones: BoneInfluence array
 
-type FatMesh = { vertices: FatVertex array; indices: int array; skin: Render.SkinBinding option }
+type FatMesh = { vertices: FatVertex array; skin: Render.SkinBinding option }
