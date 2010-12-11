@@ -1,6 +1,6 @@
 module Math.Pack
 
-let private clamp value left right =
+let inline private clamp value left right =
     min right (max left value)
 
 let packFloatUNorm value bits =
