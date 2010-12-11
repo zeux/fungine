@@ -52,10 +52,15 @@ let buildMesh source =
 
     // use a constant FVF for now
     let fvf = [|Position; Tangent; Bitangent; Normal; TexCoord 0; SkinningInfo 4|]
+    let format = Render.VertexFormats.Pos_TBN_Tex1_Bone4_Packed
 
     // export meshes
     let instances = doc.Root.Select("/COLLADA/library_visual_scenes//node/instance_geometry | /COLLADA/library_visual_scenes//node/instance_controller")
-    let meshes = instances |> Array.collect (fun i -> (Build.Dae.FatMeshBuilder.build doc i fvf skeleton) |> Array.map (fun mesh -> mesh, skeleton.data, skeleton.data.AbsoluteTransform skeleton.node_map.[i.ParentNode]))
+    let meshes = instances |> Array.collect (fun i ->
+        let fat_meshes = Build.Dae.FatMeshBuilder.build doc i fvf skeleton
+        let packed_meshes = fat_meshes |> Array.map (fun mesh -> Build.Geometry.MeshPacker.pack mesh format)
+
+        packed_meshes |> Array.map (fun mesh -> mesh, skeleton.data, skeleton.data.AbsoluteTransform skeleton.node_map.[i.ParentNode]))
 
     let time4 = timer.ElapsedMilliseconds
 
