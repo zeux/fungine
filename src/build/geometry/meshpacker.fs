@@ -63,10 +63,12 @@ module MeshPacker =
 
         // pack the data
         for v in vertices do
+            let rescale value offset scale = if scale = 0.f then 0.f else (value - offset) / scale
+
             // position: 3 unorm16 + padding
-            stream.Write(uint16 (Math.Pack.packFloatUNorm ((v.position.X - position_offset.X) / position_scale.X) 16))
-            stream.Write(uint16 (Math.Pack.packFloatUNorm ((v.position.Y - position_offset.Y) / position_scale.Y) 16))
-            stream.Write(uint16 (Math.Pack.packFloatUNorm ((v.position.Z - position_offset.Z) / position_scale.Z) 16))
+            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale v.position.X position_offset.X position_scale.X) 16))
+            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale v.position.Y position_offset.Y position_scale.Y) 16))
+            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale v.position.Z position_offset.Z position_scale.Z) 16))
             stream.Write(uint16 0)
 
             // TBN: assume orthonormal basis, normal is 3 unorm8 + padding, tangent is 3 unorm8 + bitangent sign
@@ -79,8 +81,8 @@ module MeshPacker =
             // texcoord: 2 unorm16
             let uv0 = if v.texcoord <> null then v.texcoord.[0] else Vector2()
 
-            stream.Write(uint16 (Math.Pack.packFloatUNorm ((uv0.X - texcoord_offset.X) / texcoord_scale.X) 16))
-            stream.Write(uint16 (Math.Pack.packFloatUNorm ((uv0.Y - texcoord_offset.Y) / texcoord_scale.Y) 16))
+            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale uv0.X texcoord_offset.X texcoord_scale.X) 16))
+            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale uv0.Y texcoord_offset.Y texcoord_scale.Y) 16))
 
             // bone data: 4 uint8 indices, 4 unorm8 weights, weights are normalized to give sum of 255
             let (bone_indices, bone_weights) = if v.bones <> null then packBoneInfluences v.bones else [|0uy; 0uy; 0uy; 0uy|], [|255uy; 0uy; 0uy; 0uy|]
