@@ -29,6 +29,11 @@ let private buildMaya (source: string) (target: string) =
     // start mayabatch.exe with the export command
     let startInfo = ProcessStartInfo(mayaBatch, sprintf "-batch -noAutoloadPlugins -command \"%s\"" (command.Replace("'", "\\\"")),
                         UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true)
+
+    // work around Maya multi-threaded evaluation bugs
+    startInfo.EnvironmentVariables.Add("MAYA_NO_TBB", "1")
+
+    // launch the process
     let proc = Process.Start(startInfo)
 
     // echo process output
