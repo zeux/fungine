@@ -158,7 +158,7 @@ let draw (context: DeviceContext) =
     else
         let rng = System.Random(123456789)
 
-        let offsets = [|0..1000|] |> Array.map (fun _ ->
+        let offsets = [|0 .. 1000|] |> Array.map (fun _ ->
             let x = -20.f + 40.f * float32 (rng.NextDouble())
             let y = -25.f + 40.f * float32 (rng.NextDouble())
             Matrix.Scaling(0.1f, 0.1f, 0.1f) * Matrix.Translation(x, 7.f, y))

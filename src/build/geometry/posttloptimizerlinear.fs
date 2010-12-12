@@ -113,7 +113,7 @@ let optimize indices =
     let mutable best_triangle_prev = -1
     let mutable cache = [||]
 
-    for i in 0..triangles.Length - 1 do
+    for i in 0 .. triangles.Length - 1 do
         // find triangle with the best score (it should've been found in the previous loop iteration, so this is usually fast)
         let best_triangle_index = if best_triangle_prev < 0 then maxIndex triangle_scores else best_triangle_prev
         let best_triangle = triangles.[best_triangle_index] |> (fun (a, b, c) -> [|a; b; c|])

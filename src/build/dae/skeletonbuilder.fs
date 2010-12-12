@@ -11,7 +11,7 @@ type Skeleton =
 module SkeletonBuilder =
     let parseMatrixArray (data: float32 array) offset =
         let mutable m = Matrix()
-        for i in 0..15 do m.Item(i % 4, i / 4) <- data.[i + offset]
+        for i in 0 .. 15 do m.Item(i % 4, i / 4) <- data.[i + offset]
         m
 
     let parseMatrixNode (node: XmlNode) =

@@ -109,7 +109,7 @@ let parseFloatArray contents count =
     skipWhitespace contents &offset
 
     // parse the known number of numbers
-    for i in 0..count-1 do
+    for i in 0 .. count - 1 do
         result.[i] <- fastFloatParse contents &offset
         skipWhitespace contents &offset
 
