@@ -13,9 +13,6 @@ type Triangle(a: int, b: int, c: int) =
 
 type Vertex() =
     [<DefaultValue>]
-    val mutable cache_position: int
-
-    [<DefaultValue>]
     val mutable score: float32
 
     [<DefaultValue>]
@@ -69,7 +66,7 @@ let private buildVertices (indices: int array) =
     for i in indices do triangle_counts.[i] <- triangle_counts.[i] + 1
 
     // create vertex array with uninitialized triangle arrays
-    let vertices = Array.init vertex_count (fun i -> Vertex(cache_position = -1, triangles = Array.zeroCreate triangle_counts.[i]))
+    let vertices = Array.init vertex_count (fun i -> Vertex(triangles = Array.zeroCreate triangle_counts.[i]))
 
     // add triangles to vertex lists
     indices |> Array.iteri (fun i v ->
@@ -89,19 +86,22 @@ let optimize indices =
     let vertices = buildVertices indices
 
     // initialize vertex and triangle scores
-    vertices |> Array.iter (fun v -> v.score <- getVertexScore v.cache_position v.active_triangles)
+    vertices |> Array.iter (fun v -> v.score <- getVertexScore -1 v.active_triangles)
     triangles |> Array.iter (fun t -> t.score <- vertices.[t.A].score + vertices.[t.B].score + vertices.[t.C].score)
 
     // algorithm loop
     let result = List<int>(capacity = indices.Length)
 
-    let mutable best_triangle: Triangle = null
+    let mutable best_triangle_prev: Triangle = null
     let mutable cache = [||]
 
     for i in 0..triangles.Length - 1 do
-        // find triangle with the best score (it should've been found in the previous loop iteration, so this is rare)
-        if best_triangle = null then
-            best_triangle <- triangles |> Array.maxBy (fun t -> t.score)
+        // find triangle with the best score (it should've been found in the previous loop iteration, so this is usually fast)
+        let best_triangle =
+            if best_triangle_prev = null then
+                triangles |> Array.maxBy (fun t -> t.score)
+            else
+                best_triangle_prev
 
         let triangle = [|best_triangle.A; best_triangle.B; best_triangle.C|]
 
@@ -120,14 +120,16 @@ let optimize indices =
         let cache_new = Array.append triangle (Array.choose (fun c -> if c = triangle.[0] || c = triangle.[1] || c = triangle.[2] then None else Some c) cache)
 
         // update vertices and find best triangle
+        best_triangle_prev <- best_triangle
+
         for i in 0 .. cache_new.Length - 1 do
             let v = cache_new.[i]
 
             // update vertex cache position
-            vertices.[v].cache_position <- if i < cache_size then i else -1
+            let cache_position = if i < cache_size then i else -1
 
             // update vertex score
-            let score = getVertexScore vertices.[v].cache_position vertices.[v].active_triangles
+            let score = getVertexScore cache_position vertices.[v].active_triangles
             let score_diff = score - vertices.[v].score
             vertices.[v].score <- score
 
@@ -135,12 +137,11 @@ let optimize indices =
             for t in vertices.[v].triangles do
                 triangles.[t].score <- triangles.[t].score + score_diff
 
-                if best_triangle.score < triangles.[t].score then
-                    best_triangle <- triangles.[t]
+                if best_triangle_prev.score < triangles.[t].score then
+                    best_triangle_prev <- triangles.[t]
                         
         // no best triangle found
-        if best_triangle.A = triangle.[0] && best_triangle.B = triangle.[1] && best_triangle.C = triangle.[2] then
-            best_triangle <- null
+        if best_triangle_prev = best_triangle then best_triangle_prev <- null
 
         // switch to new cache
         cache <- if cache_new.Length < cache_size then cache_new else Array.sub cache_new 0 cache_size
