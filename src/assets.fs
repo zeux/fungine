@@ -57,10 +57,21 @@ let buildMesh source =
     // export meshes
     let instances = doc.Root.Select("/COLLADA/library_visual_scenes//node/instance_geometry | /COLLADA/library_visual_scenes//node/instance_controller")
     let meshes = instances |> Array.collect (fun i ->
+        // build fat meshes from .dae
         let fat_meshes = Build.Dae.FatMeshBuilder.build doc i fvf skeleton
+
+        // build packed & indexed meshes
         let packed_meshes = fat_meshes |> Array.map (fun mesh -> Build.Geometry.MeshPacker.pack mesh format)
 
-        packed_meshes |> Array.map (fun mesh -> mesh, skeleton.data, skeleton.data.AbsoluteTransform skeleton.node_map.[i.ParentNode]))
+        // optimize for Post T&L cache
+        let postopt_meshes = packed_meshes |> Array.map (fun mesh -> { mesh with indices = Build.Geometry.PostTLOptimizerLinear.optimize mesh.indices })
+
+        // optimize for Pre T&L cache
+        let preopt_meshes = postopt_meshes |> Array.map (fun mesh ->
+            let (vertices, indices) = Build.Geometry.PreTLOptimizer.optimize mesh.vertices mesh.indices mesh.format.size
+            { mesh with vertices = vertices; indices = indices })
+
+        preopt_meshes |> Array.map (fun mesh -> mesh, skeleton.data, skeleton.data.AbsoluteTransform skeleton.node_map.[i.ParentNode]))
 
     let time4 = timer.ElapsedMilliseconds
 

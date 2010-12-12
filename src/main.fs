@@ -84,12 +84,14 @@ let createRenderIndexBuffer (indices: int array) =
     createBufferFromStream stream BindFlags.IndexBuffer
 
 let renderMeshes =
+    let index_offsets = meshes |> Array.map (fun (mesh, skeleton, transform) -> mesh.vertices.Length / mesh.format.size) |> Array.scan (+) 0
+    let indices = meshes |> Array.mapi (fun index (mesh, skeleton, transform) -> Array.map ((+) index_offsets.[index]) mesh.indices) |> Array.collect id
+
+    let posttl = Build.Geometry.PostTLAnalyzer.analyzeFIFO indices 16
+
+    printfn "%d triangles, ACMR %f, ATVR %f" (indices.Length / 3) posttl.acmr posttl.atvr
+
     meshes |> Array.map (fun (mesh, skeleton, transform) ->
-        // pre/post t&l
-        let posttl_before = Build.Geometry.PostTLAnalyzer.analyzeFIFO mesh.indices 16
-
-        printfn "%d triangles, %d vertices, ACMR %f, ATVR %f" (mesh.indices.Length / 3) mesh.vertices.Length posttl_before.acmr posttl_before.atvr
-
         mesh, skeleton, transform, createRenderVertexBuffer mesh.vertices, createRenderIndexBuffer mesh.indices)
 
 let projection = Matrix.PerspectiveFovLH(45.f, float32 form.ClientSize.Width / float32 form.ClientSize.Height, 1.f, 1000.f)
