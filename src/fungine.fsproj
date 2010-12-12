@@ -43,6 +43,7 @@
     <Compile Include="render\vertexformat.fs" />
     <Compile Include="build\geometry\fatmesh.fs" />
     <Compile Include="build\geometry\meshpacker.fs" />
+    <Compile Include="build\geometry\pretloptimizer.fs" />
     <Compile Include="build\geometry\posttlanalyzer.fs" />
     <Compile Include="build\geometry\posttloptimizerlinear.fs" />
     <Compile Include="build\dae\parse.fs" />
