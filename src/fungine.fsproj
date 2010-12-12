@@ -44,6 +44,7 @@
     <Compile Include="build\geometry\fatmesh.fs" />
     <Compile Include="build\geometry\meshpacker.fs" />
     <Compile Include="build\geometry\posttlanalyzer.fs" />
+    <Compile Include="build\geometry\posttloptimizerlinear.fs" />
     <Compile Include="build\dae\parse.fs" />
     <Compile Include="build\dae\export.fs" />
     <Compile Include="build\dae\skeletonbuilder.fs" />
