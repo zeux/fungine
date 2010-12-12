@@ -27,3 +27,34 @@ let analyzeFIFO indices cache_size =
             misses <- misses + 1
 
     result misses indices.Length vertex_count
+
+let analyzeLRU indices cache_size =
+    let vertex_count = 1 + Array.max indices
+    let cache_indices = Array.create cache_size vertex_count
+    let cache_timestamps = Array.create cache_size 0
+    let mutable timestamp = 0
+
+    // count cache misses
+    let mutable misses = 0
+
+    for i in indices do
+        let hit = Array.exists (fun ci -> ci = i) cache_indices
+
+        // find the cache entry (either the found one, or the least recently used one)
+        let index =
+            if hit then
+                Array.findIndex (fun ci -> ci = i) cache_indices
+            else
+                let entry = Array.min cache_timestamps
+                Array.findIndex (fun ct -> ct = entry) cache_timestamps
+            
+        // replace the entry and update timestamp
+        timestamp <- timestamp + 1
+        cache_indices.[index] <- i
+        cache_timestamps.[index] <- timestamp
+
+        // update miss count
+        if not hit then
+            misses <- misses + 1
+
+    result misses indices.Length vertex_count
