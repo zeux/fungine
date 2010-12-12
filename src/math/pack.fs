@@ -17,3 +17,9 @@ let packDirectionR8G8B8 (v: Vector3) =
     let y = packFloatSNorm v.Y 8
     let z = packFloatSNorm v.Z 8
     x ||| (y <<< 8) ||| (z <<< 16)
+
+let packDirectionR10G10B10 (v: Vector3) =
+    let x = packFloatUNorm (v.X * 0.5f + 0.5f) 10
+    let y = packFloatUNorm (v.Y * 0.5f + 0.5f) 10
+    let z = packFloatUNorm (v.Z * 0.5f + 0.5f) 10
+    x ||| (y <<< 10) ||| (z <<< 20)

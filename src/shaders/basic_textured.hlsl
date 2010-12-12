@@ -47,21 +47,22 @@ PS_IN vs_main(VS_IN I, uint instance: SV_InstanceId)
     I.pos.xyz = I.pos.xyz * position_scale + position_offset;
     I.pos.w = 1;
 
-    float4 pos_ls = 0;
+    float4x4 transform = 0;
 
     [unroll] for (int i = 0; i < 4; ++i)
     {
-        pos_ls += mul(I.pos, bones[I.bone_indices[i]]) * I.bone_weights[i];
+        transform += bones[I.bone_indices[i]] * I.bone_weights[i];
     }
 
+    float4 pos_ls = mul(I.pos, transform);
     float4 pos_ws = mul(pos_ls, offsets[instance]);
 
 	O.pos = mul(pos_ws, view_projection);
 
     O.pos_ws = pos_ws.xyz;
-    O.normal = I.normal;
-    O.tangent = I.tangent.xyz;
-    O.bitangent = cross(O.normal, O.tangent) * I.tangent.w;
+    O.normal = normalize(mul(I.normal * 2 - 1, (float3x3)transform));
+    O.tangent = normalize(mul(I.tangent.xyz * 2 - 1, (float3x3)transform));
+    O.bitangent = cross(O.normal, O.tangent) * (I.tangent.w * 2 - 1);
     O.uv0 = I.uv0 * texcoord_scale + texcoord_offset;
 	
 	return O;

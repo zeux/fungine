@@ -45,8 +45,8 @@ module VertexFormats =
         VertexFormatBuilder.build
             [|
                 "POSITION", 0, Format.R16G16B16A16_UNorm;
-                "NORMAL", 0, Format.R8G8B8A8_SNorm;
-                "TANGENT", 0, Format.R8G8B8A8_SNorm;
+                "NORMAL", 0, Format.R10G10B10A2_UNorm;
+                "TANGENT", 0, Format.R10G10B10A2_UNorm;
                 "TEXCOORD", 0, Format.R16G16_UNorm;
                 "BONEINDICES", 0, Format.R8G8B8A8_UInt;
                 "BONEWEIGHTS", 0, Format.R8G8B8A8_UNorm;
