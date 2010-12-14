@@ -75,8 +75,8 @@ module MeshPacker =
             let normal, tangent, bitangent = orthonormalize v.normal v.tangent v.bitangent
             let bitangent_sign = sign (Vector3.Dot(Vector3.Cross(normal, tangent), bitangent))
             
-            stream.Write(Math.Pack.packDirectionR10G10B10(normal))
-            stream.Write(Math.Pack.packDirectionR10G10B10(tangent) ||| ((if bitangent_sign = 1 then 1u else 0u) <<< 30))
+            stream.Write(Math.Pack.packDirectionUNorm normal 10)
+            stream.Write((Math.Pack.packDirectionUNorm tangent 10) ||| ((if bitangent_sign = 1 then 1u else 0u) <<< 30))
 
             // texcoord: 2 unorm16
             let uv0 = if v.texcoord <> null then v.texcoord.[0] else Vector2()
