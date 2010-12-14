@@ -80,7 +80,9 @@ let buildMesh source =
     meshes
     
 let buildMeshes path =
-    System.IO.Directory.GetFiles(path, "*.mb", System.IO.SearchOption.AllDirectories) |> Array.collect buildMesh
+    let patterns = [|"*.mb"; "*.ma"|]
+    let files = patterns |> Array.collect (fun p -> System.IO.Directory.GetFiles(path, p, System.IO.SearchOption.AllDirectories))
+    files |> Array.collect buildMesh
 
 let buildAll () =
     buildMeshes "art"
