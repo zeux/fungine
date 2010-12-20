@@ -9,6 +9,15 @@ open SlimDX.Windows
 open SlimDX.D3DCompiler
 open SlimDX.Direct3D11
 
+[<STAThread>]
+do()
+
+let dbg_stress_test = Core.DbgVar(false, "render/stress test")
+let dbg_wireframe = Core.DbgVar(true, "render/wireframe")
+let dbg_present_interval = Core.DbgVar(0, "vsync interval")
+let dbg_name = Core.DbgVar("foo", "name")
+
+System.Threading.Thread.CurrentThread.CurrentCulture <- System.Globalization.CultureInfo.InvariantCulture
 System.Environment.CurrentDirectory <- System.IO.Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath) + "/.."
 System.Console.WindowWidth <- max System.Console.WindowWidth 140
 
@@ -111,7 +120,9 @@ let draw (context: DeviceContext) =
     context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
     context.OutputMerger.SetTargets(depthBufferView, backBufferView)
     context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.Less))
-    context.Rasterizer.State <- RasterizerState.FromDescription(device, RasterizerStateDescription(CullMode = CullMode.Back, FillMode = FillMode.Solid, IsFrontCounterclockwise = true))
+
+    let fill_mode = if dbg_wireframe.Value then FillMode.Wireframe else FillMode.Solid
+    context.Rasterizer.State <- RasterizerState.FromDescription(device, RasterizerStateDescription(CullMode = CullMode.Back, FillMode = fill_mode, IsFrontCounterclockwise = true))
 
     context.InputAssembler.InputLayout <- layout
     context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
@@ -153,7 +164,7 @@ let draw (context: DeviceContext) =
             context.InputAssembler.SetIndexBuffer(ib, Format.R16_UInt, 0)
             context.DrawIndexedInstanced(mesh.indices.Length, offsets.Length, 0, 0, 0)
 
-    if false then
+    if not dbg_stress_test.Value then
         drawInstanced [| Matrix.Identity |]
     else
         let rng = System.Random(123456789)
@@ -167,8 +178,10 @@ let draw (context: DeviceContext) =
 
     context.FinishCommandList(false)
 
-MessagePump.Run(form, fun () ->
+treeview.start ()
 
+MessagePump.Run(form, fun () ->
+    form.Text <- dbg_name.Value
     device.ImmediateContext.ClearRenderTargetView(backBufferView, Color4 Color.Black)
     device.ImmediateContext.ClearDepthStencilView(depthBufferView, DepthStencilClearFlags.Depth, 1.f, 0uy)
 
@@ -178,7 +191,7 @@ MessagePump.Run(form, fun () ->
 
     device.ImmediateContext.ExecuteCommandList(cl, false)
 
-    swapChain.Present(0, PresentFlags.None) |> ignore
+    swapChain.Present(dbg_present_interval.Value, PresentFlags.None) |> ignore
 )
 
 device.ImmediateContext.ClearState()
