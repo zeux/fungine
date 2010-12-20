@@ -1,0 +1,13 @@
+- build
+    - tipsify implementation
+    - materials export
+    - mesh data serialization
+    - animation export
+    - proper building framework - md5 checks, dependencies, etc.
+
+- core
+	- dbgvar w/serialization
+
+- winui
+	- propertytree for dbgvar
+	- move to wpf from winforms
