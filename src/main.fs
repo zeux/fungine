@@ -16,6 +16,8 @@ let dbg_stress_test = Core.DbgVar(false, "render/stress test")
 let dbg_wireframe = Core.DbgVar(true, "render/wireframe")
 let dbg_present_interval = Core.DbgVar(0, "vsync interval")
 let dbg_name = Core.DbgVar("foo", "name")
+let dbg_fillmode = Core.DbgVar(FillMode.Solid, "render/fill mode")
+let dbg_texfilter = Core.DbgVar(Filter.Anisotropic, "render/texture/filter")
 
 System.Threading.Thread.CurrentThread.CurrentCulture <- System.Globalization.CultureInfo.InvariantCulture
 System.Environment.CurrentDirectory <- System.IO.Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath) + "/.."
@@ -132,7 +134,7 @@ let draw (context: DeviceContext) =
 
     context.VertexShader.SetConstantBuffer(constantBuffer0, 0)
     context.VertexShader.SetConstantBuffer(constantBuffer1, 1)
-    context.PixelShader.SetSampler(SamplerState.FromDescription(device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = Filter.Anisotropic, MaximumAnisotropy = 16)), 0)
+    context.PixelShader.SetSampler(SamplerState.FromDescription(device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbg_texfilter.Value, MaximumAnisotropy = 16)), 0)
 
     context.PixelShader.SetShaderResource(new ShaderResourceView(device, albedo_map :> Resource), 0)
     context.PixelShader.SetShaderResource(new ShaderResourceView(device, normal_map :> Resource), 1)
@@ -178,7 +180,9 @@ let draw (context: DeviceContext) =
 
     context.FinishCommandList(false)
 
-treeview.start ()
+let w = WinUI.PropertyTree.create (Core.DbgVarManager.getVariables())
+w.KeyUp.Add (fun args -> if args.Key = System.Windows.Input.Key.Escape then w.Close())
+w.Show()
 
 MessagePump.Run(form, fun () ->
     form.Text <- dbg_name.Value

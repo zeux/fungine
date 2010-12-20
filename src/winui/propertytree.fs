@@ -1,9 +1,9 @@
-﻿module treeview
+﻿module WinUI.PropertyTree
 
 open System.Windows
 open System.Windows.Controls
 
-type Grid with
+type private Grid with
     member x.Add(control, row, column) =
         x.Children.Add(control) |> ignore
         Grid.SetRow(control, row)
@@ -57,25 +57,43 @@ let private createHorizontalGrid controls =
     grid
 
 // typed value proxy for text box
-type private StringAccessor<'T>(data: obj ref, conv: string -> 'T) =
+type StringAccessor<'T>(data: obj ref, conv: string -> 'T) =
     member x.Value
         with get () = string (!data)
         and set value = data := box (conv value)
     
+// create named control group
+let private createControlGroup name (control: 'a) =
+    let text = TextBlock(Text = name, VerticalAlignment = VerticalAlignment.Center, Margin = Thickness(0.0, 0.0, 4.0, 0.0))
+    createHorizontalGrid [|text :> UIElement; control :> UIElement|] :> FrameworkElement
+
 // create edit control group from variable reference
 let private createControlEdit name data =
-    let text = TextBlock(Text = name, Margin = Thickness(0.0, 0.0, 4.0, 0.0))
-    let edit = TextBox()
+    // text box bound to data
+    let edit = TextBox(MinWidth = 32.0)
     edit.SetBinding(TextBox.TextProperty, Data.Binding("Value", Source = data, ValidatesOnExceptions = true)) |> ignore
-    createHorizontalGrid [|text :> UIElement; edit :> UIElement|] :> FrameworkElement
+
+    // force data accept on Enter
+    edit.KeyDown.Add (fun args -> if args.Key = Input.Key.Enter then edit.GetBindingExpression(TextBox.TextProperty).UpdateSource())
+
+    createControlGroup name edit
 
 // create control from variable reference
 let private createControl name (data: obj ref) =
     match !data with
     | :? bool ->
+        // check box bound to data
         let cb = CheckBox(Content = name)
         cb.SetBinding(CheckBox.IsCheckedProperty, Data.Binding("Value", Source = data)) |> ignore
+
         cb :> FrameworkElement
+
+    | :? System.Enum as enum ->
+        // combo box bound to data
+        let combo = ComboBox(ItemsSource = System.Enum.GetValues(enum.GetType()))
+        combo.SetBinding(ComboBox.SelectedItemProperty, Data.Binding("Value", Source = data)) |> ignore
+
+        createControlGroup name combo
 
     | :? int -> createControlEdit name (StringAccessor(data, int))
     | :? float32 -> createControlEdit name (StringAccessor(data, float32))
@@ -87,39 +105,40 @@ let rec private buildTreeViewItems nodes =
     nodes |> Seq.map (fun node ->
         match node with
         | Variable (name, data) ->
-            TreeViewItem(Header = createControl name data)
+            let c = createControl name data
+            TreeViewItem(Header = c, Margin = Thickness(0.0, 1.0, 0.0, 2.0))
         | Group (name, children) ->
             TreeViewItem(Header = name, IsExpanded = true, ItemsSource = buildTreeViewItems children))
 
-let start () =
-    let wnd = Window()
+// create window from variables
+let create variables =
+    let build pattern = variables |> filter pattern |> buildTree |> buildTreeViewItems
 
-    let treeview = TreeView()
+    // create tree
+    let tree = TreeView(ItemsSource = build "")
 
-    let nodes = Core.DbgVarManager.getVariables() |> buildTree
+    VirtualizingStackPanel.SetIsVirtualizing(tree, true)
 
-    treeview.ItemsSource <- buildTreeViewItems nodes
-
-    VirtualizingStackPanel.SetIsVirtualizing(treeview, true)
-
-    Grid.SetIsSharedSizeScope(treeview, true)
-
-    let grid = Grid()
-
+    // create filter box
     let filter_box = TextBox()
-    filter_box.TextChanged.Add(fun _ ->
-        let nodes = Core.DbgVarManager.getVariables() |> filter filter_box.Text |> buildTree
-        treeview.ItemsSource <- buildTreeViewItems nodes)
+
+    filter_box.TextChanged.Add(fun _ -> tree.ItemsSource <- build filter_box.Text)
+
+    // add filter box and tree to grid
+    let grid = Grid()
 
     grid.RowDefinitions.Add(RowDefinition(Height = GridLength.Auto))
     grid.Add(filter_box, 0, 0)
 
     grid.RowDefinitions.Add(RowDefinition(Height = GridLength(1.0, GridUnitType.Star)))
-    grid.Add(treeview, 1, 0)
+    grid.Add(tree, 1, 0)
 
-    wnd.Content <- grid
-
+    // make sure filter box is focused
     filter_box.Focus() |> ignore
 
-    System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(wnd)
-    wnd.Show()
+    // create new window
+    let window = Window(Content = grid)
+
+    System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(window)
+
+    window
