@@ -87,5 +87,5 @@ float4 ps_main(PS_IN I): SV_Target
 
     float3 specular = spec * pow(saturate(dot(reflected, light)), 20);
 
-	return albedo_map.Sample(default_sampler, I.uv0) * diffuse + float4(specular, 0);
+	return albedo * diffuse + float4(specular, 0);
 }
