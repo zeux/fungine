@@ -180,9 +180,11 @@ let draw (context: DeviceContext) =
 
     context.FinishCommandList(false)
 
-let w = WinUI.PropertyTree.create (Core.DbgVarManager.getVariables())
-w.KeyUp.Add (fun args -> if args.Key = System.Windows.Input.Key.Escape then w.Close())
-w.Show()
+form.KeyDown.Add(fun args ->
+    if args.Alt && args.KeyCode = System.Windows.Forms.Keys.Oemcomma then
+        let w = WinUI.PropertyTree.create (Core.DbgVars.getVariables() |> Array.map (fun (name, v) -> name, box v))
+        w.KeyUp.Add (fun args -> if args.Key = System.Windows.Input.Key.Escape then w.Close())
+        w.Show())
 
 MessagePump.Run(form, fun () ->
     form.Text <- dbg_name.Value
