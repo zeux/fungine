@@ -12,7 +12,7 @@ let private getRegistryValue (reg: RegistryKey) (path: string) key =
 
 // get the highest version of installed Maya, consider both 64 and 32 bit versions
 let private getMayaPath versions =
-    let keys = [for view in [RegistryView.Registry64; RegistryView.Registry32] -> RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view)]
+    let keys = [for hive in [RegistryHive.CurrentUser; RegistryHive.LocalMachine] do for view in [RegistryView.Registry64; RegistryView.Registry32] -> RegistryKey.OpenBaseKey(hive, view)]
     let variations = [for key in keys do for ver in versions -> key, ver]
     List.pick (fun (key, ver) -> getRegistryValue key (sprintf @"SOFTWARE\Autodesk\Maya\%s\Setup\InstallPath" ver) "MAYA_INSTALL_LOCATION") variations
 
