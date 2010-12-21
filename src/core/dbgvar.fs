@@ -2,15 +2,35 @@ namespace Core
 
 open System.Collections.Generic
 
-module DbgVarManager =
-    let private variables = Dictionary<string, obj ref>()
+module DbgVars =
+    // variable storage
+    type Cell(defaults) =
+        let mutable value = defaults
+        let event = Event<_>()
 
-    let add description value =
+        // default value accessor
+        member x.DefaultValue = defaults
+
+        // value change notifications
+        member x.ValueChanged = event.Publish
+
+        // value accessor
+        member x.Value
+            with get () = value
+            and set rhs =
+                value <- rhs
+                event.Trigger(box x)
+
+    let private variables = Dictionary<string, Cell>()
+
+    let add description defaults =
         lock variables (fun () ->
             match variables.TryGetValue(description) with
-            | true, cell -> cell
+            | true, cell ->
+                assert (cell.DefaultValue = defaults)
+                cell
             | _ ->
-                let cell = ref (box value)
+                let cell = Cell(box defaults)
                 variables.Add(description, cell)
                 cell)
 
@@ -19,7 +39,7 @@ module DbgVarManager =
 
 type DbgVar<'T>(defaults: 'T, description: string) =
     // auto-register variable in manager
-    let value = DbgVarManager.add description defaults
+    let value = DbgVars.add description defaults
 
     // value accessor
-    member x.Value: 'T = unbox !value
+    member x.Value: 'T = unbox value.Value
