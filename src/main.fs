@@ -13,7 +13,7 @@ open SlimDX.Direct3D11
 do()
 
 let dbg_stress_test = Core.DbgVar(false, "render/stress test")
-let dbg_wireframe = Core.DbgVar(true, "render/wireframe")
+let dbg_wireframe = Core.DbgVar(false, "render/wireframe")
 let dbg_present_interval = Core.DbgVar(0, "vsync interval")
 let dbg_name = Core.DbgVar("foo", "name")
 let dbg_fillmode = Core.DbgVar(FillMode.Solid, "render/fill mode")
@@ -75,8 +75,8 @@ let depthBufferView = new DepthStencilView(device, depthBuffer)
 
 let basic_textured = Effect(device, "src/shaders/basic_textured.hlsl")
 
-let vertex_size = Render.VertexFormats.Pos_TBN_Tex1_Bone4_Packed.size
-let layout = new InputLayout(device, basic_textured.VertexSignature, Render.VertexFormats.Pos_TBN_Tex1_Bone4_Packed.elements)
+let vertex_size = (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).size
+let layout = new InputLayout(device, basic_textured.VertexSignature, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
 
 let createBufferFromStream stream bind_flags =
     new Buffer(device, stream, BufferDescription(int stream.Length, ResourceUsage.Default, bind_flags, CpuAccessFlags.None, ResourceOptionFlags.None, 0))
@@ -95,12 +95,12 @@ let createRenderIndexBuffer (indices: int array) =
     createBufferFromStream stream BindFlags.IndexBuffer
 
 let renderMeshes =
-    let index_offsets = meshes |> Array.map (fun (mesh, skeleton, transform) -> mesh.vertices.Length / mesh.format.size) |> Array.scan (+) 0
+    let index_offsets = meshes |> Array.map (fun (mesh, skeleton, transform) -> mesh.vertices.Length / mesh.vertex_size) |> Array.scan (+) 0
     let indices = meshes |> Array.mapi (fun index (mesh, skeleton, transform) -> Array.map ((+) index_offsets.[index]) mesh.indices) |> Array.collect id
 
     let posttl = Build.Geometry.PostTLAnalyzer.analyzeFIFO indices 16
 
-    printfn "%d triangles, ACMR %f, ATVR %f" (indices.Length / 3) posttl.acmr posttl.atvr
+    printfn "%d triangles, %d vertices, ACMR %f, ATVR %f" (indices.Length / 3) index_offsets.[index_offsets.Length - 1] posttl.acmr posttl.atvr
 
     meshes |> Array.map (fun (mesh, skeleton, transform) ->
         mesh, skeleton, transform, createRenderVertexBuffer mesh.vertices, createRenderIndexBuffer mesh.indices)

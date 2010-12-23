@@ -4,13 +4,16 @@ open SlimDX
 open SlimDX.DXGI
 open SlimDX.Direct3D11
 
-type VertexFormat =
+type VertexLayout =
     { elements: InputElement array
       size: int }
 
-module VertexFormatBuilder =
-    // get a size of the format element
-    let private getFormatSize element =
+type VertexFormat =
+    | Pos_TBN_Tex1_Bone4_Packed = 0
+
+module VertexLayouts =
+    // get a size of the input element
+    let private getElementSize element =
         match element with
         | Format.R32G32B32A32_Typeless | Format.R32G32B32A32_Float | Format.R32G32B32A32_UInt | Format.R32G32B32A32_SInt -> 16
         | Format.R32G32B32_Typeless | Format.R32G32B32_Float | Format.R32G32B32_UInt | Format.R32G32B32_SInt -> 12
@@ -29,20 +32,20 @@ module VertexFormatBuilder =
         | Format.R9G9B9E5_SharedExp -> 4
         | _ -> failwith "Unknown format element"
 
-    // build a format from an array of (semantics, index, format) tuples
+    // build a layout from an array of (semantics, index, format) tuples
     let build components =
         // get component offsets
-        let offsets = components |> Array.scan (fun acc (semantics, index, format) -> acc + getFormatSize format) 0
+        let offsets = components |> Array.scan (fun acc (semantics, index, format) -> acc + getElementSize format) 0
 
         // get input elements
         let elements = components |> Array.mapi (fun i (semantics, index, format) -> InputElement(semantics, index, format, offsets.[i], 0))
 
-        // build vertex format
-        { new VertexFormat with elements = elements and size = offsets.[offsets.Length - 1] }
+        // build vertex layout
+        { new VertexLayout with elements = elements and size = offsets.[offsets.Length - 1] }
 
-module VertexFormats =
-    let Pos_TBN_Tex1_Bone4_Packed =
-        VertexFormatBuilder.build
+    // get a prebuilt layout
+    let private Pos_TBN_Tex1_Bone4_Packed =
+        build
             [|
                 "POSITION", 0, Format.R16G16B16A16_UNorm;
                 "NORMAL", 0, Format.R10G10B10A2_UNorm;
@@ -51,3 +54,8 @@ module VertexFormats =
                 "BONEINDICES", 0, Format.R8G8B8A8_UInt;
                 "BONEWEIGHTS", 0, Format.R8G8B8A8_UNorm;
             |]
+
+    let get format =
+        match format with
+        | VertexFormat.Pos_TBN_Tex1_Bone4_Packed -> Pos_TBN_Tex1_Bone4_Packed
+        | _ -> failwith "Unknown format"

@@ -11,6 +11,7 @@ type PackedMeshCompressionInfo =
 type PackedMesh =
     { compression_info: PackedMeshCompressionInfo
       format: Render.VertexFormat
+      vertex_size: int
       vertices: byte array
       indices: int array
       skin: Render.SkinBinding option }
@@ -48,13 +49,13 @@ module MeshPacker =
 
         indices, weights
 
-    let private packVertices (vertices: Build.Geometry.FatVertex array) (format: Render.VertexFormat) =
+    let private packVertices (vertices: Build.Geometry.FatVertex array) (format: Render.VertexFormat) vertex_size =
         // only a restricted set of formats supported atm
-        let supported_formats = [|Render.VertexFormats.Pos_TBN_Tex1_Bone4_Packed|]
+        let supported_formats = [|Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed|]
         if not (Array.exists (fun f -> format = f) supported_formats) then failwith "Unsupported format"
 
         // prepare a stream for writing
-        let result : byte array = Array.zeroCreate (vertices.Length * format.size)
+        let result : byte array = Array.zeroCreate (vertices.Length * vertex_size)
         use stream = new SlimDX.DataStream(result, canRead = false, canWrite = true)
 
         // get position and texcoord bounds for compression
@@ -96,14 +97,18 @@ module MeshPacker =
         result, compression_info
 
     let pack (mesh: Build.Geometry.FatMesh) format =
+        // get vertex size from the format
+        let layout = Render.VertexLayouts.get format
+        let vertex_size = layout.size
+
         // build vertex data
-        let vertices, compression_info = packVertices mesh.vertices format
+        let vertices, compression_info = packVertices mesh.vertices format vertex_size
 
         // build index data
         let remap = Dictionary<byte array, int>(HashIdentity.Structural)
 
         let indices = Array.init mesh.vertices.Length (fun i ->
-            let vertex = Array.sub vertices (i * format.size) format.size
+            let vertex = Array.sub vertices (i * vertex_size) vertex_size
 
             match remap.TryGetValue(vertex) with
             | true, index -> index
@@ -113,13 +118,13 @@ module MeshPacker =
                 index)
 
         // build indexed vertex data
-        let indexed_vertices = Array.zeroCreate (remap.Count * format.size)
+        let indexed_vertices = Array.zeroCreate (remap.Count * vertex_size)
 
         for kvp in remap do
             let vertex = kvp.Key
             let index = kvp.Value
 
-            Array.blit vertex 0 indexed_vertices (index * format.size) format.size
+            Array.blit vertex 0 indexed_vertices (index * vertex_size) vertex_size
 
         // build the mesh
-        { new PackedMesh with compression_info = compression_info and format = format and vertices = indexed_vertices and indices = indices and skin = mesh.skin }
+        { new PackedMesh with compression_info = compression_info and format = format and vertex_size = vertex_size and vertices = indexed_vertices and indices = indices and skin = mesh.skin }

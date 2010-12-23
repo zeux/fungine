@@ -52,7 +52,7 @@ let buildMesh source =
 
     // use a constant FVF for now
     let fvf = [|Position; Tangent; Bitangent; Normal; TexCoord 0; SkinningInfo 4|]
-    let format = Render.VertexFormats.Pos_TBN_Tex1_Bone4_Packed
+    let format = Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed
 
     // export meshes
     let instances = doc.Root.Select("/COLLADA/library_visual_scenes//node/instance_geometry | /COLLADA/library_visual_scenes//node/instance_controller")
@@ -68,7 +68,7 @@ let buildMesh source =
 
         // optimize for Pre T&L cache
         let preopt_meshes = postopt_meshes |> Array.map (fun mesh ->
-            let (vertices, indices) = Build.Geometry.PreTLOptimizer.optimize mesh.vertices mesh.indices mesh.format.size
+            let (vertices, indices) = Build.Geometry.PreTLOptimizer.optimize mesh.vertices mesh.indices mesh.vertex_size
             { mesh with vertices = vertices; indices = indices })
 
         preopt_meshes |> Array.map (fun mesh -> mesh, skeleton.data, skeleton.data.AbsoluteTransform skeleton.node_map.[i.ParentNode]))
