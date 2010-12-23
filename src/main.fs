@@ -20,7 +20,7 @@ let dbg_fillmode = Core.DbgVar(FillMode.Solid, "render/fill mode")
 let dbg_texfilter = Core.DbgVar(Filter.Anisotropic, "render/texture/filter")
 
 System.Threading.Thread.CurrentThread.CurrentCulture <- System.Globalization.CultureInfo.InvariantCulture
-System.Environment.CurrentDirectory <- System.IO.Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath) + "/.."
+System.Environment.CurrentDirectory <- System.IO.Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath) + "/../.."
 System.Console.WindowWidth <- max System.Console.WindowWidth 140
 
 let meshes = assets.buildAll()

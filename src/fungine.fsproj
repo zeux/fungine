@@ -2,8 +2,8 @@
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Name>fungine</Name>
-    <AssemblyName>$(Name)_$(Configuration)_$(Platform)</AssemblyName>
-    <IntermediateOutputPath>../.build/$(Name)_$(Platform)_$(Configuration)/</IntermediateOutputPath>
+    <AssemblyName>$(Name)</AssemblyName>
+    <IntermediateOutputPath>../.build</IntermediateOutputPath>
     <OutputPath>../bin</OutputPath>
     <OutputType>Exe</OutputType>
     <RootNamespace>fungine</RootNamespace>
@@ -16,6 +16,10 @@
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>Client</TargetFrameworkProfile>
     <EnableUnmanagedDebugging>true</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Platform)' != '' and $(Configuration) != '' ">
+    <IntermediateOutputPath>$(IntermediateOutputPath)/$(Name)_$(Configuration)_$(Platform)/</IntermediateOutputPath>
+    <OutputPath>$(OutputPath)/$(Configuration)_$(Platform)</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Platform)' == 'x86' ">
     <PlatformTarget>x86</PlatformTarget>
