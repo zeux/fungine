@@ -37,6 +37,7 @@
   <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <ItemGroup>
     <Compile Include="core\dbgvar.fs" />
+    <Compile Include="core\serialization.fs" />
     <Compile Include="math\types.fs" />
     <Compile Include="math\pack.fs" />
     <Compile Include="render\skeleton.fs" />
@@ -73,7 +74,6 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
-    <Reference Include="System.Numerics" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xaml" />
     <Reference Include="System.Xml" />
