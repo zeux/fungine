@@ -149,20 +149,17 @@ module Saver =
         // store object with the correct type to the local variable
         let object_local = gen.DeclareLocal(typ)
         assert (object_local.LocalIndex = 1)
-        assert typ.IsClass
-
-        gen.Emit(OpCodes.Ldarg_1)
-        gen.Emit(OpCodes.Castclass, typ)
-        gen.Emit(OpCodes.Stloc_1)
 
         // serialize object contents
-        let objemit (gen: ILGenerator) = gen.Emit(OpCodes.Ldloc_1)
-
-        if typ.IsArray then
+        if isStruct typ then
+            emitSaveFields gen (fun gen -> gen.Emit(OpCodes.Ldarga_S, 1uy)) typ
+        else if typ.IsValueType then
+            emitSaveValue gen (fun gen -> gen.Emit(OpCodes.Ldarg_1); gen.Emit(OpCodes.Unbox_Any, typ)) typ
+        else if typ.IsArray then
             assert (typ.GetArrayRank() = 1)
-            emitSaveArray gen objemit typ
+            emitSaveArray gen (fun gen -> gen.Emit(OpCodes.Ldarg_1)) typ
         else
-            emitSaveFields gen objemit typ
+            emitSaveFields gen (fun gen -> gen.Emit(OpCodes.Ldarg_1)) typ
 
         gen.Emit(OpCodes.Ret)
 
