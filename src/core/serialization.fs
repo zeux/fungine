@@ -6,31 +6,6 @@ open System.IO
 open System.Reflection
 open System.Reflection.Emit
 
-type ObjectSaveContext() =
-    let object_queue = Queue<obj>()
-    let object_ids = Dictionary<obj, int>(HashIdentity.Reference)
-
-    // get the list of objects to be serialized
-    member x.Objects = seq { while object_queue.Count > 0 do yield object_queue.Dequeue() }
-
-    // get a serialized id of the object
-    member x.Object (obj: obj) =
-        // null is encoded with 0
-        if Object.ReferenceEquals(obj, null) then
-            0
-        else
-            // non-null objects are encoded with 1-based object index in the object table
-            1 +
-            match object_ids.TryGetValue(obj) with
-            | true, id -> id
-            | _ ->
-                let id = object_ids.Count
-                object_ids.Add(obj, id)
-                object_queue.Enqueue(obj)
-                id
-
-type ObjectSaveDelegate = delegate of ObjectSaveContext * BinaryWriter * obj -> unit
-
 let loadFromStream stream =
     null
 
@@ -39,6 +14,34 @@ let loadFromFile path =
     loadFromStream stream
 
 module Saver =
+    type ObjectTable() =
+        let object_queue = Queue<obj>()
+        let object_ids = Dictionary<obj, int>(HashIdentity.Reference)
+
+        // get the list of objects to be serialized
+        member x.PendingObjects = seq { while object_queue.Count > 0 do yield object_queue.Dequeue() }
+
+        // get the list of all objects
+        member x.Objects = object_ids |> Array.ofSeq
+
+        // get a serialized id of the object
+        member x.Object (obj: obj) =
+            // null is encoded with 0
+            if Object.ReferenceEquals(obj, null) then
+                0
+            else
+                // non-null objects are encoded with 1-based object index in the object table
+                1 +
+                match object_ids.TryGetValue(obj) with
+                | true, id -> id
+                | _ ->
+                    let id = object_ids.Count
+                    object_ids.Add(obj, id)
+                    object_queue.Enqueue(obj)
+                    id
+
+    type SaveDelegate = delegate of ObjectTable * BinaryWriter * obj -> unit
+
     type SaveMethodHost = class end
 
     let isStruct (typ: Type) =
@@ -67,7 +70,7 @@ module Saver =
             // push object id
             gen.Emit(OpCodes.Ldarg_0) // context
             objemit gen
-            gen.Emit(OpCodes.Call, typedefof<ObjectSaveContext>.GetMethod("Object"))
+            gen.Emit(OpCodes.Call, typedefof<ObjectTable>.GetMethod("Object"))
 
             // write object id
             gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [|typedefof<int>|]))
@@ -153,14 +156,14 @@ module Saver =
         gen.Emit(OpCodes.Ret)
 
     let buildSaveDelegate (typ: Type) =
-        let dm = DynamicMethod(typ.ToString(), null, [|typedefof<ObjectSaveContext>; typedefof<BinaryWriter>; typedefof<obj>|], typedefof<SaveMethodHost>, true)
+        let dm = DynamicMethod(typ.ToString(), null, [|typedefof<ObjectTable>; typedefof<BinaryWriter>; typedefof<obj>|], typedefof<SaveMethodHost>, true)
         let gen = dm.GetILGenerator()
 
         emitSave gen typ
 
-        dm.CreateDelegate(typedefof<ObjectSaveDelegate>) :?> ObjectSaveDelegate
+        dm.CreateDelegate(typedefof<SaveDelegate>) :?> SaveDelegate
 
-    let saveDelegateCache = Dictionary<Type, ObjectSaveDelegate>()
+    let saveDelegateCache = Dictionary<Type, SaveDelegate>()
 
     let getSaveDelegate typ =
         match saveDelegateCache.TryGetValue(typ) with
@@ -170,20 +173,56 @@ module Saver =
             saveDelegateCache.Add(typ, d)
             d
 
-    let saveWithContext context obj =
-        ()
+    let save (context: ObjectTable) obj =
+        use stream = new MemoryStream()
+        use writer = new BinaryWriter(stream)
+
+        // push head object
+        context.Object obj |> ignore
+
+        // save all objects (additional items are pushed to the queue in save delegates)
+        for obj in context.PendingObjects do
+            let d = getSaveDelegate (obj.GetType())
+            d.Invoke(context, writer, obj)
+
+        stream.ToArray()
 
 let saveToStream stream obj =
+    let table = Saver.ObjectTable()
+
+    // save object data & fill object table
+    let data = Saver.save table obj
+
+    // build type table and object -> type id mapping
+    let types = Dictionary<Type, int>()
+
+    let object_types = table.Objects |> Array.map (fun p ->
+        let typ = p.Key.GetType()
+
+        match types.TryGetValue(typ) with
+        | true, id -> id
+        | _ ->
+            let id = types.Count
+            types.Add(typ, id)
+            id)
+
+    // save header
     let writer = new BinaryWriter(stream)
-    let context = ObjectSaveContext()
 
-    // push head object
-    context.Object obj |> ignore
+    writer.Write("fun")
 
-    // save all objects (additional items are pushed to the queue in save delegates)
-    for obj in context.Objects do
-        let d = Saver.getSaveDelegate (obj.GetType())
-        d.Invoke(context, writer, obj)
+    // save type table
+    writer.Write(types.Count)
+
+    types |> Array.ofSeq |> Array.sortBy (fun p -> p.Value) |> Array.map (fun p -> p.Key.AssemblyQualifiedName) |> Array.iter writer.Write
+
+    // save object table
+    writer.Write(object_types.Length)
+
+    object_types |> Array.iter writer.Write
+
+    // save object data
+    writer.Write(data)
 
 let saveToFile path obj =
     use stream = new FileStream(path, FileMode.Create)
