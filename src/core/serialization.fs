@@ -6,12 +6,9 @@ open System.IO
 open System.Reflection
 open System.Reflection.Emit
 
-type ObjectSaveContext(writer: BinaryWriter) =
+type ObjectSaveContext() =
     let object_queue = Queue<obj>()
     let object_ids = Dictionary<obj, int>(HashIdentity.Reference)
-
-    // get associated writer
-    member x.Writer = writer
 
     // get the list of objects to be serialized
     member x.Objects = seq { while object_queue.Count > 0 do yield object_queue.Dequeue() }
@@ -32,7 +29,7 @@ type ObjectSaveContext(writer: BinaryWriter) =
                 object_queue.Enqueue(obj)
                 id
 
-type ObjectSaveDelegate = delegate of ObjectSaveContext * obj -> unit
+type ObjectSaveDelegate = delegate of ObjectSaveContext * BinaryWriter * obj -> unit
 
 let loadFromStream stream =
     null
@@ -48,7 +45,7 @@ module Saver =
         typ.IsValueType && not typ.IsPrimitive && not typ.IsEnum
         
     let emitSaveValuePrimitive (gen: ILGenerator) objemit typ =
-        gen.Emit(OpCodes.Ldloc_0) // writer
+        gen.Emit(OpCodes.Ldarg_1) // writer
         objemit gen
         gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [|typ|]))
 
@@ -65,7 +62,7 @@ module Saver =
         // save objects as object ids (defer actual saving)
         else
             assert typ.IsClass
-            gen.Emit(OpCodes.Ldloc_0) // writer
+            gen.Emit(OpCodes.Ldarg_1) // writer
 
             // push object id
             gen.Emit(OpCodes.Ldarg_0) // context
@@ -97,19 +94,19 @@ module Saver =
     let emitSaveArray (gen: ILGenerator) objemit (typ: Type) =
         // declare local variables for length and for loop counter
         let idx_local = gen.DeclareLocal(typedefof<int>)
-        assert (idx_local.LocalIndex = 2)
+        assert (idx_local.LocalIndex = 0)
 
         let cnt_local = gen.DeclareLocal(typedefof<int>)
-        assert (cnt_local.LocalIndex = 3)
+        assert (cnt_local.LocalIndex = 1)
 
         // store size to local
         objemit gen
         gen.Emit(OpCodes.Ldlen)
-        gen.Emit(OpCodes.Stloc_3) // count
+        gen.Emit(OpCodes.Stloc_1) // count
 
         // serialize size
-        gen.Emit(OpCodes.Ldloc_0) // writer
-        gen.Emit(OpCodes.Ldloc_3) // count
+        gen.Emit(OpCodes.Ldarg_1) // writer
+        gen.Emit(OpCodes.Ldloc_1) // count
         gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [|typedefof<int>|]))
 
         // serialize contents
@@ -123,48 +120,34 @@ module Saver =
         let etype = typ.GetElementType()
         let ldelem = if isStruct etype then OpCodes.Ldelema else OpCodes.Ldelem
 
-        emitSaveValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc_2); gen.Emit(ldelem, etype)) etype
+        emitSaveValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc_0); gen.Emit(ldelem, etype)) etype
 
         // index++
-        gen.Emit(OpCodes.Ldloc_2) // index
+        gen.Emit(OpCodes.Ldloc_0) // index
         gen.Emit(OpCodes.Ldc_I4_1)
         gen.Emit(OpCodes.Add)
-        gen.Emit(OpCodes.Stloc_2)
+        gen.Emit(OpCodes.Stloc_0)
 
         // if (index < count) goto begin
         gen.MarkLabel(loop_cmp)
-        gen.Emit(OpCodes.Ldloc_2) // index
-        gen.Emit(OpCodes.Ldloc_3) // count
+        gen.Emit(OpCodes.Ldloc_0) // index
+        gen.Emit(OpCodes.Ldloc_1) // count
         gen.Emit(OpCodes.Blt, loop_begin)
 
     let emitSave (gen: ILGenerator) (typ: Type) =
-        // store writer to the local variable
-        let writer_local = gen.DeclareLocal(typedefof<BinaryWriter>)
-        assert (writer_local.LocalIndex = 0)
-
-        gen.Emit(OpCodes.Ldarg_0) // context
-        gen.EmitCall(OpCodes.Call, typedefof<ObjectSaveContext>.GetProperty("Writer").GetGetMethod(), null)
-        gen.Emit(OpCodes.Stloc_0) // writer
-
-        // store object with the correct type to the local variable
-        let object_local = gen.DeclareLocal(typ)
-        assert (object_local.LocalIndex = 1)
-
         // serialize object contents
-        if isStruct typ then
-            emitSaveFields gen (fun gen -> gen.Emit(OpCodes.Ldarga_S, 1uy)) typ
-        else if typ.IsValueType then
-            emitSaveValue gen (fun gen -> gen.Emit(OpCodes.Ldarg_1); gen.Emit(OpCodes.Unbox_Any, typ)) typ
+        if typ.IsValueType then
+            emitSaveValue gen (fun gen -> gen.Emit(OpCodes.Ldarg_2); gen.Emit(OpCodes.Unbox_Any, typ)) typ
         else if typ.IsArray then
             assert (typ.GetArrayRank() = 1)
-            emitSaveArray gen (fun gen -> gen.Emit(OpCodes.Ldarg_1)) typ
+            emitSaveArray gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) typ
         else
-            emitSaveFields gen (fun gen -> gen.Emit(OpCodes.Ldarg_1)) typ
+            emitSaveFields gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) typ
 
         gen.Emit(OpCodes.Ret)
 
     let buildSaveDelegate (typ: Type) =
-        let dm = DynamicMethod("", null, [|typedefof<ObjectSaveContext>; typedefof<obj>|], typedefof<SaveMethodHost>, true)
+        let dm = DynamicMethod("", null, [|typedefof<ObjectSaveContext>; typedefof<BinaryWriter>; typedefof<obj>|], typedefof<SaveMethodHost>, true)
         let gen = dm.GetILGenerator()
 
         emitSave gen typ
@@ -186,7 +169,7 @@ module Saver =
 
 let saveToStream stream obj =
     let writer = new BinaryWriter(stream)
-    let context = ObjectSaveContext(writer)
+    let context = ObjectSaveContext()
 
     // push head object
     context.Object obj |> ignore
@@ -194,7 +177,7 @@ let saveToStream stream obj =
     // save all objects (additional items are pushed to the queue in save delegates)
     for obj in context.Objects do
         let d = Saver.getSaveDelegate (obj.GetType())
-        d.Invoke(context, obj)
+        d.Invoke(context, writer, obj)
 
 let saveToFile path obj =
     use stream = new FileStream(path, FileMode.Create)
