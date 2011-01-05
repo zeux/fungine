@@ -44,24 +44,24 @@ let loadFromFile path =
 module Saver =
     type SaveMethodHost = class end
 
-    let emitSaveFieldPrimitive (gen: ILGenerator) objemit (field: FieldInfo) save_type =
+    let isStruct (typ: Type) =
+        typ.IsValueType && not typ.IsPrimitive && not typ.IsEnum
+        
+    let emitSaveValuePrimitive (gen: ILGenerator) objemit typ =
         gen.Emit(OpCodes.Ldloc_0) // writer
-        objemit gen // object
-        gen.Emit(OpCodes.Ldfld, field)
-        gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [|save_type|]))
+        objemit gen
+        gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [|typ|]))
 
-    let rec emitSaveField (gen: ILGenerator) objemit (field: FieldInfo) =
-        let typ = field.FieldType
-
+    let rec emitSaveValue (gen: ILGenerator) objemit (typ: Type) =
         // save primitive types as is
         if typ.IsPrimitive then
-            emitSaveFieldPrimitive gen objemit field field.FieldType
+            emitSaveValuePrimitive gen objemit typ
         // save enums as int values
         else if typ.IsEnum then
-            emitSaveFieldPrimitive gen objemit field typedefof<int>
+            emitSaveValuePrimitive gen objemit typedefof<int>
         // save structs as embedded field lists
         else if typ.IsValueType then
-            emitSaveFields gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldflda, field)) field.FieldType
+            emitSaveFields gen objemit typ
         // save objects as object ids (defer actual saving)
         else
             assert typ.IsClass
@@ -69,8 +69,7 @@ module Saver =
 
             // push object id
             gen.Emit(OpCodes.Ldarg_0) // context
-            objemit gen // object
-            gen.Emit(OpCodes.Ldfld, field) // field
+            objemit gen
             gen.Emit(OpCodes.Call, typedefof<ObjectSaveContext>.GetMethod("Object"))
 
             // write object id
@@ -88,24 +87,55 @@ module Saver =
         // can't have empty types
         assert (fields_ser.Length > 0)
 
-        // serialize all serializable fields (!)
+        // serialize all serializable fields
         for f in fields_ser do
-            emitSaveField gen objemit f
+            // load structs by reference to conserve stack space
+            let ldfld = if isStruct f.FieldType then OpCodes.Ldflda else OpCodes.Ldfld
 
-    let emitSaveArray (gen: ILGenerator) (typ: Type) =
-        // store size
-        gen.Emit(OpCodes.Ldloc_0)
-        gen.Emit(OpCodes.Ldloc_1)
+            emitSaveValue gen (fun gen -> objemit gen; gen.Emit(ldfld, f)) f.FieldType
+
+    let emitSaveArray (gen: ILGenerator) objemit (typ: Type) =
+        // declare local variables for length and for loop counter
+        let idx_local = gen.DeclareLocal(typedefof<int>)
+        assert (idx_local.LocalIndex = 2)
+
+        let cnt_local = gen.DeclareLocal(typedefof<int>)
+        assert (cnt_local.LocalIndex = 3)
+
+        // store size to local
+        objemit gen
         gen.Emit(OpCodes.Ldlen)
+        gen.Emit(OpCodes.Stloc_3) // count
+
+        // serialize size
+        gen.Emit(OpCodes.Ldloc_0) // writer
+        gen.Emit(OpCodes.Ldloc_3) // count
         gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [|typedefof<int>|]))
 
-        let element_type = typ.GetElementType()
+        // serialize contents
+        let loop_begin = gen.DefineLabel()
+        let loop_cmp = gen.DefineLabel()
 
-        if element_type.IsValueType then
-            // store value type arrays
-            ()
-        else
-            ()
+        gen.Emit(OpCodes.Br, loop_cmp)
+        gen.MarkLabel(loop_begin)
+
+        // save element index; load structs by reference to conserve stack space
+        let etype = typ.GetElementType()
+        let ldelem = if isStruct etype then OpCodes.Ldelema else OpCodes.Ldelem
+
+        emitSaveValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc_2); gen.Emit(ldelem, etype)) etype
+
+        // index++
+        gen.Emit(OpCodes.Ldloc_2) // index
+        gen.Emit(OpCodes.Ldc_I4_1)
+        gen.Emit(OpCodes.Add)
+        gen.Emit(OpCodes.Stloc_2)
+
+        // if (index < count) goto begin
+        gen.MarkLabel(loop_cmp)
+        gen.Emit(OpCodes.Ldloc_2) // index
+        gen.Emit(OpCodes.Ldloc_3) // count
+        gen.Emit(OpCodes.Blt, loop_begin)
 
     let emitSave (gen: ILGenerator) (typ: Type) =
         // store writer to the local variable
@@ -125,11 +155,14 @@ module Saver =
         gen.Emit(OpCodes.Castclass, typ)
         gen.Emit(OpCodes.Stloc_1)
 
+        // serialize object contents
+        let objemit (gen: ILGenerator) = gen.Emit(OpCodes.Ldloc_1)
+
         if typ.IsArray then
             assert (typ.GetArrayRank() = 1)
-            emitSaveArray gen typ
+            emitSaveArray gen objemit typ
         else
-            emitSaveFields gen (fun gen -> gen.Emit(OpCodes.Ldloc_1)) typ
+            emitSaveFields gen objemit typ
 
         gen.Emit(OpCodes.Ret)
 
