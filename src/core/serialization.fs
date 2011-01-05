@@ -143,11 +143,11 @@ module Saver =
             emitSaveValue gen (fun gen -> gen.Emit(OpCodes.Ldarg_2); gen.Emit(OpCodes.Unbox_Any, typ)) typ
         else
             let save =
-                if typ.IsArray then
+                if typ = typedefof<string> || typ = typedefof<byte array> || typ = typedefof<char array> then
+                    emitSaveValuePrimitive
+                else if typ.IsArray then
                     assert (typ.GetArrayRank() = 1)
                     emitSaveArray
-                else if typ = typedefof<string> || typ = typedefof<byte array> || typ = typedefof<char array> then
-                    emitSaveValuePrimitive
                 else
                     emitSaveFields
                     
