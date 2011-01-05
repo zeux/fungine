@@ -138,16 +138,22 @@ module Saver =
         // serialize object contents
         if typ.IsValueType then
             emitSaveValue gen (fun gen -> gen.Emit(OpCodes.Ldarg_2); gen.Emit(OpCodes.Unbox_Any, typ)) typ
-        else if typ.IsArray then
-            assert (typ.GetArrayRank() = 1)
-            emitSaveArray gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) typ
         else
-            emitSaveFields gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) typ
+            let save =
+                if typ.IsArray then
+                    assert (typ.GetArrayRank() = 1)
+                    emitSaveArray
+                else if typ = typedefof<string> || typ = typedefof<byte array> || typ = typedefof<char array> then
+                    emitSaveValuePrimitive
+                else
+                    emitSaveFields
+                    
+            save gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) typ
 
         gen.Emit(OpCodes.Ret)
 
     let buildSaveDelegate (typ: Type) =
-        let dm = DynamicMethod("", null, [|typedefof<ObjectSaveContext>; typedefof<BinaryWriter>; typedefof<obj>|], typedefof<SaveMethodHost>, true)
+        let dm = DynamicMethod(typ.ToString(), null, [|typedefof<ObjectSaveContext>; typedefof<BinaryWriter>; typedefof<obj>|], typedefof<SaveMethodHost>, true)
         let gen = dm.GetILGenerator()
 
         emitSave gen typ
