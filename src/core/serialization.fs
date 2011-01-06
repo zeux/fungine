@@ -27,6 +27,15 @@ module Loader =
 
     type LoadMethodHost = class end
 
+    let emitLoadValueByteArray (gen: ILGenerator) objemitpre =
+        gen.Emit(OpCodes.Ldarg_1) // reader
+        objemitpre gen
+        gen.Emit(OpCodes.Ldc_I4_0)
+        objemitpre gen
+        gen.Emit(OpCodes.Ldlen)
+        gen.Emit(OpCodes.Call, typedefof<BinaryReader>.GetMethod("Read", [|typedefof<byte array>; typedefof<int>; typedefof<int>|]))
+        gen.Emit(OpCodes.Pop)
+
     let emitLoadValuePrimitive (gen: ILGenerator) objemitpre objemitpost (typ: Type) =
         objemitpre gen
         gen.Emit(OpCodes.Ldarg_1) // reader
@@ -109,16 +118,14 @@ module Loader =
     let emitLoad (gen: ILGenerator) (typ: Type) =
         // deserialize object contents
         if typ.IsValueType then
-            ()
-            // emitLoadValue gen (fun gen -> gen.Emit(OpCodes.Ldarg_2); gen.Emit(OpCodes.Unbox_Any, typ)) typ
+            emitLoadValue gen (fun gen -> gen.Emit(OpCodes.Ldarg_2); gen.Emit(OpCodes.Unbox, typ)) (fun gen -> gen.Emit(OpCodes.Stobj, typ)) typ
+        else if typ = typedefof<byte array> then
+            emitLoadValueByteArray gen (fun gen -> gen.Emit(OpCodes.Ldarg_2))
+        else if typ.IsArray then
+            assert (typ.GetArrayRank() = 1)
+            emitLoadArray gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) typ
         else
-            if typ = typedefof<string> || typ = typedefof<byte array> || typ = typedefof<char array> then
-                emitLoadValuePrimitive gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) (fun gen -> ()) typ
-            else if typ.IsArray then
-                assert (typ.GetArrayRank() = 1)
-                emitLoadArray gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) typ
-            else
-                emitLoadFields gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) (fun gen -> ()) typ
+            emitLoadFields gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) (fun gen -> ()) typ
 
         gen.Emit(OpCodes.Ret)
 
@@ -301,7 +308,7 @@ module Saver =
             emitSaveValue gen (fun gen -> gen.Emit(OpCodes.Ldarg_2); gen.Emit(OpCodes.Unbox_Any, typ)) typ
         else
             let save =
-                if typ = typedefof<string> || typ = typedefof<byte array> || typ = typedefof<char array> then
+                if typ = typedefof<string> || typ = typedefof<byte array> then
                     emitSaveValuePrimitive
                 else if typ.IsArray then
                     assert (typ.GetArrayRank() = 1)
