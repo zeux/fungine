@@ -52,7 +52,7 @@ let private emitSaveObject (gen: ILGenerator) objemit =
     // push object id
     gen.Emit(OpCodes.Ldarg_0) // table
     objemit gen
-    gen.Emit(OpCodes.Call, typedefof<ObjectTable>.GetMethod("Object"))
+    gen.Emit(OpCodes.Call, typedefof<ObjectTable>.GetMethod("Object", BindingFlags.Instance ||| BindingFlags.NonPublic))
 
     // write object id
     gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [|typedefof<int>|]))
