@@ -14,6 +14,9 @@ type private LoadDelegate = delegate of ObjectTable * BinaryReader * obj -> unit
 // all load methods are created as methods of this type
 type private LoadMethodHost = class end
 
+// dummy function for callbacks
+let private emitNone gen = ()
+
 // load any value for which there is a BinaryWriter.ReadType method (all primitive types)
 let private emitLoadValuePrimitive (gen: ILGenerator) objemitpre objemitpost (typ: Type) =
     objemitpre gen
@@ -43,22 +46,22 @@ let rec private emitLoadValue (gen: ILGenerator) objemitpre objemitpost (typ: Ty
         emitLoadValuePrimitive gen objemitpre objemitpost typedefof<int>
     // load structs as embedded field lists
     else if typ.IsValueType then
-        emitLoadFields gen objemitpre objemitpost typ
+        emitLoadFields gen objemitpre typ
     // load objects as object ids
     else
         assert typ.IsClass
         emitLoadObject gen objemitpre objemitpost
 
 // load all fields of a class/struct
-and private emitLoadFields (gen: ILGenerator) objemitpre objemitpost (typ: Type) =
+and private emitLoadFields (gen: ILGenerator) objemit (typ: Type) =
     let fields = Util.getSerializableFields typ
 
     // serialize all serializable fields
     for f in fields do
         if Util.isStruct f.FieldType then
-            emitLoadValue gen (fun gen -> objemitpre gen; gen.Emit(OpCodes.Ldflda, f)) objemitpost f.FieldType
+            emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldflda, f)) emitNone f.FieldType
         else
-            emitLoadValue gen objemitpre (fun gen -> gen.Emit(OpCodes.Stfld, f)) f.FieldType
+            emitLoadValue gen objemit (fun gen -> gen.Emit(OpCodes.Stfld, f)) f.FieldType
 
 // load an array
 let private emitLoadArray (gen: ILGenerator) objemit (typ: Type) =
@@ -67,23 +70,23 @@ let private emitLoadArray (gen: ILGenerator) objemit (typ: Type) =
 
     Util.emitArrayLoop gen objemit (fun gen ->
         if Util.isStruct etype then
-            emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc_0); gen.Emit(OpCodes.Ldelema, etype)) (fun gen -> ()) etype
+            emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc_0); gen.Emit(OpCodes.Ldelema, etype)) emitNone etype
         else
             emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc_0)) (fun gen -> gen.Emit(OpCodes.Stelem, etype)) etype)
 
 // load byte array (fast path)
-let private emitLoadByteArray (gen: ILGenerator) objemitpre =
+let private emitLoadByteArray (gen: ILGenerator) objemit =
     gen.Emit(OpCodes.Ldarg_1) // reader
-    objemitpre gen
+    objemit gen
     gen.Emit(OpCodes.Ldc_I4_0)
-    objemitpre gen
+    objemit gen
     gen.Emit(OpCodes.Ldlen)
     gen.Emit(OpCodes.Call, typedefof<BinaryReader>.GetMethod("Read", [|typedefof<byte array>; typedefof<int>; typedefof<int>|]))
     gen.Emit(OpCodes.Pop)
 
 // load string
-let private emitLoadString (gen: ILGenerator) objemitpre =
-    objemitpre gen
+let private emitLoadString (gen: ILGenerator) objemit =
+    objemit gen
     gen.Emit(OpCodes.Ldc_I4_0)
     gen.Emit(OpCodes.Ldarg_1) // reader
     gen.Emit(OpCodes.Call, typedefof<BinaryReader>.GetMethod("ReadString"))
@@ -92,17 +95,19 @@ let private emitLoadString (gen: ILGenerator) objemitpre =
 // load a top-level type
 let private emitLoad (gen: ILGenerator) (typ: Type) =
     // deserialize object contents
+    let objemit (gen: ILGenerator) = gen.Emit(OpCodes.Ldarg_2)
+
     if typ.IsValueType then
-        emitLoadValue gen (fun gen -> gen.Emit(OpCodes.Ldarg_2); gen.Emit(OpCodes.Unbox, typ)) (fun gen -> gen.Emit(OpCodes.Stobj, typ)) typ
+        emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Unbox, typ)) (fun gen -> gen.Emit(OpCodes.Stobj, typ)) typ
     else if typ = typedefof<byte array> then
-        emitLoadByteArray gen (fun gen -> gen.Emit(OpCodes.Ldarg_2))
+        emitLoadByteArray gen objemit
     else if typ = typedefof<string> then
-        emitLoadString gen (fun gen -> gen.Emit(OpCodes.Ldarg_2))
+        emitLoadString gen objemit
     else if typ.IsArray then
         assert (typ.GetArrayRank() = 1)
-        emitLoadArray gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) typ
+        emitLoadArray gen objemit typ
     else
-        emitLoadFields gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) (fun gen -> ()) typ
+        emitLoadFields gen objemit typ
 
     gen.Emit(OpCodes.Ret)
 

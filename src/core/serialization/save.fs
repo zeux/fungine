@@ -96,19 +96,17 @@ let private emitSaveArray (gen: ILGenerator) objemit (typ: Type) =
 // save a top-level type
 let private emitSave (gen: ILGenerator) (typ: Type) =
     // serialize object contents
+    let objemit (gen: ILGenerator) = gen.Emit(OpCodes.Ldarg_2)
+
     if typ.IsValueType then
-        emitSaveValue gen (fun gen -> gen.Emit(OpCodes.Ldarg_2); gen.Emit(OpCodes.Unbox_Any, typ)) typ
+        emitSaveValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Unbox_Any, typ)) typ
+    else if typ = typedefof<string> || typ = typedefof<byte array> then
+        emitSaveValuePrimitive gen objemit typ
+    else if typ.IsArray then
+        assert (typ.GetArrayRank() = 1)
+        emitSaveArray gen objemit typ
     else
-        let save =
-            if typ = typedefof<string> || typ = typedefof<byte array> then
-                emitSaveValuePrimitive
-            else if typ.IsArray then
-                assert (typ.GetArrayRank() = 1)
-                emitSaveArray
-            else
-                emitSaveFields
-                
-        save gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) typ
+        emitSaveFields gen objemit typ
 
     gen.Emit(OpCodes.Ret)
 
