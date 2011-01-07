@@ -62,44 +62,14 @@ and private emitLoadFields (gen: ILGenerator) objemitpre objemitpost (typ: Type)
 
 // load an array
 let private emitLoadArray (gen: ILGenerator) objemit (typ: Type) =
-    // declare local variables for length and for loop counter
-    let idx_local = gen.DeclareLocal(typedefof<int>)
-    assert (idx_local.LocalIndex = 0)
-
-    let cnt_local = gen.DeclareLocal(typedefof<int>)
-    assert (cnt_local.LocalIndex = 1)
-
-    // store size to local
-    objemit gen
-    gen.Emit(OpCodes.Ldlen)
-    gen.Emit(OpCodes.Stloc_1) // count
-
     // serialize contents
-    let loop_begin = gen.DefineLabel()
-    let loop_cmp = gen.DefineLabel()
-
-    gen.Emit(OpCodes.Br, loop_cmp)
-    gen.MarkLabel(loop_begin)
-
-    // load element index
     let etype = typ.GetElementType()
 
-    if Util.isStruct etype then
-        emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc_0); gen.Emit(OpCodes.Ldelema, etype)) (fun gen -> ()) etype
-    else
-        emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc_0)) (fun gen -> gen.Emit(OpCodes.Stelem, etype)) etype
-
-    // index++
-    gen.Emit(OpCodes.Ldloc_0) // index
-    gen.Emit(OpCodes.Ldc_I4_1)
-    gen.Emit(OpCodes.Add)
-    gen.Emit(OpCodes.Stloc_0)
-
-    // if (index < count) goto begin
-    gen.MarkLabel(loop_cmp)
-    gen.Emit(OpCodes.Ldloc_0) // index
-    gen.Emit(OpCodes.Ldloc_1) // count
-    gen.Emit(OpCodes.Blt, loop_begin)
+    Util.emitArrayLoop gen objemit (fun gen ->
+        if Util.isStruct etype then
+            emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc_0); gen.Emit(OpCodes.Ldelema, etype)) (fun gen -> ()) etype
+        else
+            emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc_0)) (fun gen -> gen.Emit(OpCodes.Stelem, etype)) etype)
 
 // load byte array (fast path)
 let private emitLoadByteArray (gen: ILGenerator) objemitpre =
