@@ -27,15 +27,6 @@ module Loader =
 
     type LoadMethodHost = class end
 
-    let emitLoadValueByteArray (gen: ILGenerator) objemitpre =
-        gen.Emit(OpCodes.Ldarg_1) // reader
-        objemitpre gen
-        gen.Emit(OpCodes.Ldc_I4_0)
-        objemitpre gen
-        gen.Emit(OpCodes.Ldlen)
-        gen.Emit(OpCodes.Call, typedefof<BinaryReader>.GetMethod("Read", [|typedefof<byte array>; typedefof<int>; typedefof<int>|]))
-        gen.Emit(OpCodes.Pop)
-
     let emitLoadValuePrimitive (gen: ILGenerator) objemitpre objemitpost (typ: Type) =
         objemitpre gen
         gen.Emit(OpCodes.Ldarg_1) // reader
@@ -115,12 +106,30 @@ module Loader =
         gen.Emit(OpCodes.Ldloc_1) // count
         gen.Emit(OpCodes.Blt, loop_begin)
 
+    let emitLoadByteArray (gen: ILGenerator) objemitpre =
+        gen.Emit(OpCodes.Ldarg_1) // reader
+        objemitpre gen
+        gen.Emit(OpCodes.Ldc_I4_0)
+        objemitpre gen
+        gen.Emit(OpCodes.Ldlen)
+        gen.Emit(OpCodes.Call, typedefof<BinaryReader>.GetMethod("Read", [|typedefof<byte array>; typedefof<int>; typedefof<int>|]))
+        gen.Emit(OpCodes.Pop)
+
+    let emitLoadString (gen: ILGenerator) objemitpre =
+        objemitpre gen
+        gen.Emit(OpCodes.Ldc_I4_0)
+        gen.Emit(OpCodes.Ldarg_1) // reader
+        gen.Emit(OpCodes.Call, typedefof<BinaryReader>.GetMethod("ReadString"))
+        gen.Emit(OpCodes.Call, typedefof<string>.GetMethod("FillStringChecked", BindingFlags.Static ||| BindingFlags.NonPublic))
+
     let emitLoad (gen: ILGenerator) (typ: Type) =
         // deserialize object contents
         if typ.IsValueType then
             emitLoadValue gen (fun gen -> gen.Emit(OpCodes.Ldarg_2); gen.Emit(OpCodes.Unbox, typ)) (fun gen -> gen.Emit(OpCodes.Stobj, typ)) typ
         else if typ = typedefof<byte array> then
-            emitLoadValueByteArray gen (fun gen -> gen.Emit(OpCodes.Ldarg_2))
+            emitLoadByteArray gen (fun gen -> gen.Emit(OpCodes.Ldarg_2))
+        else if typ = typedefof<string> then
+            emitLoadString gen (fun gen -> gen.Emit(OpCodes.Ldarg_2))
         else if typ.IsArray then
             assert (typ.GetArrayRank() = 1)
             emitLoadArray gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) typ
@@ -165,7 +174,7 @@ let loadFromStream stream =
     let object_types = Array.init (reader.ReadInt32()) (fun _ -> types.[reader.ReadInt32()])
 
     // read array size table
-    let array_size_indices = object_types |> Array.map (fun typ -> if typ.IsArray then 1 else 0) |> Array.scan (+) 0
+    let array_size_indices = object_types |> Array.map (fun typ -> if typ.IsArray || typ = typedefof<string> then 1 else 0) |> Array.scan (+) 0
     assert (array_size_indices.Length = object_types.Length + 1)
 
     let array_sizes = Array.init array_size_indices.[object_types.Length] (fun _ -> reader.ReadInt32())
@@ -177,6 +186,9 @@ let loadFromStream stream =
 
             let length = array_sizes.[array_size_indices.[idx]]
             System.Array.CreateInstance(typ.GetElementType(), length) :> obj
+        else if typ = typedefof<string> then
+            let length = array_sizes.[array_size_indices.[idx]]
+            typ.GetMethod("FastAllocateString", BindingFlags.Static ||| BindingFlags.NonPublic).Invoke(null, [|box length|])
         else
             System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typ))
 
@@ -391,6 +403,8 @@ let saveToStream stream obj =
         let typ = p.Key.GetType()
         if typ.IsArray then
             Some (p.Key :?> System.Array).Length
+        else if typ = typedefof<string> then
+            Some (p.Key :?> string).Length
         else
             None) |> Array.iter writer.Write
 
