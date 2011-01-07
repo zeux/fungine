@@ -2,13 +2,26 @@ module Core.Serialization.Util
 
 open System
 open System.Collections.Generic
-open System.IO
 open System.Reflection
-open System.Reflection.Emit
 
+// a cache for delegates based on types
+type DelegateCache<'a>(creator) =
+    let cache = Dictionary<Type, 'a>()
+
+    // get the value from the cache, creating it as necessary
+    member x.Get typ =
+        match cache.TryGetValue(typ) with
+        | true, value -> value
+        | _ ->
+            let d = creator typ
+            cache.Add(typ, d)
+            d
+
+// return true if type is a struct
 let isStruct (typ: Type) =
     typ.IsValueType && not typ.IsPrimitive && not typ.IsEnum
 
+// get all fields from the type and its ancestors that are eligible for serialization
 let getSerializableFields (typ: Type) =
     if not typ.IsSerializable then failwith (sprintf "Type %A is not serializable" typ)
 

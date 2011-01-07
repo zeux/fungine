@@ -1,23 +1,39 @@
 module Core.Serialization.Load
 
 open System
-open System.Collections.Generic
 open System.IO
 open System.Reflection
 open System.Reflection.Emit
 
+// a table that holds all objects in a loaded graph
 type private ObjectTable = obj array
 
+// a delegate for loading objects; there is an instance of one for each type
 type private LoadDelegate = delegate of ObjectTable * BinaryReader * obj -> unit
 
+// all load methods are created as methods of this type
 type private LoadMethodHost = class end
 
+// load any value for which there is a BinaryWriter.ReadType method (all primitive types)
 let private emitLoadValuePrimitive (gen: ILGenerator) objemitpre objemitpost (typ: Type) =
     objemitpre gen
     gen.Emit(OpCodes.Ldarg_1) // reader
     gen.Emit(OpCodes.Call, typedefof<BinaryReader>.GetMethod("Read" + typ.Name))
     objemitpost gen
 
+// load an object
+let private emitLoadObject (gen: ILGenerator) objemitpre objemitpost =
+    objemitpre gen
+
+    // read id and fetch object from object table
+    gen.Emit(OpCodes.Ldarg_0) // table
+    gen.Emit(OpCodes.Ldarg_1) // reader
+    gen.Emit(OpCodes.Call, typedefof<BinaryReader>.GetMethod("ReadInt32"))
+    gen.Emit(OpCodes.Ldelem_Ref)
+
+    objemitpost gen
+
+// load any value (dispatcher function)
 let rec private emitLoadValue (gen: ILGenerator) objemitpre objemitpost (typ: Type) =
     // load primitive types as is
     if typ.IsPrimitive then
@@ -31,16 +47,9 @@ let rec private emitLoadValue (gen: ILGenerator) objemitpre objemitpost (typ: Ty
     // load objects as object ids
     else
         assert typ.IsClass
+        emitLoadObject gen objemitpre objemitpost
 
-        objemitpre gen
-
-        gen.Emit(OpCodes.Ldarg_0) // table
-        gen.Emit(OpCodes.Ldarg_1) // reader
-        gen.Emit(OpCodes.Call, typedefof<BinaryReader>.GetMethod("ReadInt32"))
-        gen.Emit(OpCodes.Ldelem_Ref)
-
-        objemitpost gen
-
+// load all fields of a class/struct
 and private emitLoadFields (gen: ILGenerator) objemitpre objemitpost (typ: Type) =
     let fields = Util.getSerializableFields typ
 
@@ -51,6 +60,7 @@ and private emitLoadFields (gen: ILGenerator) objemitpre objemitpost (typ: Type)
         else
             emitLoadValue gen objemitpre (fun gen -> gen.Emit(OpCodes.Stfld, f)) f.FieldType
 
+// load an array
 let private emitLoadArray (gen: ILGenerator) objemit (typ: Type) =
     // declare local variables for length and for loop counter
     let idx_local = gen.DeclareLocal(typedefof<int>)
@@ -91,6 +101,7 @@ let private emitLoadArray (gen: ILGenerator) objemit (typ: Type) =
     gen.Emit(OpCodes.Ldloc_1) // count
     gen.Emit(OpCodes.Blt, loop_begin)
 
+// load byte array (fast path)
 let private emitLoadByteArray (gen: ILGenerator) objemitpre =
     gen.Emit(OpCodes.Ldarg_1) // reader
     objemitpre gen
@@ -100,6 +111,7 @@ let private emitLoadByteArray (gen: ILGenerator) objemitpre =
     gen.Emit(OpCodes.Call, typedefof<BinaryReader>.GetMethod("Read", [|typedefof<byte array>; typedefof<int>; typedefof<int>|]))
     gen.Emit(OpCodes.Pop)
 
+// load string
 let private emitLoadString (gen: ILGenerator) objemitpre =
     objemitpre gen
     gen.Emit(OpCodes.Ldc_I4_0)
@@ -107,6 +119,7 @@ let private emitLoadString (gen: ILGenerator) objemitpre =
     gen.Emit(OpCodes.Call, typedefof<BinaryReader>.GetMethod("ReadString"))
     gen.Emit(OpCodes.Call, typedefof<string>.GetMethod("FillStringChecked", BindingFlags.Static ||| BindingFlags.NonPublic))
 
+// load a top-level type
 let private emitLoad (gen: ILGenerator) (typ: Type) =
     // deserialize object contents
     if typ.IsValueType then
@@ -123,6 +136,7 @@ let private emitLoad (gen: ILGenerator) (typ: Type) =
 
     gen.Emit(OpCodes.Ret)
 
+// create a load delegate for a given type
 let private buildLoadDelegate (typ: Type) =
     let dm = DynamicMethod(typ.ToString(), null, [|typedefof<ObjectTable>; typedefof<BinaryReader>; typedefof<obj>|], typedefof<LoadMethodHost>, true)
     let gen = dm.GetILGenerator()
@@ -131,16 +145,10 @@ let private buildLoadDelegate (typ: Type) =
 
     dm.CreateDelegate(typedefof<LoadDelegate>) :?> LoadDelegate
 
-let private loadDelegateCache = Dictionary<Type, LoadDelegate>()
+// a cache for save delegates (one delegate per type)
+let private loadDelegateCache = Util.DelegateCache(buildLoadDelegate)
 
-let private getLoadDelegate typ =
-    match loadDelegateCache.TryGetValue(typ) with
-    | true, value -> value
-    | _ ->
-        let d = buildLoadDelegate typ
-        loadDelegateCache.Add(typ, d)
-        d
-
+// load object from stream
 let fromStream stream =
     let reader = new BinaryReader(stream)
 
@@ -182,12 +190,13 @@ let fromStream stream =
 
     // load objects
     objects |> Array.iter (fun obj ->
-        let d = getLoadDelegate (obj.GetType())
+        let d = loadDelegateCache.Get(obj.GetType())
 
         d.Invoke(table, reader, obj))
         
     objects.[0]
 
+// load object from file
 let fromFile path =
     use stream = new FileStream(path, FileMode.Open)
     fromStream stream

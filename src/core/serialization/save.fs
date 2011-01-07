@@ -6,6 +6,7 @@ open System.IO
 open System.Reflection
 open System.Reflection.Emit
 
+// a table that holds all objects in a current graph
 type private ObjectTable() =
     let object_queue = Queue<obj>()
     let object_ids = Dictionary<obj, int>(HashIdentity.Reference)
@@ -32,15 +33,31 @@ type private ObjectTable() =
                 object_queue.Enqueue(obj)
                 id
 
+// a delegate for saving objects; there is an instance of one for each type
 type private SaveDelegate = delegate of ObjectTable * BinaryWriter * obj -> unit
 
+// all save methods are created as methods of this type
 type private SaveMethodHost = class end
 
+// save any value for which there is a BinaryWriter.Write method (all primitive types, string, byte array)
 let private emitSaveValuePrimitive (gen: ILGenerator) objemit typ =
     gen.Emit(OpCodes.Ldarg_1) // writer
     objemit gen
     gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [|typ|]))
 
+// save an object
+let private emitSaveObject (gen: ILGenerator) objemit =
+    gen.Emit(OpCodes.Ldarg_1) // writer
+
+    // push object id
+    gen.Emit(OpCodes.Ldarg_0) // table
+    objemit gen
+    gen.Emit(OpCodes.Call, typedefof<ObjectTable>.GetMethod("Object"))
+
+    // write object id
+    gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [|typedefof<int>|]))
+
+// save any value (dispatcher function)
 let rec private emitSaveValue (gen: ILGenerator) objemit (typ: Type) =
     // save primitive types as is
     if typ.IsPrimitive then
@@ -54,16 +71,9 @@ let rec private emitSaveValue (gen: ILGenerator) objemit (typ: Type) =
     // save objects as object ids (defer actual saving)
     else
         assert typ.IsClass
-        gen.Emit(OpCodes.Ldarg_1) // writer
+        emitSaveObject gen objemit
 
-        // push object id
-        gen.Emit(OpCodes.Ldarg_0) // table
-        objemit gen
-        gen.Emit(OpCodes.Call, typedefof<ObjectTable>.GetMethod("Object"))
-
-        // write object id
-        gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [|typedefof<int>|]))
-
+// save all fields of a class/struct
 and private emitSaveFields (gen: ILGenerator) objemit (typ: Type) =
     let fields = Util.getSerializableFields typ
 
@@ -74,6 +84,7 @@ and private emitSaveFields (gen: ILGenerator) objemit (typ: Type) =
 
         emitSaveValue gen (fun gen -> objemit gen; gen.Emit(cmd, f)) f.FieldType
 
+// save an array
 let private emitSaveArray (gen: ILGenerator) objemit (typ: Type) =
     // declare local variables for length and for loop counter
     let idx_local = gen.DeclareLocal(typedefof<int>)
@@ -112,6 +123,7 @@ let private emitSaveArray (gen: ILGenerator) objemit (typ: Type) =
     gen.Emit(OpCodes.Ldloc_1) // count
     gen.Emit(OpCodes.Blt, loop_begin)
 
+// save a top-level type
 let private emitSave (gen: ILGenerator) (typ: Type) =
     // serialize object contents
     if typ.IsValueType then
@@ -130,6 +142,7 @@ let private emitSave (gen: ILGenerator) (typ: Type) =
 
     gen.Emit(OpCodes.Ret)
 
+// create a save delegate for a given type
 let private buildSaveDelegate (typ: Type) =
     let dm = DynamicMethod(typ.ToString(), null, [|typedefof<ObjectTable>; typedefof<BinaryWriter>; typedefof<obj>|], typedefof<SaveMethodHost>, true)
     let gen = dm.GetILGenerator()
@@ -138,16 +151,10 @@ let private buildSaveDelegate (typ: Type) =
 
     dm.CreateDelegate(typedefof<SaveDelegate>) :?> SaveDelegate
 
-let private saveDelegateCache = Dictionary<Type, SaveDelegate>()
+// a cache for save delegates (one delegate per type)
+let private saveDelegateCache = Util.DelegateCache(buildSaveDelegate)
 
-let private getSaveDelegate typ =
-    match saveDelegateCache.TryGetValue(typ) with
-    | true, value -> value
-    | _ ->
-        let d = buildSaveDelegate typ
-        saveDelegateCache.Add(typ, d)
-        d
-
+// save object data to a data array
 let private save (context: ObjectTable) obj =
     use stream = new MemoryStream()
     use writer = new BinaryWriter(stream)
@@ -157,11 +164,13 @@ let private save (context: ObjectTable) obj =
 
     // save all objects (additional items are pushed to the queue in save delegates)
     for obj in context.PendingObjects do
-        let d = getSaveDelegate (obj.GetType())
+        let d = saveDelegateCache.Get(obj.GetType())
+
         d.Invoke(context, writer, obj)
 
     stream.ToArray()
 
+// save object to stream
 let toStream stream obj =
     let table = ObjectTable()
 
@@ -209,6 +218,7 @@ let toStream stream obj =
     // save object data
     writer.Write(data)
 
+// save object to file
 let toFile path obj =
     use stream = new FileStream(path, FileMode.Create)
     toStream stream obj
