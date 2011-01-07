@@ -1,0 +1,214 @@
+module Core.Serialization.Save
+
+open System
+open System.Collections.Generic
+open System.IO
+open System.Reflection
+open System.Reflection.Emit
+
+type private ObjectTable() =
+    let object_queue = Queue<obj>()
+    let object_ids = Dictionary<obj, int>(HashIdentity.Reference)
+
+    // get the list of objects to be serialized
+    member x.PendingObjects = seq { while object_queue.Count > 0 do yield object_queue.Dequeue() }
+
+    // get the list of all objects
+    member x.Objects = object_ids |> Array.ofSeq
+
+    // get a serialized id of the object
+    member x.Object (obj: obj) =
+        // null is encoded with 0
+        if Object.ReferenceEquals(obj, null) then
+            0
+        else
+            // non-null objects are encoded with 1-based object index in the object table
+            1 +
+            match object_ids.TryGetValue(obj) with
+            | true, id -> id
+            | _ ->
+                let id = object_ids.Count
+                object_ids.Add(obj, id)
+                object_queue.Enqueue(obj)
+                id
+
+type private SaveDelegate = delegate of ObjectTable * BinaryWriter * obj -> unit
+
+type private SaveMethodHost = class end
+
+let private emitSaveValuePrimitive (gen: ILGenerator) objemit typ =
+    gen.Emit(OpCodes.Ldarg_1) // writer
+    objemit gen
+    gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [|typ|]))
+
+let rec private emitSaveValue (gen: ILGenerator) objemit (typ: Type) =
+    // save primitive types as is
+    if typ.IsPrimitive then
+        emitSaveValuePrimitive gen objemit typ
+    // save enums as int values
+    else if typ.IsEnum then
+        emitSaveValuePrimitive gen objemit typedefof<int>
+    // save structs as embedded field lists
+    else if typ.IsValueType then
+        emitSaveFields gen objemit typ
+    // save objects as object ids (defer actual saving)
+    else
+        assert typ.IsClass
+        gen.Emit(OpCodes.Ldarg_1) // writer
+
+        // push object id
+        gen.Emit(OpCodes.Ldarg_0) // table
+        objemit gen
+        gen.Emit(OpCodes.Call, typedefof<ObjectTable>.GetMethod("Object"))
+
+        // write object id
+        gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [|typedefof<int>|]))
+
+and private emitSaveFields (gen: ILGenerator) objemit (typ: Type) =
+    let fields = Util.getSerializableFields typ
+
+    // serialize all serializable fields
+    for f in fields do
+        // load structs by reference to conserve stack space
+        let cmd = if Util.isStruct f.FieldType then OpCodes.Ldflda else OpCodes.Ldfld
+
+        emitSaveValue gen (fun gen -> objemit gen; gen.Emit(cmd, f)) f.FieldType
+
+let private emitSaveArray (gen: ILGenerator) objemit (typ: Type) =
+    // declare local variables for length and for loop counter
+    let idx_local = gen.DeclareLocal(typedefof<int>)
+    assert (idx_local.LocalIndex = 0)
+
+    let cnt_local = gen.DeclareLocal(typedefof<int>)
+    assert (cnt_local.LocalIndex = 1)
+
+    // store size to local
+    objemit gen
+    gen.Emit(OpCodes.Ldlen)
+    gen.Emit(OpCodes.Stloc_1) // count
+
+    // serialize contents
+    let loop_begin = gen.DefineLabel()
+    let loop_cmp = gen.DefineLabel()
+
+    gen.Emit(OpCodes.Br, loop_cmp)
+    gen.MarkLabel(loop_begin)
+
+    // save element index; load structs by reference to conserve stack space
+    let etype = typ.GetElementType()
+    let cmd = if Util.isStruct etype then OpCodes.Ldelema else OpCodes.Ldelem
+
+    emitSaveValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc_0); gen.Emit(cmd, etype)) etype
+
+    // index++
+    gen.Emit(OpCodes.Ldloc_0) // index
+    gen.Emit(OpCodes.Ldc_I4_1)
+    gen.Emit(OpCodes.Add)
+    gen.Emit(OpCodes.Stloc_0)
+
+    // if (index < count) goto begin
+    gen.MarkLabel(loop_cmp)
+    gen.Emit(OpCodes.Ldloc_0) // index
+    gen.Emit(OpCodes.Ldloc_1) // count
+    gen.Emit(OpCodes.Blt, loop_begin)
+
+let private emitSave (gen: ILGenerator) (typ: Type) =
+    // serialize object contents
+    if typ.IsValueType then
+        emitSaveValue gen (fun gen -> gen.Emit(OpCodes.Ldarg_2); gen.Emit(OpCodes.Unbox_Any, typ)) typ
+    else
+        let save =
+            if typ = typedefof<string> || typ = typedefof<byte array> then
+                emitSaveValuePrimitive
+            else if typ.IsArray then
+                assert (typ.GetArrayRank() = 1)
+                emitSaveArray
+            else
+                emitSaveFields
+                
+        save gen (fun gen -> gen.Emit(OpCodes.Ldarg_2)) typ
+
+    gen.Emit(OpCodes.Ret)
+
+let private buildSaveDelegate (typ: Type) =
+    let dm = DynamicMethod(typ.ToString(), null, [|typedefof<ObjectTable>; typedefof<BinaryWriter>; typedefof<obj>|], typedefof<SaveMethodHost>, true)
+    let gen = dm.GetILGenerator()
+
+    emitSave gen typ
+
+    dm.CreateDelegate(typedefof<SaveDelegate>) :?> SaveDelegate
+
+let private saveDelegateCache = Dictionary<Type, SaveDelegate>()
+
+let private getSaveDelegate typ =
+    match saveDelegateCache.TryGetValue(typ) with
+    | true, value -> value
+    | _ ->
+        let d = buildSaveDelegate typ
+        saveDelegateCache.Add(typ, d)
+        d
+
+let private save (context: ObjectTable) obj =
+    use stream = new MemoryStream()
+    use writer = new BinaryWriter(stream)
+
+    // push head object
+    context.Object obj |> ignore
+
+    // save all objects (additional items are pushed to the queue in save delegates)
+    for obj in context.PendingObjects do
+        let d = getSaveDelegate (obj.GetType())
+        d.Invoke(context, writer, obj)
+
+    stream.ToArray()
+
+let toStream stream obj =
+    let table = ObjectTable()
+
+    // save object data & fill object table
+    let data = save table obj
+
+    // build type table and object -> type id mapping
+    let types = Dictionary<Type, int>()
+
+    let object_types = table.Objects |> Array.map (fun p ->
+        let typ = p.Key.GetType()
+
+        match types.TryGetValue(typ) with
+        | true, id -> id
+        | _ ->
+            let id = types.Count
+            types.Add(typ, id)
+            id)
+
+    // save header
+    let writer = new BinaryWriter(stream)
+
+    writer.Write("fun")
+
+    // save type table
+    writer.Write(types.Count)
+
+    types |> Array.ofSeq |> Array.sortBy (fun p -> p.Value) |> Array.map (fun p -> p.Key.AssemblyQualifiedName) |> Array.iter writer.Write
+
+    // save object table
+    writer.Write(object_types.Length)
+
+    object_types |> Array.iter writer.Write
+
+    // save array size table
+    table.Objects |> Array.choose (fun p ->
+        let typ = p.Key.GetType()
+        if typ.IsArray then
+            Some (p.Key :?> System.Array).Length
+        else if typ = typedefof<string> then
+            Some (p.Key :?> string).Length
+        else
+            None) |> Array.iter writer.Write
+
+    // save object data
+    writer.Write(data)
+
+let toFile path obj =
+    use stream = new FileStream(path, FileMode.Create)
+    toStream stream obj
