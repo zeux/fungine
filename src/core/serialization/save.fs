@@ -120,7 +120,7 @@ let private buildSaveDelegate (typ: Type) =
     dm.CreateDelegate(typedefof<SaveDelegate>) :?> SaveDelegate
 
 // a cache for save delegates (one delegate per type)
-let private saveDelegateCache = Util.DelegateCache(buildSaveDelegate)
+let private saveDelegateCache = Util.TypeCache(buildSaveDelegate)
 
 // save object data to a data array
 let private save (context: ObjectTable) obj =
@@ -166,7 +166,10 @@ let toStream stream obj =
     // save type table
     writer.Write(types.Count)
 
-    types |> Array.ofSeq |> Array.sortBy (fun p -> p.Value) |> Array.map (fun p -> p.Key.AssemblyQualifiedName) |> Array.iter writer.Write
+    let type_table = types |> Array.ofSeq |> Array.sortBy (fun p -> p.Value) |> Array.map (fun p -> p.Key)
+
+    type_table |> Array.iter (fun typ -> writer.Write(typ.AssemblyQualifiedName))
+    type_table |> Array.iter (fun typ -> writer.Write(Version.get typ))
 
     // save object table
     writer.Write(object_types.Length)

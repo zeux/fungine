@@ -121,7 +121,7 @@ let private buildLoadDelegate (typ: Type) =
     dm.CreateDelegate(typedefof<LoadDelegate>) :?> LoadDelegate
 
 // a cache for save delegates (one delegate per type)
-let private loadDelegateCache = Util.DelegateCache(buildLoadDelegate)
+let private loadDelegateCache = Util.TypeCache(buildLoadDelegate)
 
 // load object from stream
 let fromStream stream =
@@ -133,10 +133,16 @@ let fromStream stream =
     if signature <> "fun" then failwith "Incorrect header"
 
     // read type table
-    let type_names = Array.init (reader.ReadInt32()) (fun _ -> reader.ReadString())
+    let type_count = reader.ReadInt32()
+    let type_names = Array.init type_count (fun _ -> reader.ReadString())
+    let type_versions = Array.init type_count (fun _ -> reader.ReadUInt32())
 
     // resolve types
-    let types = type_names |> Array.map (fun name -> Type.GetType(name))
+    let types =
+        Array.map2 (fun name version ->
+            let typ = Type.GetType(name)
+            if version <> Version.get typ then failwith (sprintf "Version mismatch for type %A" typ)
+            typ) type_names type_versions
 
     // read object table
     let object_types = Array.init (reader.ReadInt32()) (fun _ -> types.[reader.ReadInt32()])

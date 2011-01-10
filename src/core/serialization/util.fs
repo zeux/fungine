@@ -5,8 +5,8 @@ open System.Collections.Generic
 open System.Reflection
 open System.Reflection.Emit
 
-// a cache for delegates based on types
-type DelegateCache<'a>(creator) =
+// a cache based on types
+type TypeCache<'a>(creator) =
     let cache = Dictionary<Type, 'a>()
 
     // get the value from the cache, creating it as necessary

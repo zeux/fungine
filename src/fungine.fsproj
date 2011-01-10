@@ -42,6 +42,7 @@
   <ItemGroup>
     <Compile Include="core\dbgvar.fs" />
     <Compile Include="core\serialization\util.fs" />
+    <Compile Include="core\serialization\version.fs" />
     <Compile Include="core\serialization\save.fs" />
     <Compile Include="core\serialization\load.fs" />
     <Compile Include="math\types.fs" />
