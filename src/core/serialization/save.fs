@@ -62,9 +62,9 @@ let rec private emitSaveValue (gen: ILGenerator) objemit (typ: Type) =
     // save primitive types as is
     if typ.IsPrimitive then
         emitSaveValuePrimitive gen objemit typ
-    // save enums as int values
+    // save enums as integer values
     else if typ.IsEnum then
-        emitSaveValuePrimitive gen objemit typedefof<int>
+        emitSaveValuePrimitive gen objemit (typ.GetEnumUnderlyingType())
     // save structs as embedded field lists
     else if typ.IsValueType then
         emitSaveFields gen objemit typ

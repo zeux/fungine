@@ -41,9 +41,9 @@ let rec private emitLoadValue (gen: ILGenerator) objemitpre objemitpost (typ: Ty
     // load primitive types as is
     if typ.IsPrimitive then
         emitLoadValuePrimitive gen objemitpre objemitpost typ
-    // load enums as int values
+    // load enums as integer values
     else if typ.IsEnum then
-        emitLoadValuePrimitive gen objemitpre objemitpost typedefof<int>
+        emitLoadValuePrimitive gen objemitpre objemitpost (typ.GetEnumUnderlyingType())
     // load structs as embedded field lists
     else if typ.IsValueType then
         emitLoadFields gen objemitpre typ
