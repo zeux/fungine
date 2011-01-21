@@ -27,7 +27,7 @@ let private runTest test =
 let private runTests () =
     let assemblies = System.AppDomain.CurrentDomain.GetAssemblies()
     let types = assemblies |> Array.collect (fun a -> a.GetTypes()) 
-    let suites = types |> Array.filter (fun t -> t.Name = "Tests")
+    let suites = types |> Array.filter (fun t -> t.Name.EndsWith("Tests"))
 
     let total = ref 0
     let passed = ref 0
