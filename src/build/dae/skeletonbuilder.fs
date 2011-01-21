@@ -23,7 +23,7 @@ module SkeletonBuilder =
 
         match comp.Name with
         | "translate" -> let d = data 3 in Matrix.Translation(d.[0], d.[1], d.[2])
-        | "rotate" -> let d = data 4 in Matrix.RotationAxis(Vector3(d.[0], d.[1], d.[2]), d.[3] / 180.0f * float32 System.Math.PI)
+        | "rotate" -> let d = data 4 in Matrix.RotationAxis(SlimDX.Vector3(d.[0], d.[1], d.[2]), d.[3] / 180.0f * float32 System.Math.PI)
         | "scale" -> let d = data 3 in Matrix.Scaling(d.[0], d.[1], d.[2])
         | "matrix" -> parseMatrixNode comp
         | _ -> Matrix.Identity

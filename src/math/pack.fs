@@ -17,15 +17,15 @@ let packFloatSNorm value bits =
     (uint32 result) &&& mask
 
 let packDirectionSNorm (v: MathTypes.Vector3) bits =
-    let x = packFloatSNorm v.X bits
-    let y = packFloatSNorm v.Y bits
-    let z = packFloatSNorm v.Z bits
+    let x = packFloatSNorm v.x bits
+    let y = packFloatSNorm v.y bits
+    let z = packFloatSNorm v.z bits
     x ||| (y <<< bits) ||| (z <<< (2 * bits))
 
 let packDirectionUNorm (v: MathTypes.Vector3) bits =
-    let x = packFloatUNorm (v.X * 0.5f + 0.5f) bits
-    let y = packFloatUNorm (v.Y * 0.5f + 0.5f) bits
-    let z = packFloatUNorm (v.Z * 0.5f + 0.5f) bits
+    let x = packFloatUNorm (v.x * 0.5f + 0.5f) bits
+    let y = packFloatUNorm (v.y * 0.5f + 0.5f) bits
+    let z = packFloatUNorm (v.z * 0.5f + 0.5f) bits
     x ||| (y <<< bits) ||| (z <<< (2 * bits))
 
 let packDirectionUnnormalized (v: MathTypes.Vector3) bits offset =
@@ -36,12 +36,12 @@ let packDirectionUnnormalized (v: MathTypes.Vector3) bits offset =
     let inline rounderr x = abs (x - float (int (x + 0.5)))
 
     // normalize by largest component
-    let axis = if abs v.X > abs v.Y && abs v.X > abs v.Z then 0 else if abs v.Y > abs v.Z then 1 else 2
+    let axis = if abs v.x > abs v.y && abs v.x > abs v.z then 0 else if abs v.y > abs v.x then 1 else 2
     let n1 = v / abs v.[axis]
 
     // select two other components (abs values)
-    let n1_0 = abs (float (if axis = 0 then n1.Y else n1.X))
-    let n1_1 = abs (float (if axis = 2 then n1.Y else n1.Z))
+    let n1_0 = abs (float (if axis = 0 then n1.y else n1.x))
+    let n1_1 = abs (float (if axis = 2 then n1.y else n1.z))
 
     // approximate both components with integer ratios with a common denominator
     let mutable bestv = 0.0
@@ -57,9 +57,9 @@ let packDirectionUnnormalized (v: MathTypes.Vector3) bits offset =
 
     // pack values together
     let mask = (1u <<< bits) - 1u
-    let x = uint32 (round (n1.X * float32 bestv) + offset) &&& mask
-    let y = uint32 (round (n1.Y * float32 bestv) + offset) &&& mask
-    let z = uint32 (round (n1.Z * float32 bestv) + offset) &&& mask
+    let x = uint32 (round (n1.x * float32 bestv) + offset) &&& mask
+    let y = uint32 (round (n1.y * float32 bestv) + offset) &&& mask
+    let z = uint32 (round (n1.z * float32 bestv) + offset) &&& mask
     
     x ||| (y <<< bits) ||| (z <<< (2 * bits))
 
