@@ -27,15 +27,15 @@ let relativePath path root =
 let buildTexture source =
     build source (".build/" + changeExtension source ".dds") Build.Texture.build
 
-let buildMesh source =
+let buildMeshImpl source target =
     // export .dae file
-    let target = ".build/" + changeExtension source ".dae"
-    build source target Build.Dae.Export.build
+    let dae = ".build/" + changeExtension source ".dae"
+    build source dae Build.Dae.Export.build
 
     // parse .dae file
     let timer = System.Diagnostics.Stopwatch.StartNew()
 
-    let doc = Document(target)
+    let doc = Document(dae)
     let time1 = timer.ElapsedMilliseconds
 
     // export textures
@@ -56,6 +56,7 @@ let buildMesh source =
 
     // export meshes
     let instances = doc.Root.Select("/COLLADA/library_visual_scenes//node/instance_geometry | /COLLADA/library_visual_scenes//node/instance_controller")
+
     let meshes = instances |> Array.collect (fun i ->
         // build fat meshes from .dae
         let fat_meshes = Build.Dae.FatMeshBuilder.build doc i fvf skeleton
@@ -75,9 +76,20 @@ let buildMesh source =
 
     let time4 = timer.ElapsedMilliseconds
 
-    printfn "parse / export tex / skeleton / mesh %d / %d / %d / %d" time1 (time2 - time1) (time3 - time2) (time4 - time3)
+    Core.Serialization.Save.toFile target meshes
 
-    meshes
+    let time5 = timer.ElapsedMilliseconds
+
+    printfn "parse / export tex / skeleton / mesh %d / %d / %d / %d, save %d" time1 (time2 - time1) (time3 - time2) (time4 - time3) (time5 - time4)
+
+    true
+
+let buildMesh source =
+    let target = ".build/" + changeExtension source ".mesh"
+
+    build source target buildMeshImpl
+
+    (Core.Serialization.Load.fromFile target) :?> (PackedMesh * Render.Skeleton * Matrix) array
     
 let buildMeshes path =
     let patterns = [|"*.mb"; "*.ma"|]
