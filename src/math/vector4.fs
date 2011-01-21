@@ -54,3 +54,10 @@ type Vector4 =
 
     // string representation
     override this.ToString() = sprintf "%f %f %f %f" this.x this.y this.z this.w
+
+    // constants
+    static member Zero = Vector4()
+    static member UnitX = Vector4(1.f, 0.f, 0.f, 0.f)
+    static member UnitY = Vector4(0.f, 1.f, 0.f, 0.f)
+    static member UnitZ = Vector4(0.f, 0.f, 1.f, 0.f)
+    static member UnitW = Vector4(0.f, 0.f, 0.f, 1.f)

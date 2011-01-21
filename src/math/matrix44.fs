@@ -21,6 +21,9 @@ type Matrix44 =
           row2 = Vector4(m20, m21, m22, m23);
           row3 = Vector4(m30, m31, m32, m33) }
 
+    // ctor from Matrix34
+    new (m: Matrix34) = { row0 = m.row0; row1 = m.row1; row2 = m.row2; row3 = Vector4.UnitW }
+
     // index operators
     member this.Row index =
         match index with
@@ -55,3 +58,7 @@ type Matrix44 =
 
     // string representation
     override this.ToString() = sprintf "%A\n%A\n%A\n%A" this.row0 this.row1 this.row2 this.row3
+
+    // constants
+    static member Zero = Matrix44()
+    static member Identity = Matrix44(Vector4.UnitX, Vector4.UnitY, Vector4.UnitZ, Vector4.UnitW)

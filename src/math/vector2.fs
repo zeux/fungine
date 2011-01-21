@@ -63,3 +63,8 @@ type Vector2 =
 
     // string representation
     override this.ToString() = sprintf "%f %f" this.x this.y
+
+    // constants
+    static member Zero = Vector2()
+    static member UnitX = Vector2(1.f, 0.f)
+    static member UnitY = Vector2(0.f, 1.f)

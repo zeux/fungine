@@ -71,3 +71,9 @@ type Vector3 =
 
     // string representation
     override this.ToString() = sprintf "%f %f %f" this.x this.y this.z
+
+    // constants
+    static member Zero = Vector3()
+    static member UnitX = Vector3(1.f, 0.f, 0.f)
+    static member UnitY = Vector3(0.f, 1.f, 0.f)
+    static member UnitZ = Vector3(0.f, 0.f, 1.f)

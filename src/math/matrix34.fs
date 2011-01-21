@@ -52,3 +52,7 @@ type Matrix34 =
 
     // string representation
     override this.ToString() = sprintf "%A\n%A\n%A" this.row0 this.row1 this.row2
+
+    // constants
+    static member Zero = Matrix34()
+    static member Identity = Matrix34(Vector4.UnitX, Vector4.UnitY, Vector4.UnitZ)
