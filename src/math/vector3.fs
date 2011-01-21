@@ -6,9 +6,9 @@ open System.Runtime.InteropServices
 
 [<Struct; StructLayout(LayoutKind.Sequential, Pack = 4)>]
 type Vector3 =
-    val x: float32
-    val y: float32
-    val z: float32
+    val mutable x: float32
+    val mutable y: float32
+    val mutable z: float32
 
     // base ctor
     new (x, y, z) = { x = x; y = y; z = z }
@@ -70,4 +70,4 @@ type Vector3 =
     static member Lerp (l: Vector3, r: Vector3, k: float32) = l + (r - l) * k
 
     // string representation
-    override this.ToString() = sprintf "{%f %f %f}" this.x this.y this.z
+    override this.ToString() = sprintf "%f %f %f" this.x this.y this.z

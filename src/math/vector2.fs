@@ -6,8 +6,8 @@ open System.Runtime.InteropServices
 
 [<Struct; StructLayout(LayoutKind.Sequential, Pack = 4)>]
 type Vector2 =
-    val x: float32
-    val y: float32
+    val mutable x: float32
+    val mutable y: float32
 
     // ctor
     new (x, y) = { x = x; y = y }
@@ -62,4 +62,4 @@ type Vector2 =
     static member Lerp (l: Vector2, r: Vector2, k: float32) = l + (r - l) * k
 
     // string representation
-    override this.ToString() = sprintf "{%f %f}" this.x this.y
+    override this.ToString() = sprintf "%f %f" this.x this.y
