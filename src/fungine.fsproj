@@ -47,6 +47,12 @@
     <Compile Include="core\serialization\save.fs" />
     <Compile Include="core\serialization\load.fs" />
     <Compile Include="core\serialization\tests.fs" />
+    <Compile Include="math\color4.fs" />
+    <Compile Include="math\vector2.fs" />
+    <Compile Include="math\vector3.fs" />
+    <Compile Include="math\vector4.fs" />
+    <Compile Include="math\matrix43.fs" />
+    <Compile Include="math\matrix44.fs" />
     <Compile Include="math\types.fs" />
     <Compile Include="math\pack.fs" />
     <Compile Include="render\skeleton.fs" />

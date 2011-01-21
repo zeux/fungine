@@ -16,19 +16,19 @@ let packFloatSNorm value bits =
     let result = round ((clamp value -1.f 1.f) * (float32 scale))
     (uint32 result) &&& mask
 
-let packDirectionSNorm (v: Vector3) bits =
+let packDirectionSNorm (v: MathTypes.Vector3) bits =
     let x = packFloatSNorm v.X bits
     let y = packFloatSNorm v.Y bits
     let z = packFloatSNorm v.Z bits
     x ||| (y <<< bits) ||| (z <<< (2 * bits))
 
-let packDirectionUNorm (v: Vector3) bits =
+let packDirectionUNorm (v: MathTypes.Vector3) bits =
     let x = packFloatUNorm (v.X * 0.5f + 0.5f) bits
     let y = packFloatUNorm (v.Y * 0.5f + 0.5f) bits
     let z = packFloatUNorm (v.Z * 0.5f + 0.5f) bits
     x ||| (y <<< bits) ||| (z <<< (2 * bits))
 
-let packDirectionUnnormalized (v: Vector3) bits offset =
+let packDirectionUnnormalized (v: MathTypes.Vector3) bits offset =
     // round x to nearest integer
     let inline round x = int (x + (if x > 0.f then 0.5f else -0.5f))
 
@@ -63,8 +63,8 @@ let packDirectionUnnormalized (v: Vector3) bits offset =
     
     x ||| (y <<< bits) ||| (z <<< (2 * bits))
 
-let packDirectionUnnormalizedSigned (v: Vector3) bits =
+let packDirectionUnnormalizedSigned (v: MathTypes.Vector3) bits =
     packDirectionUnnormalized v bits 0
 
-let packDirectionUnnormalizedUnsigned (v: Vector3) bits =
+let packDirectionUnnormalizedUnsigned (v: MathTypes.Vector3) bits =
     packDirectionUnnormalized v bits (1 <<< (bits - 1))
