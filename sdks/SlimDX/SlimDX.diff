@@ -1,6 +1,6 @@
 Index: build/vs2010/SlimDX.vcxproj.filters
 ===================================================================
---- build/vs2010/SlimDX.vcxproj.filters	(revision 1792)
+--- build/vs2010/SlimDX.vcxproj.filters	(revision 1884)
 +++ build/vs2010/SlimDX.vcxproj.filters	(working copy)
 @@ -1,129 +1,6 @@
  ﻿<?xml version="1.0" encoding="utf-8"?>
@@ -132,7 +132,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <Filter Include="Base">
        <UniqueIdentifier>{37768987-11cb-4026-a388-ea4936321fea}</UniqueIdentifier>
      </Filter>
-@@ -133,174 +10,6 @@
+@@ -133,240 +10,15 @@
      <Filter Include="Base\Performance">
        <UniqueIdentifier>{f7faa328-85b2-4c79-93a0-28234facf6d0}</UniqueIdentifier>
      </Filter>
@@ -307,10 +307,33 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <Filter Include="Math">
        <UniqueIdentifier>{acfb6ae1-2700-4b84-8a8d-3784a0b6e675}</UniqueIdentifier>
      </Filter>
-@@ -331,42 +40,6 @@
-     <Filter Include="Math\Half">
-       <UniqueIdentifier>{39fc09f7-6130-452c-a699-272b546f5941}</UniqueIdentifier>
+-    <Filter Include="Math\Bounding Volumes">
+-      <UniqueIdentifier>{4e8a90de-8d2c-492e-923a-d2f3cd4f4b4e}</UniqueIdentifier>
+-    </Filter>
+     <Filter Include="Math\Color">
+       <UniqueIdentifier>{e2814615-3496-414d-9bd7-c11d210be7f3}</UniqueIdentifier>
      </Filter>
+-    <Filter Include="Math\Vector">
+-      <UniqueIdentifier>{c13bbc56-855d-46f4-8b87-7cb8c04d2060}</UniqueIdentifier>
+-    </Filter>
+-    <Filter Include="Math\Matrix">
+-      <UniqueIdentifier>{8dbb2878-ee46-46c1-acca-7d56daca36da}</UniqueIdentifier>
+-    </Filter>
+-    <Filter Include="Math\Quaternion">
+-      <UniqueIdentifier>{f21445bc-db48-460f-945a-c78a55c554ab}</UniqueIdentifier>
+-    </Filter>
+-    <Filter Include="Math\Ray">
+-      <UniqueIdentifier>{0474200c-ddc6-4c9c-b379-b20ffa5b62eb}</UniqueIdentifier>
+-    </Filter>
+-    <Filter Include="Math\Plane">
+-      <UniqueIdentifier>{c97a0f0c-d717-4f76-bfa7-911bfc7809ee}</UniqueIdentifier>
+-    </Filter>
+     <Filter Include="Math\Rational">
+       <UniqueIdentifier>{c0c50ccb-bef2-4eb8-ac60-125bf416df97}</UniqueIdentifier>
+     </Filter>
+-    <Filter Include="Math\Half">
+-      <UniqueIdentifier>{39fc09f7-6130-452c-a699-272b546f5941}</UniqueIdentifier>
+-    </Filter>
 -    <Filter Include="Math\Spherical Harmonics">
 -      <UniqueIdentifier>{8c8dbdb2-1362-4363-9938-21a40e510bee}</UniqueIdentifier>
 -    </Filter>
@@ -350,17 +373,20 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <Filter Include="DXGI">
        <UniqueIdentifier>{3a0198ca-3161-41d5-9474-4e5e8d03dff9}</UniqueIdentifier>
      </Filter>
-@@ -409,9 +82,6 @@
-     <Filter Include="Design">
-       <UniqueIdentifier>{e9fd3d11-2054-47ce-807f-f69f047d4a15}</UniqueIdentifier>
+@@ -406,12 +58,6 @@
+     <Filter Include="DXGI\1.1">
+       <UniqueIdentifier>{7a547ae3-b5f3-4201-a4d3-dac30ff62309}</UniqueIdentifier>
      </Filter>
+-    <Filter Include="Design">
+-      <UniqueIdentifier>{e9fd3d11-2054-47ce-807f-f69f047d4a15}</UniqueIdentifier>
+-    </Filter>
 -    <Filter Include="X3DAudio">
 -      <UniqueIdentifier>{c164a640-d9f7-4ff0-9084-9c5c98c3c27e}</UniqueIdentifier>
 -    </Filter>
      <Filter Include="RawInput">
        <UniqueIdentifier>{21a5b7d5-9f2d-4c09-a2c5-39a2f91cc33a}</UniqueIdentifier>
      </Filter>
-@@ -424,90 +94,6 @@
+@@ -424,90 +70,6 @@
      <Filter Include="RawInput\Info">
        <UniqueIdentifier>{9b8fd6e6-b9e8-4454-9ef6-487d74af267d}</UniqueIdentifier>
      </Filter>
@@ -451,7 +477,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <Filter Include="Multimedia">
        <UniqueIdentifier>{8028fbbc-9cd1-48ba-b1fa-1bb4871fb1cc}</UniqueIdentifier>
      </Filter>
-@@ -523,105 +109,6 @@
+@@ -523,105 +85,6 @@
      <Filter Include="Windows\DisplayMonitor">
        <UniqueIdentifier>{d6d9f224-bfd5-4663-9ba1-e101302b8797}</UniqueIdentifier>
      </Filter>
@@ -557,7 +583,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <Filter Include="Direct3D11">
        <UniqueIdentifier>{2a4901e8-6e0b-449c-b227-0b3f78d9927c}</UniqueIdentifier>
      </Filter>
-@@ -712,93 +199,9 @@
+@@ -712,93 +175,9 @@
      <Filter Include="Direct3D11\Viewport">
        <UniqueIdentifier>{292b2637-c95a-496b-8824-9f00529628a3}</UniqueIdentifier>
      </Filter>
@@ -651,7 +677,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <Filter Include="D3DCompiler">
        <UniqueIdentifier>{929321bb-3d29-4f15-b994-6dede9e74d32}</UniqueIdentifier>
      </Filter>
-@@ -828,279 +231,6 @@
+@@ -828,279 +207,6 @@
      </Filter>
    </ItemGroup>
    <ItemGroup>
@@ -931,7 +957,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClCompile Include="..\..\source\ComObject.cpp">
        <Filter>Base</Filter>
      </ClCompile>
-@@ -1110,9 +240,6 @@
+@@ -1110,9 +216,6 @@
      <ClCompile Include="..\..\source\Configuration.cpp">
        <Filter>Base</Filter>
      </ClCompile>
@@ -941,7 +967,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClCompile Include="..\..\source\Result.cpp">
        <Filter>Base</Filter>
      </ClCompile>
-@@ -1134,510 +261,6 @@
+@@ -1134,642 +237,15 @@
      <ClCompile Include="..\..\source\Performance.cpp">
        <Filter>Base\Performance</Filter>
      </ClCompile>
@@ -1449,13 +1475,54 @@ Index: build/vs2010/SlimDX.vcxproj.filters
 -    <ClCompile Include="..\..\source\directinput\ConditionSet.cpp">
 -      <Filter>DirectInput\Effect\Conditions</Filter>
 -    </ClCompile>
-     <ClCompile Include="..\..\source\math\BoundingBox.cpp">
-       <Filter>Math\Bounding Volumes</Filter>
+-    <ClCompile Include="..\..\source\math\BoundingBox.cpp">
+-      <Filter>Math\Bounding Volumes</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\math\BoundingSphere.cpp">
+-      <Filter>Math\Bounding Volumes</Filter>
+-    </ClCompile>
+     <ClCompile Include="..\..\source\math\Color3.cpp">
+       <Filter>Math\Color</Filter>
      </ClCompile>
-@@ -1686,90 +309,6 @@
-     <ClCompile Include="..\..\source\math\Half4.cpp">
-       <Filter>Math\Half</Filter>
+     <ClCompile Include="..\..\source\math\Color4.cpp">
+       <Filter>Math\Color</Filter>
      </ClCompile>
+-    <ClCompile Include="..\..\source\math\Vector2.cpp">
+-      <Filter>Math\Vector</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\math\Vector3.cpp">
+-      <Filter>Math\Vector</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\math\Vector4.cpp">
+-      <Filter>Math\Vector</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\math\Matrix.cpp">
+-      <Filter>Math\Matrix</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\math\Quaternion.cpp">
+-      <Filter>Math\Quaternion</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\math\Ray.cpp">
+-      <Filter>Math\Ray</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\math\Plane.cpp">
+-      <Filter>Math\Plane</Filter>
+-    </ClCompile>
+     <ClCompile Include="..\..\source\math\Rational.cpp">
+       <Filter>Math\Rational</Filter>
+     </ClCompile>
+-    <ClCompile Include="..\..\source\math\Half.cpp">
+-      <Filter>Math\Half</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\math\Half2.cpp">
+-      <Filter>Math\Half</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\math\Half3.cpp">
+-      <Filter>Math\Half</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\math\Half4.cpp">
+-      <Filter>Math\Half</Filter>
+-    </ClCompile>
 -    <ClCompile Include="..\..\source\math\SHVector.cpp">
 -      <Filter>Math\Spherical Harmonics</Filter>
 -    </ClCompile>
@@ -1543,10 +1610,61 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClCompile Include="..\..\source\dxgi\DXGIException.cpp">
        <Filter>DXGI</Filter>
      </ClCompile>
-@@ -1899,24 +438,6 @@
-     <ClCompile Include="..\..\source\design\Vector4Converter.cpp">
-       <Filter>Design</Filter>
+@@ -1848,75 +324,6 @@
+     <ClCompile Include="..\..\source\dxgi\Surface1.cpp">
+       <Filter>DXGI\1.1</Filter>
      </ClCompile>
+-    <ClCompile Include="..\..\source\design\BoundingBoxConverter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\BoundingSphereConverter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\Color3Converter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\Color4Converter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\FieldPropertyDescriptor.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\Half2Converter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\Half3Converter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\Half4Converter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\HalfConverter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\MatrixConverter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\PlaneConverter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\QuaternionConverter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\RationalConverter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\RayConverter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\Vector2Converter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\Vector3Converter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\..\source\design\Vector4Converter.cpp">
+-      <Filter>Design</Filter>
+-    </ClCompile>
 -    <ClCompile Include="..\..\source\x3daudio\Cone.cpp">
 -      <Filter>X3DAudio</Filter>
 -    </ClCompile>
@@ -1568,7 +1686,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClCompile Include="..\..\source\rawinput\DeviceRI.cpp">
        <Filter>RawInput\Device</Filter>
      </ClCompile>
-@@ -1926,117 +447,6 @@
+@@ -1926,117 +333,6 @@
      <ClCompile Include="..\..\source\rawinput\DeviceInfo.cpp">
        <Filter>RawInput\Info</Filter>
      </ClCompile>
@@ -1686,7 +1804,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClCompile Include="..\..\source\multimedia\WaveFormat.cpp">
        <Filter>Multimedia\WaveFormat</Filter>
      </ClCompile>
-@@ -2055,270 +465,6 @@
+@@ -2055,270 +351,6 @@
      <ClCompile Include="..\..\source\windows\DisplayMonitor.cpp">
        <Filter>Windows\DisplayMonitor</Filter>
      </ClCompile>
@@ -1957,7 +2075,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClCompile Include="..\..\source\direct3d11\Direct3D11Exception.cpp">
        <Filter>Direct3D11</Filter>
      </ClCompile>
-@@ -2556,96 +702,6 @@
+@@ -2556,96 +588,6 @@
      <ClCompile Include="..\..\source\direct3d11\Viewport11.cpp">
        <Filter>Direct3D11\Viewport</Filter>
      </ClCompile>
@@ -2054,7 +2172,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClCompile Include="..\..\source\direct3d11\FastFourierTransform11.cpp">
        <Filter>Direct3D11\Compute</Filter>
      </ClCompile>
-@@ -2661,60 +717,6 @@
+@@ -2661,60 +603,6 @@
      <ClCompile Include="..\..\source\direct3d11\SegmentedScan11.cpp">
        <Filter>Direct3D11\Compute</Filter>
      </ClCompile>
@@ -2115,7 +2233,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClCompile Include="..\..\source\d3dcompiler\D3DCompilerException.cpp">
        <Filter>D3DCompiler</Filter>
      </ClCompile>
-@@ -2761,287 +763,11 @@
+@@ -2761,287 +649,11 @@
        <Filter>D3DCompiler\Reflection\Variable</Filter>
      </ClCompile>
      <ClCompile Include="..\..\source\AssemblyInfo.cpp" />
@@ -2406,7 +2524,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClInclude Include="..\..\source\auto_array.h">
        <Filter>Base</Filter>
      </ClInclude>
-@@ -3096,567 +822,6 @@
+@@ -3096,717 +708,15 @@
      <ClInclude Include="..\..\source\Performance.h">
        <Filter>Base\Performance</Filter>
      </ClInclude>
@@ -2971,13 +3089,57 @@ Index: build/vs2010/SlimDX.vcxproj.filters
 -    <ClInclude Include="..\..\source\directinput\ConditionSet.h">
 -      <Filter>DirectInput\Effect\Conditions</Filter>
 -    </ClInclude>
-     <ClInclude Include="..\..\source\math\Enums.h">
-       <Filter>Math</Filter>
+-    <ClInclude Include="..\..\source\math\Enums.h">
+-      <Filter>Math</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\math\BoundingBox.h">
+-      <Filter>Math\Bounding Volumes</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\math\BoundingSphere.h">
+-      <Filter>Math\Bounding Volumes</Filter>
+-    </ClInclude>
+     <ClInclude Include="..\..\source\math\Color3.h">
+       <Filter>Math\Color</Filter>
      </ClInclude>
-@@ -3708,105 +873,6 @@
-     <ClInclude Include="..\..\source\math\Half4.h">
-       <Filter>Math\Half</Filter>
+     <ClInclude Include="..\..\source\math\Color4.h">
+       <Filter>Math\Color</Filter>
      </ClInclude>
+-    <ClInclude Include="..\..\source\math\Vector2.h">
+-      <Filter>Math\Vector</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\math\Vector3.h">
+-      <Filter>Math\Vector</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\math\Vector4.h">
+-      <Filter>Math\Vector</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\math\Matrix.h">
+-      <Filter>Math\Matrix</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\math\Quaternion.h">
+-      <Filter>Math\Quaternion</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\math\Ray.h">
+-      <Filter>Math\Ray</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\math\Plane.h">
+-      <Filter>Math\Plane</Filter>
+-    </ClInclude>
+     <ClInclude Include="..\..\source\math\Rational.h">
+       <Filter>Math\Rational</Filter>
+     </ClInclude>
+-    <ClInclude Include="..\..\source\math\Half.h">
+-      <Filter>Math\Half</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\math\Half2.h">
+-      <Filter>Math\Half</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\math\Half3.h">
+-      <Filter>Math\Half</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\math\Half4.h">
+-      <Filter>Math\Half</Filter>
+-    </ClInclude>
 -    <ClInclude Include="..\..\source\math\SHVector.h">
 -      <Filter>Math\Spherical Harmonics</Filter>
 -    </ClInclude>
@@ -3080,10 +3242,61 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClInclude Include="..\..\source\dxgi\DXGIException.h">
        <Filter>DXGI</Filter>
      </ClInclude>
-@@ -3939,30 +1005,6 @@
-     <ClInclude Include="..\..\source\design\Vector4Converter.h">
-       <Filter>Design</Filter>
+@@ -3888,81 +798,6 @@
+     <ClInclude Include="..\..\source\dxgi\Surface1.h">
+       <Filter>DXGI\1.1</Filter>
      </ClInclude>
+-    <ClInclude Include="..\..\source\design\BoundingBoxConverter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\BoundingSphereConverter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\Color3Converter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\Color4Converter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\FieldPropertyDescriptor.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\Half2Converter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\Half3Converter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\Half4Converter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\HalfConverter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\MatrixConverter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\PlaneConverter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\QuaternionConverter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\RationalConverter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\RayConverter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\Vector2Converter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\Vector3Converter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\..\source\design\Vector4Converter.h">
+-      <Filter>Design</Filter>
+-    </ClInclude>
 -    <ClInclude Include="..\..\source\x3daudio\Cone.h">
 -      <Filter>X3DAudio</Filter>
 -    </ClInclude>
@@ -3111,7 +3324,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClInclude Include="..\..\source\rawinput\Enums.h">
        <Filter>RawInput</Filter>
      </ClInclude>
-@@ -3993,135 +1035,6 @@
+@@ -3993,135 +828,6 @@
      <ClInclude Include="..\..\source\rawinput\MouseInfo.h">
        <Filter>RawInput\Info</Filter>
      </ClInclude>
@@ -3247,7 +3460,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClInclude Include="..\..\source\multimedia\Enums.h">
        <Filter>Multimedia</Filter>
      </ClInclude>
-@@ -4143,300 +1056,6 @@
+@@ -4143,300 +849,6 @@
      <ClInclude Include="..\..\source\windows\DisplayMonitor.h">
        <Filter>Windows\DisplayMonitor</Filter>
      </ClInclude>
@@ -3548,7 +3761,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClInclude Include="..\..\source\direct3d11\Direct3D11Exception.h">
        <Filter>Direct3D11</Filter>
      </ClInclude>
-@@ -4680,96 +1299,6 @@
+@@ -4680,96 +1092,6 @@
      <ClInclude Include="..\..\source\direct3d11\Viewport11.h">
        <Filter>Direct3D11\Viewport</Filter>
      </ClInclude>
@@ -3645,7 +3858,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClInclude Include="..\..\source\direct3d11\FastFourierTransform11.h">
        <Filter>Direct3D11\Compute</Filter>
      </ClInclude>
-@@ -4785,63 +1314,6 @@
+@@ -4785,63 +1107,6 @@
      <ClInclude Include="..\..\source\direct3d11\SegmentedScan11.h">
        <Filter>Direct3D11\Compute</Filter>
      </ClInclude>
@@ -3709,7 +3922,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
      <ClInclude Include="..\..\source\d3dcompiler\D3DCompilerException.h">
        <Filter>D3DCompiler</Filter>
      </ClInclude>
-@@ -4893,20 +1365,6 @@
+@@ -4893,20 +1158,6 @@
      <ClInclude Include="..\..\source\stdafx.h" />
    </ItemGroup>
    <ItemGroup>
@@ -3732,7 +3945,7 @@ Index: build/vs2010/SlimDX.vcxproj.filters
    </ItemGroup>
 Index: build/vs2010/SlimDX.vcxproj
 ===================================================================
---- build/vs2010/SlimDX.vcxproj	(revision 1792)
+--- build/vs2010/SlimDX.vcxproj	(revision 1884)
 +++ build/vs2010/SlimDX.vcxproj	(working copy)
 @@ -67,7 +67,8 @@
      <CLRSupport>true</CLRSupport>
@@ -3772,7 +3985,14 @@ Index: build/vs2010/SlimDX.vcxproj
        <CLRUnmanagedCodeCheck>true</CLRUnmanagedCodeCheck>
      </Link>
    </ItemDefinitionGroup>
-@@ -162,12 +167,16 @@
+@@ -156,18 +161,22 @@
+       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+     </ClCompile>
+     <Link>
+-      <AdditionalDependencies>user32.lib;gdi32.lib;dxguid.lib;d3d9.lib;d3dx9.lib;dxgi.lib;d3d10.lib;d3dx10.lib;d3d10_1.lib;dinput8.lib;xinput.lib;dxerr.lib;ole32.lib;x3daudio.lib;xapobase.lib;winmm.lib;dsound.lib;d3dcompiler.lib;d3d11.lib;d3dx11.lib;d2d1.lib;dwrite.lib;d3dcsx.lib;Effects11.lib;advapi32.lib</AdditionalDependencies>
++      <AdditionalDependencies>user32.lib;gdi32.lib;dxguid.lib;d3d9.lib;d3dx9.lib;dxgi.lib;d3d10.lib;d3dx10.lib;d3d10_1.lib;dinput8.lib;xinput.lib;dxerr.lib;ole32.lib;x3daudio.lib;xapobase.lib;winmm.lib;dsound.lib;d3dcompiler.lib;d3d11.lib;d3dx11.lib;d2d1.lib;dwrite.lib;d3dcsx.lib;advapi32.lib</AdditionalDependencies>
+       <Version>0.0.0.0</Version>
+       <AdditionalLibraryDirectories>$(OutDir);$(DXSDK_DIR)Lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
        <DelayLoadDLLs>d3d9.dll;d3dx9_43.dll;d3dx10_43.dll;d3dx11_43.dll;d3dcompiler_43.dll;d3dcsx_43.dll;d3d10.dll;d3d10_1.dll;d3d11.dll;d2d1.dll;dwrite.dll;dxgi.dll;dinput8.dll;x3daudio1_7.dll;xinput1_3.dll;dsound.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
        <GenerateDebugInformation>true</GenerateDebugInformation>
        <AssemblyDebug>true</AssemblyDebug>
@@ -3817,7 +4037,14 @@ Index: build/vs2010/SlimDX.vcxproj
      </Link>
    </ItemDefinitionGroup>
    <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-@@ -227,9 +240,11 @@
+@@ -221,15 +234,17 @@
+       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+     </ClCompile>
+     <Link>
+-      <AdditionalDependencies>user32.lib;gdi32.lib;dxguid.lib;d3d9.lib;d3dx9.lib;dxgi.lib;d3d10.lib;d3dx10.lib;d3d10_1.lib;dinput8.lib;xinput.lib;dxerr.lib;ole32.lib;x3daudio.lib;xapobase.lib;winmm.lib;dsound.lib;d3dcompiler.lib;d3d11.lib;d3dx11.lib;d2d1.lib;dwrite.lib;d3dcsx.lib;Effects11.lib;advapi32.lib</AdditionalDependencies>
++      <AdditionalDependencies>user32.lib;gdi32.lib;dxguid.lib;d3d9.lib;d3dx9.lib;dxgi.lib;d3d10.lib;d3dx10.lib;d3d10_1.lib;dinput8.lib;xinput.lib;dxerr.lib;ole32.lib;x3daudio.lib;xapobase.lib;winmm.lib;dsound.lib;d3dcompiler.lib;d3d11.lib;d3dx11.lib;d2d1.lib;dwrite.lib;d3dcsx.lib;advapi32.lib</AdditionalDependencies>
+       <Version>0.0.0.0</Version>
+       <AdditionalLibraryDirectories>$(OutDir);$(DXSDK_DIR)Lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
        <DelayLoadDLLs>d3d9.dll;d3dx9_43.dll;d3dx10_43.dll;d3dx11_43.dll;d3dcompiler_43.dll;d3dcsx_43.dll;d3d10.dll;d3d10_1.dll;d3d11.dll;d2d1.dll;dwrite.dll;dxgi.dll;dinput8.dll;x3daudio1_7.dll;xinput1_3.dll;dsound.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
        <GenerateDebugInformation>true</GenerateDebugInformation>
        <RandomizedBaseAddress>false</RandomizedBaseAddress>
@@ -3831,7 +4058,7 @@ Index: build/vs2010/SlimDX.vcxproj
        <CLRUnmanagedCodeCheck>true</CLRUnmanagedCodeCheck>
      </Link>
    </ItemDefinitionGroup>
-@@ -249,7 +264,7 @@
+@@ -249,13 +264,14 @@
        <MultiProcessorCompilation>true</MultiProcessorCompilation>
      </ClCompile>
      <Link>
@@ -3840,7 +4067,15 @@ Index: build/vs2010/SlimDX.vcxproj
        <Version>4.0.10.43</Version>
        <AdditionalLibraryDirectories>$(OutDir);$(DXSDK_DIR)Lib\x86;$(OutDir)..\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
        <DelayLoadDLLs>d3d9.dll;d3dx9_43.dll;d3dx10_43.dll;d3dx11_43.dll;d3dcompiler_43.dll;d3dcsx_43.dll;d3d10.dll;d3d10_1.dll;d3d11.dll;d2d1.dll;dwrite.dll;dxgi.dll;dinput8.dll;x3daudio1_7.dll;xinput1_3.dll;dsound.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
-@@ -290,7 +305,8 @@
+       <GenerateDebugInformation>true</GenerateDebugInformation>
+       <RandomizedBaseAddress>false</RandomizedBaseAddress>
+-      <DataExecutionPrevention></DataExecutionPrevention>
++      <DataExecutionPrevention>
++      </DataExecutionPrevention>
+       <TargetMachine>MachineX86</TargetMachine>
+       <KeyFile>D:\slimdxKey.snk</KeyFile>
+       <DelaySign>false</DelaySign>
+@@ -290,7 +306,8 @@
        <DelayLoadDLLs>d3d9.dll;d3dx9_43.dll;d3dx10_43.dll;d3dx11_43.dll;d3dcompiler_43.dll;d3dcsx_43.dll;d3d10.dll;d3d10_1.dll;d3d11.dll;d2d1.dll;dwrite.dll;dxgi.dll;dinput8.dll;x3daudio1_7.dll;xinput1_3.dll;dsound.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
        <GenerateDebugInformation>true</GenerateDebugInformation>
        <RandomizedBaseAddress>false</RandomizedBaseAddress>
@@ -3850,7 +4085,7 @@ Index: build/vs2010/SlimDX.vcxproj
        <TargetMachine>MachineX64</TargetMachine>
        <KeyFile>D:\slimdxKey.snk</KeyFile>
        <DelaySign>false</DelaySign>
-@@ -315,97 +331,6 @@
+@@ -315,97 +332,6 @@
      </Reference>
    </ItemGroup>
    <ItemGroup>
@@ -3948,7 +4183,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClCompile Include="..\..\source\ComObject.cpp" />
      <ClCompile Include="..\..\source\CompilationException.cpp" />
      <ClCompile Include="..\..\source\Configuration.cpp" />
-@@ -417,174 +342,6 @@
+@@ -417,218 +343,9 @@
      <ClCompile Include="..\..\source\DataRectangle.cpp" />
      <ClCompile Include="..\..\source\DataStream.cpp" />
      <ClCompile Include="..\..\source\Performance.cpp" />
@@ -4120,13 +4355,22 @@ Index: build/vs2010/SlimDX.vcxproj
 -    <ClCompile Include="..\..\source\directinput\RampForce.cpp" />
 -    <ClCompile Include="..\..\source\directinput\Condition.cpp" />
 -    <ClCompile Include="..\..\source\directinput\ConditionSet.cpp" />
-     <ClCompile Include="..\..\source\math\BoundingBox.cpp" />
-     <ClCompile Include="..\..\source\math\BoundingSphere.cpp" />
+-    <ClCompile Include="..\..\source\math\BoundingBox.cpp" />
+-    <ClCompile Include="..\..\source\math\BoundingSphere.cpp" />
      <ClCompile Include="..\..\source\math\Color3.cpp" />
-@@ -601,34 +358,6 @@
-     <ClCompile Include="..\..\source\math\Half2.cpp" />
-     <ClCompile Include="..\..\source\math\Half3.cpp" />
-     <ClCompile Include="..\..\source\math\Half4.cpp" />
+     <ClCompile Include="..\..\source\math\Color4.cpp" />
+-    <ClCompile Include="..\..\source\math\Vector2.cpp" />
+-    <ClCompile Include="..\..\source\math\Vector3.cpp" />
+-    <ClCompile Include="..\..\source\math\Vector4.cpp" />
+-    <ClCompile Include="..\..\source\math\Matrix.cpp" />
+-    <ClCompile Include="..\..\source\math\Quaternion.cpp" />
+-    <ClCompile Include="..\..\source\math\Ray.cpp" />
+-    <ClCompile Include="..\..\source\math\Plane.cpp" />
+     <ClCompile Include="..\..\source\math\Rational.cpp" />
+-    <ClCompile Include="..\..\source\math\Half.cpp" />
+-    <ClCompile Include="..\..\source\math\Half2.cpp" />
+-    <ClCompile Include="..\..\source\math\Half3.cpp" />
+-    <ClCompile Include="..\..\source\math\Half4.cpp" />
 -    <ClCompile Include="..\..\source\math\SHVector.cpp" />
 -    <ClCompile Include="..\..\source\xaudio2\ResultCodeXA2.cpp" />
 -    <ClCompile Include="..\..\source\xaudio2\XAudio2Exception.cpp" />
@@ -4158,10 +4402,27 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClCompile Include="..\..\source\dxgi\DXGIException.cpp" />
      <ClCompile Include="..\..\source\dxgi\ResultCodeDxgi.cpp" />
      <ClCompile Include="..\..\source\dxgi\SwapChainDescription.cpp" />
-@@ -672,146 +401,15 @@
-     <ClCompile Include="..\..\source\design\Vector2Converter.cpp" />
-     <ClCompile Include="..\..\source\design\Vector3Converter.cpp" />
-     <ClCompile Include="..\..\source\design\Vector4Converter.cpp" />
+@@ -655,163 +372,15 @@
+     <ClCompile Include="..\..\source\dxgi\Factory1.cpp" />
+     <ClCompile Include="..\..\source\dxgi\KeyedMutex.cpp" />
+     <ClCompile Include="..\..\source\dxgi\Surface1.cpp" />
+-    <ClCompile Include="..\..\source\design\BoundingBoxConverter.cpp" />
+-    <ClCompile Include="..\..\source\design\BoundingSphereConverter.cpp" />
+-    <ClCompile Include="..\..\source\design\Color3Converter.cpp" />
+-    <ClCompile Include="..\..\source\design\Color4Converter.cpp" />
+-    <ClCompile Include="..\..\source\design\FieldPropertyDescriptor.cpp" />
+-    <ClCompile Include="..\..\source\design\Half2Converter.cpp" />
+-    <ClCompile Include="..\..\source\design\Half3Converter.cpp" />
+-    <ClCompile Include="..\..\source\design\Half4Converter.cpp" />
+-    <ClCompile Include="..\..\source\design\HalfConverter.cpp" />
+-    <ClCompile Include="..\..\source\design\MatrixConverter.cpp" />
+-    <ClCompile Include="..\..\source\design\PlaneConverter.cpp" />
+-    <ClCompile Include="..\..\source\design\QuaternionConverter.cpp" />
+-    <ClCompile Include="..\..\source\design\RationalConverter.cpp" />
+-    <ClCompile Include="..\..\source\design\RayConverter.cpp" />
+-    <ClCompile Include="..\..\source\design\Vector2Converter.cpp" />
+-    <ClCompile Include="..\..\source\design\Vector3Converter.cpp" />
+-    <ClCompile Include="..\..\source\design\Vector4Converter.cpp" />
 -    <ClCompile Include="..\..\source\x3daudio\Cone.cpp" />
 -    <ClCompile Include="..\..\source\x3daudio\CurvePoint.cpp" />
 -    <ClCompile Include="..\..\source\x3daudio\DspSettings.cpp" />
@@ -4305,7 +4566,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClCompile Include="..\..\source\direct3d11\Direct3D11Exception.cpp" />
      <ClCompile Include="..\..\source\direct3d11\ResultCode11.cpp" />
      <ClCompile Include="..\..\source\direct3d11\Buffer11.cpp" />
-@@ -891,59 +489,11 @@
+@@ -891,59 +460,11 @@
      <ClCompile Include="..\..\source\direct3d11\Texture3DDescription11.cpp" />
      <ClCompile Include="..\..\source\direct3d11\Asynchronous11.cpp" />
      <ClCompile Include="..\..\source\direct3d11\Viewport11.cpp" />
@@ -4365,7 +4626,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClCompile Include="..\..\source\d3dcompiler\D3DCompilerException.cpp" />
      <ClCompile Include="..\..\source\d3dcompiler\IncludeDC.cpp" />
      <ClCompile Include="..\..\source\d3dcompiler\ShaderMacroDC.cpp" />
-@@ -975,99 +525,6 @@
+@@ -975,99 +496,6 @@
      </ClCompile>
    </ItemGroup>
    <ItemGroup>
@@ -4465,7 +4726,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClInclude Include="..\..\source\auto_array.h" />
      <ClInclude Include="..\..\source\CollectionShim.h" />
      <ClInclude Include="..\..\source\ComObject.h" />
-@@ -1086,193 +543,6 @@
+@@ -1086,243 +514,9 @@
      <ClInclude Include="..\..\source\DataRectangle.h" />
      <ClInclude Include="..\..\source\DataStream.h" />
      <ClInclude Include="..\..\source\Performance.h" />
@@ -4656,13 +4917,23 @@ Index: build/vs2010/SlimDX.vcxproj
 -    <ClInclude Include="..\..\source\directinput\RampForce.h" />
 -    <ClInclude Include="..\..\source\directinput\Condition.h" />
 -    <ClInclude Include="..\..\source\directinput\ConditionSet.h" />
-     <ClInclude Include="..\..\source\math\Enums.h" />
-     <ClInclude Include="..\..\source\math\BoundingBox.h" />
-     <ClInclude Include="..\..\source\math\BoundingSphere.h" />
-@@ -1290,39 +560,6 @@
-     <ClInclude Include="..\..\source\math\Half2.h" />
-     <ClInclude Include="..\..\source\math\Half3.h" />
-     <ClInclude Include="..\..\source\math\Half4.h" />
+-    <ClInclude Include="..\..\source\math\Enums.h" />
+-    <ClInclude Include="..\..\source\math\BoundingBox.h" />
+-    <ClInclude Include="..\..\source\math\BoundingSphere.h" />
+     <ClInclude Include="..\..\source\math\Color3.h" />
+     <ClInclude Include="..\..\source\math\Color4.h" />
+-    <ClInclude Include="..\..\source\math\Vector2.h" />
+-    <ClInclude Include="..\..\source\math\Vector3.h" />
+-    <ClInclude Include="..\..\source\math\Vector4.h" />
+-    <ClInclude Include="..\..\source\math\Matrix.h" />
+-    <ClInclude Include="..\..\source\math\Quaternion.h" />
+-    <ClInclude Include="..\..\source\math\Ray.h" />
+-    <ClInclude Include="..\..\source\math\Plane.h" />
+     <ClInclude Include="..\..\source\math\Rational.h" />
+-    <ClInclude Include="..\..\source\math\Half.h" />
+-    <ClInclude Include="..\..\source\math\Half2.h" />
+-    <ClInclude Include="..\..\source\math\Half3.h" />
+-    <ClInclude Include="..\..\source\math\Half4.h" />
 -    <ClInclude Include="..\..\source\math\SHVector.h" />
 -    <ClInclude Include="..\..\source\xaudio2\Enums.h" />
 -    <ClInclude Include="..\..\source\xaudio2\ResultCodeXA2.h" />
@@ -4699,10 +4970,27 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClInclude Include="..\..\source\dxgi\DXGIException.h" />
      <ClInclude Include="..\..\source\dxgi\Enums.h" />
      <ClInclude Include="..\..\source\dxgi\ResultCodeDxgi.h" />
-@@ -1367,14 +604,6 @@
-     <ClInclude Include="..\..\source\design\Vector2Converter.h" />
-     <ClInclude Include="..\..\source\design\Vector3Converter.h" />
-     <ClInclude Include="..\..\source\design\Vector4Converter.h" />
+@@ -1350,31 +544,6 @@
+     <ClInclude Include="..\..\source\dxgi\Factory1.h" />
+     <ClInclude Include="..\..\source\dxgi\KeyedMutex.h" />
+     <ClInclude Include="..\..\source\dxgi\Surface1.h" />
+-    <ClInclude Include="..\..\source\design\BoundingBoxConverter.h" />
+-    <ClInclude Include="..\..\source\design\BoundingSphereConverter.h" />
+-    <ClInclude Include="..\..\source\design\Color3Converter.h" />
+-    <ClInclude Include="..\..\source\design\Color4Converter.h" />
+-    <ClInclude Include="..\..\source\design\FieldPropertyDescriptor.h" />
+-    <ClInclude Include="..\..\source\design\Half2Converter.h" />
+-    <ClInclude Include="..\..\source\design\Half3Converter.h" />
+-    <ClInclude Include="..\..\source\design\Half4Converter.h" />
+-    <ClInclude Include="..\..\source\design\HalfConverter.h" />
+-    <ClInclude Include="..\..\source\design\MatrixConverter.h" />
+-    <ClInclude Include="..\..\source\design\PlaneConverter.h" />
+-    <ClInclude Include="..\..\source\design\QuaternionConverter.h" />
+-    <ClInclude Include="..\..\source\design\RationalConverter.h" />
+-    <ClInclude Include="..\..\source\design\RayConverter.h" />
+-    <ClInclude Include="..\..\source\design\Vector2Converter.h" />
+-    <ClInclude Include="..\..\source\design\Vector3Converter.h" />
+-    <ClInclude Include="..\..\source\design\Vector4Converter.h" />
 -    <ClInclude Include="..\..\source\x3daudio\Cone.h" />
 -    <ClInclude Include="..\..\source\x3daudio\CurvePoint.h" />
 -    <ClInclude Include="..\..\source\x3daudio\DspSettings.h" />
@@ -4714,7 +5002,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClInclude Include="..\..\source\rawinput\Enums.h" />
      <ClInclude Include="..\..\source\rawinput\DeviceRI.h" />
      <ClInclude Include="..\..\source\rawinput\InputMessageFilter.h" />
-@@ -1385,49 +614,6 @@
+@@ -1385,49 +554,6 @@
      <ClInclude Include="..\..\source\rawinput\HidInfo.h" />
      <ClInclude Include="..\..\source\rawinput\KeyboardInfo.h" />
      <ClInclude Include="..\..\source\rawinput\MouseInfo.h" />
@@ -4764,7 +5052,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClInclude Include="..\..\source\multimedia\Enums.h" />
      <ClInclude Include="..\..\source\multimedia\WaveFormat.h" />
      <ClInclude Include="..\..\source\multimedia\WaveFormatExtensible.h" />
-@@ -1435,104 +621,6 @@
+@@ -1435,104 +561,6 @@
      <ClInclude Include="..\..\source\windows\MessagePump.h" />
      <ClInclude Include="..\..\source\windows\RenderForm.h" />
      <ClInclude Include="..\..\source\windows\DisplayMonitor.h" />
@@ -4869,7 +5157,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClInclude Include="..\..\source\direct3d11\Direct3D11Exception.h" />
      <ClInclude Include="..\..\source\direct3d11\Enums11.h" />
      <ClInclude Include="..\..\source\direct3d11\ResultCode11.h" />
-@@ -1614,60 +702,11 @@
+@@ -1614,60 +642,11 @@
      <ClInclude Include="..\..\source\direct3d11\Texture3DDescription11.h" />
      <ClInclude Include="..\..\source\direct3d11\Asynchronous11.h" />
      <ClInclude Include="..\..\source\direct3d11\Viewport11.h" />
@@ -4930,7 +5218,7 @@ Index: build/vs2010/SlimDX.vcxproj
      <ClInclude Include="..\..\source\d3dcompiler\D3DCompilerException.h" />
      <ClInclude Include="..\..\source\d3dcompiler\EnumsDC.h" />
      <ClInclude Include="..\..\source\d3dcompiler\IncludeDC.h" />
-@@ -1687,17 +726,10 @@
+@@ -1687,17 +666,10 @@
      <ClInclude Include="..\..\source\stdafx.h" />
    </ItemGroup>
    <ItemGroup>
@@ -4947,14 +5235,13 @@ Index: build/vs2010/SlimDX.vcxproj
    </ItemGroup>
    <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 -  <ImportGroup Label="ExtensionTargets"></ImportGroup>
--</Project>
-\ No newline at end of file
 +  <ImportGroup Label="ExtensionTargets">
 +  </ImportGroup>
-+</Project>
+ </Project>
+\ No newline at end of file
 Index: build/vs2010/SlimDX.sln
 ===================================================================
---- build/vs2010/SlimDX.sln	(revision 1792)
+--- build/vs2010/SlimDX.sln	(revision 1884)
 +++ build/vs2010/SlimDX.sln	(working copy)
 @@ -2,12 +2,7 @@
  Microsoft Visual Studio Solution File, Format Version 11.00
@@ -4994,7 +5281,7 @@ Index: build/vs2010/SlimDX.sln
  		HideSolutionNode = FALSE
 Index: source/ComObject.cpp
 ===================================================================
---- source/ComObject.cpp	(revision 1792)
+--- source/ComObject.cpp	(revision 1884)
 +++ source/ComObject.cpp	(working copy)
 @@ -34,38 +34,21 @@
  
@@ -5096,9 +5383,247 @@ Index: source/ComObject.cpp
  			if( static_cast<int>( m_Flags & ComObjectFlags::IsAncillary ) == 0 )
  				m_Unknown->Release();
  
+Index: source/math/Color4.cpp
+===================================================================
+--- source/math/Color4.cpp	(revision 1884)
++++ source/math/Color4.cpp	(working copy)
+@@ -26,8 +26,6 @@
+ #include "Color4.h"
+ 
+ #include "Color3.h"
+-#include "Vector3.h"
+-#include "Vector4.h"
+ 
+ using namespace System;
+ using namespace System::Globalization;
+@@ -78,22 +76,6 @@
+ 		Blue = color.Blue;
+ 	}
+ 
+-	Color4::Color4( Vector3 color )
+-	{
+-		Alpha = 1.0f;
+-		Red = color.X;
+-		Green = color.Y;
+-		Blue = color.Z;
+-	}
+-
+-	Color4::Color4( Vector4 color )
+-	{
+-		Alpha = color.W;
+-		Red = color.X;
+-		Green = color.Y;
+-		Blue = color.Z;
+-	}
+-
+ 	Color4::Color4( int argb )
+ 	{
+ 		Alpha = ( ( argb >> 24 ) & 255 ) / 255.0f;
+@@ -129,16 +111,6 @@
+ 		return static_cast<int>( value );
+ 	}
+ 
+-	Vector3 Color4::ToVector3()
+-	{
+-		return Vector3( Red, Green, Blue );
+-	}
+-
+-	Vector4 Color4::ToVector4()
+-	{
+-		return Vector4( Red, Green, Blue, Alpha );
+-	}
+-
+ 	Color4 Color4::Add( Color4 color1, Color4 color2 )
+ 	{
+ 		return Color4( color1.Alpha + color2.Alpha, color1.Red + color2.Red, color1.Green + color2.Green, color1.Blue + color2.Blue );
+@@ -302,16 +274,6 @@
+ 		return value.ToColor();
+ 	}
+ 
+-	Color4::operator Vector3( Color4 value )
+-	{
+-		return value.ToVector3();
+-	}
+-
+-	Color4::operator Vector4( Color4 value )
+-	{
+-		return value.ToVector4();
+-	}
+-
+ 	Color4::operator Color4( int value )
+ 	{
+ 		return Color4( value );
+@@ -327,16 +289,6 @@
+ 		return Color4( value );
+ 	}
+ 
+-	Color4::operator Color4( Vector3 value )
+-	{
+-		return Color4( value );
+-	}
+-
+-	Color4::operator Color4( Vector4 value )
+-	{
+-		return Color4( value );
+-	}
+-
+ 	String^ Color4::ToString()
+ 	{
+ 		return String::Format( CultureInfo::CurrentCulture, "A:{0} R:{1} G:{2} B:{3}", 
+Index: source/math/Rational.h
+===================================================================
+--- source/math/Rational.h	(revision 1884)
++++ source/math/Rational.h	(working copy)
+@@ -21,8 +21,6 @@
+ */
+ #pragma once
+ 
+-#include "../design/RationalConverter.h"
+-
+ namespace SlimDX
+ {
+ 	/// <summary>
+@@ -30,7 +28,6 @@
+ 	/// </summary>
+ 	[System::Serializable]
+ 	[System::Runtime::InteropServices::StructLayout( System::Runtime::InteropServices::LayoutKind::Sequential )]
+-	[System::ComponentModel::TypeConverter( SlimDX::Design::RationalConverter::typeid )]
+ 	public value class Rational : System::IEquatable<Rational>
+ 	{
+ 	public:
+Index: source/math/Color3.h
+===================================================================
+--- source/math/Color3.h	(revision 1884)
++++ source/math/Color3.h	(working copy)
+@@ -21,8 +21,6 @@
+ */
+ #pragma once
+ 
+-#include "../design/Color3Converter.h"
+-
+ namespace SlimDX
+ {
+ 	/// <summary>
+@@ -30,7 +28,6 @@
+ 	/// </summary>
+ 	[System::Serializable]
+ 	[System::Runtime::InteropServices::StructLayout(System::Runtime::InteropServices::LayoutKind::Sequential)]
+-	[System::ComponentModel::TypeConverter( SlimDX::Design::Color3Converter::typeid )]
+ 	public value class Color3 : System::IEquatable<Color3>
+ 	{
+ 	public:
+Index: source/math/Color4.h
+===================================================================
+--- source/math/Color4.h	(revision 1884)
++++ source/math/Color4.h	(working copy)
+@@ -21,8 +21,6 @@
+ */
+ #pragma once
+ 
+-#include "../design/Color4Converter.h"
+-
+ struct D3DXCOLOR;
+ 
+ using System::Runtime::InteropServices::OutAttribute;
+@@ -30,15 +28,12 @@
+ namespace SlimDX
+ {
+ 	value class Color3;
+-	value class Vector3;
+-	value class Vector4;
+ 		
+ 	/// <summary>
+ 	/// A four-component (RGBA) color value; each component is a float in the range [0,1].
+ 	/// </summary>
+ 	[System::Serializable]
+ 	[System::Runtime::InteropServices::StructLayout(System::Runtime::InteropServices::LayoutKind::Sequential)]
+-	[System::ComponentModel::TypeConverter( SlimDX::Design::Color4Converter::typeid )]
+ 	public value class Color4
+ 	{
+ 	internal:
+@@ -98,18 +93,6 @@
+ 		/// <summary>
+ 		/// Initializes a new instance of the <see cref="Color4"/> structure.
+ 		/// </summary>
+-		/// <param name="color">The color whose components should be converted.</param>
+-		Color4( Vector3 color );
+-
+-		/// <summary>
+-		/// Initializes a new instance of the <see cref="Color4"/> structure.
+-		/// </summary>
+-		/// <param name="color">The color whose components should be converted.</param>
+-		Color4( Vector4 color );
+-
+-		/// <summary>
+-		/// Initializes a new instance of the <see cref="Color4"/> structure.
+-		/// </summary>
+ 		/// <param name="argb">A packed integer containing all four color components.</param>
+ 		Color4( int argb );
+ 
+@@ -132,18 +115,6 @@
+ 		int ToArgb();
+ 
+ 		/// <summary>
+-		/// Converts the color into a three component vector.
+-		/// </summary>
+-		/// <returns>A three component vector containing the red, green, and blue components of the color.</returns>
+-		Vector3 ToVector3();
+-
+-		/// <summary>
+-		/// Converts the color into a four component vector.
+-		/// </summary>
+-		/// <returns>A four component vector containing all four color components.</returns>
+-		Vector4 ToVector4();
+-
+-		/// <summary>
+ 		/// Adds two colors.
+ 		/// </summary>
+ 		/// <param name="color1">The first color to add.</param>
+@@ -359,20 +330,6 @@
+ 		static explicit operator Color3( Color4 value );
+ 
+ 		/// <summary>
+-		/// Performs an explicit conversion from <see cref="Color4"/> to <see cref="Vector3"/>.
+-		/// </summary>
+-		/// <param name="value">The value to be converted.</param>
+-		/// <returns>The converted value.</returns>
+-		static explicit operator Vector3( Color4 value );
+-
+-		/// <summary>
+-		/// Performs an explicit conversion from <see cref="Color4"/> to <see cref="Vector4"/>.
+-		/// </summary>
+-		/// <param name="value">The value to be converted.</param>
+-		/// <returns>The converted value.</returns>
+-		static explicit operator Vector4( Color4 value );
+-
+-		/// <summary>
+ 		/// Performs an explicit conversion from <see cref="System::Int32"/> to <see cref="Color4"/>.
+ 		/// </summary>
+ 		/// <param name="value">The value to be converted.</param>
+@@ -387,20 +344,6 @@
+ 		static explicit operator Color4( Color3 value );
+ 
+ 		/// <summary>
+-		/// Performs an explicit conversion from <see cref="Vector3"/> to <see cref="Color4"/>.
+-		/// </summary>
+-		/// <param name="value">The value to be converted.</param>
+-		/// <returns>The converted value.</returns>
+-		static explicit operator Color4( Vector3 value );
+-
+-		/// <summary>
+-		/// Performs an explicit conversion from <see cref="Vector4"/> to <see cref="Color4"/>.
+-		/// </summary>
+-		/// <param name="value">The value to be converted.</param>
+-		/// <returns>The converted value.</returns>
+-		static explicit operator Color4( Vector4 value );
+-
+-		/// <summary>
+ 		/// Performs an implicit conversion from <see cref="System::Drawing::Color"/> to <see cref="Color4"/>.
+ 		/// </summary>
+ 		/// <param name="value">The value to be converted.</param>
 Index: source/windows/RenderForm.cpp
 ===================================================================
---- source/windows/RenderForm.cpp	(revision 1792)
+--- source/windows/RenderForm.cpp	(revision 1884)
 +++ source/windows/RenderForm.cpp	(working copy)
 @@ -22,7 +22,6 @@
  #include "stdafx.h"
@@ -5119,7 +5644,7 @@ Index: source/windows/RenderForm.cpp
  	void RenderForm::OnResizeBegin( EventArgs^ e )
 Index: source/Result.cpp
 ===================================================================
---- source/Result.cpp	(revision 1792)
+--- source/Result.cpp	(revision 1884)
 +++ source/Result.cpp	(working copy)
 @@ -53,7 +53,17 @@
  
@@ -5158,67 +5683,9 @@ Index: source/Result.cpp
  	}
  
  	int Result::GetHashCode()
-Index: source/direct3d11/DeviceChild11.cpp
-===================================================================
---- source/direct3d11/DeviceChild11.cpp	(revision 1792)
-+++ source/direct3d11/DeviceChild11.cpp	(working copy)
-@@ -40,5 +40,32 @@
- 		InternalPointer->GetDevice( &device );
- 		return SlimDX::Direct3D11::Device::FromPointer( device );
- 	}
-+
-+	System::String^ DeviceChild::DebugName::get()
-+	{
-+		char name[1024];
-+		UINT size = sizeof(name) - 1;
-+
-+		if (FAILED(InternalPointer->GetPrivateData(WKPDID_D3DDebugObjectName, &size, name))) return "";
-+
-+		name[size] = 0;
-+
-+		return gcnew System::String(name);
-+	}
-+	
-+	void DeviceChild::DebugName::set(System::String^ value)
-+	{
-+		if (value->Length > 0)
-+		{
-+			array<Byte>^ valueBytes = System::Text::ASCIIEncoding::ASCII->GetBytes(value);
-+			pin_ptr<Byte> pinnedValue = &valueBytes[0];
-+
-+			InternalPointer->SetPrivateData(WKPDID_D3DDebugObjectName, value->Length, pinnedValue);
-+		}
-+		else
-+		{
-+			InternalPointer->SetPrivateData(WKPDID_D3DDebugObjectName, 0, NULL);
-+		}
-+	}
- }
- }
-Index: source/direct3d11/DeviceChild11.h
-===================================================================
---- source/direct3d11/DeviceChild11.h	(revision 1792)
-+++ source/direct3d11/DeviceChild11.h	(working copy)
-@@ -52,6 +52,15 @@
- 			{
- 				SlimDX::Direct3D11::Device^ get();
- 			}
-+
-+			/// <summary>
-+			/// Gets or sets the debug object name
-+			/// </summary>
-+			property System::String^ DebugName
-+			{
-+				System::String^ get();
-+				void set(System::String^ value);
-+			}
- 		};
- 	}
- };
-\ No newline at end of file
 Index: source/ObjectTable.h
 ===================================================================
---- source/ObjectTable.h	(revision 1792)
+--- source/ObjectTable.h	(revision 1884)
 +++ source/ObjectTable.h	(working copy)
 @@ -27,99 +27,10 @@
  {
@@ -5324,7 +5791,7 @@ Index: source/ObjectTable.h
 \ No newline at end of file
 Index: source/ComObject.h
 ===================================================================
---- source/ComObject.h	(revision 1792)
+--- source/ComObject.h	(revision 1884)
 +++ source/ComObject.h	(working copy)
 @@ -61,10 +61,7 @@
  	{
@@ -5430,7 +5897,7 @@ Index: source/ComObject.h
 \ No newline at end of file
 Index: source/ObjectTable.cpp
 ===================================================================
---- source/ObjectTable.cpp	(revision 1792)
+--- source/ObjectTable.cpp	(revision 1884)
 +++ source/ObjectTable.cpp	(working copy)
 @@ -34,180 +34,17 @@
  
