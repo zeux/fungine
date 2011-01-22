@@ -10,26 +10,23 @@ type Vertex =
     new(count) =
         { score = 0.f
           active_triangles = 0
-          total_triangles = count
           triangles = Array.zeroCreate count }
 
     val mutable score: float32 // current vertex score (depends on cache position)
     val mutable active_triangles: int // the number of triangles that are not yet added to the resulting sequence
-    val mutable total_triangles: int
 
     val triangles: int array // active triangle indices
 
     // remove triangle from vertex
     member x.RemoveTriangle triangle =
-        // update active triangles
-        assert (x.active_triangles > 0)
-        x.active_triangles <- x.active_triangles - 1
-
         // update triangle list
         let idx = Array.findIndex (fun i -> i = triangle) x.triangles
-        x.triangles.[idx] <- x.triangles.[x.total_triangles - 1]
 
-        x.total_triangles <- x.total_triangles - 1
+        assert (x.active_triangles > 0)
+        x.triangles.[idx] <- x.triangles.[x.active_triangles - 1]
+
+        // update active triangles
+        x.active_triangles <- x.active_triangles - 1
 
 // use fixed size LRU cache
 let private cache_size = 32
@@ -147,7 +144,7 @@ let optimize indices =
             v.score <- score
 
             // update triangle scores
-            for ti in 0 .. v.total_triangles - 1 do
+            for ti in 0 .. v.active_triangles - 1 do
                 let t = v.triangles.[ti]
                 triangle_scores.[t] <- triangle_scores.[t] + score_diff
 
