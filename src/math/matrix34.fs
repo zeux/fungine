@@ -28,14 +28,9 @@ type Matrix34 =
         | _ -> raise (System.IndexOutOfRangeException())
 
     member this.Column index =
-        match index with
-        | 0 -> Vector3(this.row0.x, this.row1.x, this.row2.x)
-        | 1 -> Vector3(this.row0.y, this.row1.y, this.row2.y)
-        | 2 -> Vector3(this.row0.z, this.row1.z, this.row2.z)
-        | 3 -> Vector3(this.row0.w, this.row1.w, this.row2.w)
-        | _ -> raise (System.IndexOutOfRangeException())
+        Vector3(this.row0.[index], this.row1.[index], this.row2.[index])
 
-    member this.Item row column = (this.Row row).[column]
+    member this.Item (row, column) = (this.Row row).[column]
 
     // arithmetic operators (unary)
     static member (~+) (m: Matrix34) = m
@@ -50,9 +45,53 @@ type Matrix34 =
     static member (*) (l: Matrix34, r: float32) = Matrix34(l.row0 * r, l.row1 * r, l.row2 * r)
     static member (/) (l: Matrix34, r: float32) = Matrix34(l.row0 / r, l.row1 / r, l.row2 / r)
 
+    // matrix multiplication
+    static member (*) (l: Matrix34, r: Matrix34) =
+        Matrix34(l.row0.x * r.row0.x + l.row0.y * r.row1.x + l.row0.z * r.row2.x,
+                 l.row0.x * r.row0.y + l.row0.y * r.row1.y + l.row0.z * r.row2.y,
+                 l.row0.x * r.row0.z + l.row0.y * r.row1.z + l.row0.z * r.row2.z,
+                 l.row0.x * r.row0.w + l.row0.y * r.row1.w + l.row0.z * r.row2.w + l.row0.w,
+
+                 l.row1.x * r.row0.x + l.row1.y * r.row1.x + l.row1.z * r.row2.x,
+                 l.row1.x * r.row0.y + l.row1.y * r.row1.y + l.row1.z * r.row2.y,
+                 l.row1.x * r.row0.z + l.row1.y * r.row1.z + l.row1.z * r.row2.z,
+                 l.row1.x * r.row0.w + l.row1.y * r.row1.w + l.row1.z * r.row2.w + l.row1.w,
+
+                 l.row2.x * r.row0.x + l.row2.y * r.row1.x + l.row2.z * r.row2.x,
+                 l.row2.x * r.row0.y + l.row2.y * r.row1.y + l.row2.z * r.row2.y,
+                 l.row2.x * r.row0.z + l.row2.y * r.row1.z + l.row2.z * r.row2.z,
+                 l.row2.x * r.row0.w + l.row2.y * r.row1.w + l.row2.z * r.row2.w + l.row2.w)
+
     // string representation
     override this.ToString() = sprintf "%A\n%A\n%A" this.row0 this.row1 this.row2
 
     // constants
     static member Zero = Matrix34()
     static member Identity = Matrix34(Vector4.UnitX, Vector4.UnitY, Vector4.UnitZ)
+
+    // translation transformation
+    static member Translation (x, y, z) =
+        Matrix34(1.f, 0.f, 0.f, x,
+                 0.f, 1.f, 0.f, y,
+                 0.f, 0.f, 1.f, z)
+
+    static member Translation (v: Vector3) = Matrix34.Translation(v.x, v.y, v.z)
+
+    // axis-angle rotation transformation
+    static member RotationAxis (axis, angle: float32) =
+        let a = Vector3.Normalize(axis)
+        let c = cos angle
+        let s = sin angle
+        let t = 1.f - c
+
+        Matrix34(t * a.x * a.x + c,       t * a.x * a.y - a.z * s, t * a.x * a.z + a.y * s, 0.f,
+                 t * a.x * a.y + a.z * s, t * a.y * a.y + c,       t * a.y * a.z - a.x * s, 0.f,
+                 t * a.x * a.z - a.y * s, t * a.y * a.z + a.x * s, t * a.z * a.z + c,       0.f)
+
+    // scaling transformation
+    static member Scaling (x, y, z) =
+        Matrix34(x,   0.f, 0.f, 0.f,
+                 0.f, y,   0.f, 0.f,
+                 0.f, 0.f, z,   0.f)
+
+    static member Scaling (v: Vector3) = Matrix34.Scaling(v.x, v.y, v.z)

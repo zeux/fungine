@@ -34,14 +34,9 @@ type Matrix44 =
         | _ -> raise (System.IndexOutOfRangeException())
 
     member this.Column index =
-        match index with
-        | 0 -> Vector4(this.row0.x, this.row1.x, this.row2.x, this.row3.x)
-        | 1 -> Vector4(this.row0.y, this.row1.y, this.row2.y, this.row3.y)
-        | 2 -> Vector4(this.row0.z, this.row1.z, this.row2.z, this.row3.z)
-        | 3 -> Vector4(this.row0.w, this.row1.w, this.row2.w, this.row3.w)
-        | _ -> raise (System.IndexOutOfRangeException())
+        Vector4(this.row0.[index], this.row1.[index], this.row2.[index], this.row3.[index])
 
-    member this.Item row column = (this.Row row).[column]
+    member this.Item (row, column) = (this.Row row).[column]
 
     // arithmetic operators (unary)
     static member (~+) (m: Matrix44) = m
