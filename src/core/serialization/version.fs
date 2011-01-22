@@ -48,10 +48,9 @@ let rec private updateVersion toplevel ver (typ: Type) =
         fields
         |> Array.map (fun f -> f.FieldType)
         |> Array.fold (updateVersion false) basever
-    // primitive types don't have versionable properties; also, we don't recurse into class types
     // recursing into class types is not necessary because versioning will take place if objects of embedded types are actually serialized
     else
-        assert (typ.IsPrimitive || typ.IsClass)
+        assert typ.IsClass
         basever
 
 // build a full version for type
