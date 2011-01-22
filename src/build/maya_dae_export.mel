@@ -4,7 +4,7 @@ proc exportOpenCollada(string $source, string $target)
 
     loadPlugin -quiet "COLLADAMaya.mll";
     file -force -open $source;
-    file -type "OpenCOLLADA exporter" -options $options -exportAll $target;
+    file -force -type "OpenCOLLADA exporter" -options $options -exportAll $target;
 }
 
 global proc export(string $source, string $target)
