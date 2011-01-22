@@ -30,26 +30,33 @@ let private buildEnumHash (typ: Type) =
 let private enumHashCache = Util.TypeCache(buildEnumHash)
 
 // update hash version with type
-let rec private updateVersion ver (typ: Type) =
-    // struct version depends on versions of all serializable fields
-    if Util.isStruct typ then
+let rec private updateVersion toplevel ver (typ: Type) =
+    // type name always contributes to the version
+    let basever = updateHash ver (uint32 (typ.FullName.GetHashCode()))
+
+    // primitive types don't have additional versionable properties
+    if typ.IsPrimitive then
+        basever
+    // enum version depends on enum values
+    else if typ.IsEnum then
+        updateHash basever (enumHashCache.Get(typ))
+    // aggregates' version depends on versions of all serializable fields
+    else if Util.isStruct typ || (typ.IsClass && toplevel) then
         let fields = Util.getSerializableFields typ
 
         // accumulate field versions for field static types
         fields
         |> Array.map (fun f -> f.FieldType)
-        |> Array.fold updateVersion ver
-    // enum version depends on enum values
-    else if typ.IsEnum then
-        updateHash ver (enumHashCache.Get(typ))
-    // other types' versions are just the names
+        |> Array.fold (updateVersion false) basever
+    // primitive types don't have versionable properties; also, we don't recurse into class types
+    // recursing into class types is not necessary because versioning will take place if objects of embedded types are actually serialized
     else
         assert (typ.IsPrimitive || typ.IsClass)
-        updateHash ver (uint32 (typ.FullName.GetHashCode()))
+        basever
 
 // build a full version for type
 let private buildVersion (typ: Type) =
-    updateVersion initialHash typ
+    updateVersion true initialHash typ
 
 // a cache of type versions
 let private versionCache = Util.TypeCache<_>(buildVersion)
