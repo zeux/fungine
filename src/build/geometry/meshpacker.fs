@@ -2,12 +2,14 @@ namespace Build.Geometry
 
 open System.Collections.Generic
 
+// quantization coefficients for compressed vertex data
 type PackedMeshCompressionInfo =
     { position_offset: Vector3
       position_scale: Vector3
       texcoord_offset: Vector2
       texcoord_scale: Vector2 }
 
+// an indexed mesh with compressed vertex data
 type PackedMesh =
     { compression_info: PackedMeshCompressionInfo
       format: Render.VertexFormat
@@ -17,21 +19,25 @@ type PackedMesh =
       skin: Render.SkinBinding option }
 
 module MeshPacker =
+    // project vector on a normal
     let private project v n =
         Vector3.Dot(v, n) * n
 
+    // orthonormalize three basis vectors using Gram-Schmidt process (in the e0-e1-e2 order)
     let private orthonormalize e0 e1 e2 =
         let r0 = Vector3.Normalize(e0)
         let r1 = Vector3.Normalize(e1 - project e1 r0)
         let r2 = Vector3.Normalize(e2 - project e2 r0 - project e2 r1)
         r0, r1, r2
 
+    // get per-comonent minimum and maximum for vertex data
     let inline private getComponentBounds vertices access minimize maximize =
         let data = vertices |> Array.map access
         let data_min = data |> Array.reduce (fun a b -> minimize(a, b))
         let data_max = data |> Array.reduce (fun a b -> maximize(a, b))
         data_min, data_max - data_min
 
+    // pack an array of bone influences to two byte4 vectors
     let private packBoneInfluences (bones: Build.Geometry.BoneInfluence array) =
         let indices = Array.zeroCreate 4
         let weights = Array.zeroCreate 4
@@ -49,6 +55,7 @@ module MeshPacker =
 
         indices, weights
 
+    // pack uncompressed vertex data using the desired format
     let private packVertices (vertices: Build.Geometry.FatVertex array) (format: Render.VertexFormat) vertex_size =
         // only a restricted set of formats supported atm
         let supported_formats = [|Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed|]
@@ -96,6 +103,7 @@ module MeshPacker =
         
         result, compression_info
 
+    // pack fat mesh using the desired format for vertices, merge equal vertices (results in vertex/index buffer pair)
     let pack (mesh: Build.Geometry.FatMesh) format =
         // get vertex size from the format
         let layout = Render.VertexLayouts.get format

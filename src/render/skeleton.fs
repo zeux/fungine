@@ -1,5 +1,6 @@
 namespace Render
 
+// skeleton data (mesh node hierarchy)
 type Skeleton(transforms: Matrix34 array, parents: int array) =
     do assert (transforms.Length = parents.Length)
 

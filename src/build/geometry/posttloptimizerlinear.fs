@@ -2,8 +2,10 @@ module Build.Geometry.PostTLOptimizerLinear
 
 open System.Collections.Generic
 
+// triangle tuple
 type Triangle = int * int * int
 
+// vertex data
 type Vertex =
     new(count) =
         { score = 0.f
@@ -11,11 +13,11 @@ type Vertex =
           total_triangles = count
           triangles = Array.zeroCreate count }
 
-    val mutable score: float32
-    val mutable active_triangles: int
+    val mutable score: float32 // current vertex score (depends on cache position)
+    val mutable active_triangles: int // the number of triangles that are not yet added to the resulting sequence
     val mutable total_triangles: int
 
-    val triangles: int array
+    val triangles: int array // active triangle indices
 
     // remove triangle from vertex
     member x.RemoveTriangle triangle =

@@ -1,5 +1,6 @@
 module Build.Geometry.PostTLAnalyzer
 
+// the result of cache efficiency analysis
 type Result =
     { hits: int
       misses: int
@@ -7,10 +8,12 @@ type Result =
       atvr: float // transformed vertices / total vertices
     }
 
+// get cache analysis result from cache miss count
 let private result misses index_count vertex_count =
     let triangle_count = index_count / 3
     { new Result with hits = index_count - misses and misses = misses and acmr = float misses / float triangle_count and atvr = float misses / float vertex_count }
 
+// analyze the Post T&L cache efficiency using a FIFO cache model
 let analyzeFIFO indices cache_size =
     // timestamp difference is <= cache_size iff the vertex is in cache
     let vertex_count = 1 + Array.max indices
@@ -28,6 +31,7 @@ let analyzeFIFO indices cache_size =
 
     result misses indices.Length vertex_count
 
+// analyze the Post T&L cache efficiency using an LRU cache model
 let analyzeLRU indices cache_size =
     let vertex_count = 1 + Array.max indices
     let cache_indices = Array.create cache_size vertex_count

@@ -4,11 +4,13 @@ open System.Windows
 open System.Windows.Controls
 
 type private Grid with
+    // grid control adding helper
     member x.Add(control, row, column) =
         x.Children.Add(control) |> ignore
         Grid.SetRow(control, row)
         Grid.SetColumn(control, column)
 
+// a node in the property tree
 type private TreeNode =
     | Variable of string * obj
     | Group of string * (TreeNode array)

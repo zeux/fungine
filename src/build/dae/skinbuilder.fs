@@ -5,13 +5,16 @@ open System.Collections.Generic
 open Build.Dae.Parse
 open Build.Geometry
 
+// bone influences for a single vertex
 type SkinVertex = BoneInfluence array
 
+// build-time skin controller type
 type Skin =
     { binding: Render.SkinBinding
       vertices: SkinVertex array }
 
 module SkinBuilder =
+    // build SkinBinding from COLLADA <skin> node
     let private buildBinding doc (skin: XmlNode) (sid_map: IDictionary<string, int>) =
         // get bind shape matrix (no such concept in our data model, use it to transform inv_bind_pose)
         let bind_shape_matrix = Build.Dae.SkeletonBuilder.parseMatrixNode (skin.SelectSingleNode "bind_shape_matrix")
@@ -31,6 +34,7 @@ module SkinBuilder =
 
         Render.SkinBinding(bones, inv_bind_pose)
 
+    // get a set of normalized weights (with sum of 1) of bounded length, discard minimal weights
     let private normalizeWeights (weights: BoneInfluence array) max_weights =
         // get at most max_weights largest weights
         let sorted_weights = weights |> Array.sortBy (fun i -> -i.weight)
@@ -42,6 +46,7 @@ module SkinBuilder =
 
         important_weights |> Array.map (fun i -> BoneInfluence(index = i.index, weight = i.weight / total_weight))
 
+    // get weights for all vertices from COLLADA <skin> node, normalizing and truncating weights as necessary
     let private buildVertexWeights doc (skin: XmlNode) max_weights =
         // get vertex weights node (should be unique)
         let vertex_weights = skin.SelectSingleNode "vertex_weights"
@@ -82,6 +87,7 @@ module SkinBuilder =
             normalizeWeights weights max_weights
         ) voffset vcount_data
 
+    // build skin data from controller instance
     let build (doc: Document) (instance_controller: XmlNode) skeleton max_weights =
         // get controller
         let controller = doc.Node (instance_controller.Attribute "url")

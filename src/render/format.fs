@@ -1,5 +1,6 @@
 namespace Render
 
+// format for render data (vertices, pixels, etc.)
 type Format = SlimDX.DXGI.Format
 
 module Formats =

@@ -1,5 +1,6 @@
 module Build.Geometry.PreTLOptimizer
 
+// optimize vertices and indices for Pre T&L cache efficiency
 let optimize (vertices: byte array) (indices: int array) vertex_size =
     // create vertex remap
     let vertex_count = vertices.Length / vertex_size
