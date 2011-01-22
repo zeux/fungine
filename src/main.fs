@@ -105,9 +105,9 @@ let renderMeshes =
     meshes |> Array.map (fun (mesh, skeleton, transform) ->
         mesh, skeleton, transform, createRenderVertexBuffer mesh.vertices, createRenderIndexBuffer mesh.indices)
 
-let projection = Matrix.PerspectiveFovLH(45.f, float32 form.ClientSize.Width / float32 form.ClientSize.Height, 1.f, 1000.f)
-let view = Matrix.LookAtLH(SlimDX.Vector3(0.f, 20.f, 35.f), SlimDX.Vector3(0.f, 15.f, 0.f), SlimDX.Vector3(0.f, 1.f, 0.f)) * Matrix.Scaling(-1.f, 1.f, 1.f)
-let view_projection = view * projection
+let projection = Math.Camera.projectionPerspective 45.f (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 1.f 1000.f
+let view = Math.Camera.lookAt (Math.Vector3(0.f, 20.f, 35.f)) (Math.Vector3(0.f, 15.f, 0.f)) (Math.Vector3(0.f, 1.f, 0.f)) * Matrix34.Scaling(-1.f, 1.f, 1.f)
+let view_projection = projection * Matrix44(view)
 
 let constantBuffer0 = new Buffer(device, null, BufferDescription(16448, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
 let constantBuffer1 = new Buffer(device, null, BufferDescription(65536, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
@@ -149,7 +149,7 @@ let draw (context: DeviceContext) =
             let compression_info = mesh.compression_info
 
             let box = context.MapSubresource(constantBuffer0, 0, constantBuffer0.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
-            box.Data.Write(Matrix.Transpose(view_projection))
+            box.Data.Write(view_projection)
             box.Data.Write(compression_info.position_offset)
             box.Data.Write(0.f)
             box.Data.Write(compression_info.position_scale)
