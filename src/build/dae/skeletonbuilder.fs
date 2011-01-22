@@ -9,10 +9,12 @@ type Skeleton =
       node_map: IDictionary<XmlNode, int> }
 
 module SkeletonBuilder =
+    let private parseVectorArray (data: float32 array) offset =
+        Vector4(data.[offset + 0], data.[offset + 1], data.[offset + 2], data.[offset + 3])
+
     let parseMatrixArray (data: float32 array) offset =
-        let mutable m = Matrix()
-        for i in 0 .. 15 do m.Item(i % 4, i / 4) <- data.[i + offset]
-        m
+        assert (parseVectorArray data (offset + 12) = Vector4.UnitW)
+        Matrix34(parseVectorArray data offset, parseVectorArray data (offset + 4), parseVectorArray data (offset + 8))
 
     let parseMatrixNode (node: XmlNode) =
         let d = Build.Dae.Parse.parseFloatArray node.InnerText 16
@@ -22,14 +24,14 @@ module SkeletonBuilder =
         let data n = Build.Dae.Parse.parseFloatArray comp.InnerText n
 
         match comp.Name with
-        | "translate" -> let d = data 3 in Matrix.Translation(d.[0], d.[1], d.[2])
-        | "rotate" -> let d = data 4 in Matrix.RotationAxis(SlimDX.Vector3(d.[0], d.[1], d.[2]), d.[3] / 180.0f * float32 System.Math.PI)
-        | "scale" -> let d = data 3 in Matrix.Scaling(d.[0], d.[1], d.[2])
+        | "translate" -> let d = data 3 in Matrix34.Translation(d.[0], d.[1], d.[2])
+        | "rotate" -> let d = data 4 in Matrix34.RotationAxis(Vector3(d.[0], d.[1], d.[2]), d.[3] / 180.0f * float32 System.Math.PI)
+        | "scale" -> let d = data 3 in Matrix34.Scaling(d.[0], d.[1], d.[2])
         | "matrix" -> parseMatrixNode comp
-        | _ -> Matrix.Identity
+        | _ -> Matrix34.Identity
 
     let private getNodeTransformLocal (node: XmlNode) =
-        Array.foldBack (fun comp acc -> acc * getNodeTransformComponent comp) [| for n in node.ChildNodes -> n |] Matrix.Identity
+        Array.foldBack (fun comp acc -> (getNodeTransformComponent comp) * acc) [| for n in node.ChildNodes -> n |] Matrix34.Identity
 
     let build (doc: Document) =
         // get all document nodes in document order (so that parent is always before child)

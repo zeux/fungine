@@ -106,11 +106,11 @@ let renderMeshes =
         mesh, skeleton, transform, createRenderVertexBuffer mesh.vertices, createRenderIndexBuffer mesh.indices)
 
 let projection = Matrix.PerspectiveFovLH(45.f, float32 form.ClientSize.Width / float32 form.ClientSize.Height, 1.f, 1000.f)
-let view = Matrix.LookAtLH(Vector3(0.f, 20.f, 35.f), Vector3(0.f, 15.f, 0.f), Vector3(0.f, 1.f, 0.f)) * Matrix.Scaling(-1.f, 1.f, 1.f)
+let view = Matrix.LookAtLH(SlimDX.Vector3(0.f, 20.f, 35.f), SlimDX.Vector3(0.f, 15.f, 0.f), SlimDX.Vector3(0.f, 1.f, 0.f)) * Matrix.Scaling(-1.f, 1.f, 1.f)
 let view_projection = view * projection
 
-let constantBuffer0 = new Buffer(device, null, BufferDescription(16448, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 16448))
-let constantBuffer1 = new Buffer(device, null, BufferDescription(65536, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 65536))
+let constantBuffer0 = new Buffer(device, null, BufferDescription(16448, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
+let constantBuffer1 = new Buffer(device, null, BufferDescription(65536, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
 
 let albedo_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_slavedriver_01.dds")
 let normal_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_slavedriver_01_nm.dds")
@@ -149,7 +149,7 @@ let draw (context: DeviceContext) =
             let compression_info = mesh.compression_info
 
             let box = context.MapSubresource(constantBuffer0, 0, constantBuffer0.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
-            box.Data.Write(view_projection)
+            box.Data.Write(Matrix.Transpose(view_projection))
             box.Data.Write(compression_info.position_offset)
             box.Data.Write(0.f)
             box.Data.Write(compression_info.position_scale)
@@ -167,14 +167,14 @@ let draw (context: DeviceContext) =
             context.DrawIndexedInstanced(mesh.indices.Length, offsets.Length, 0, 0, 0)
 
     if not dbg_stress_test.Value then
-        drawInstanced [| Matrix.Identity |]
+        drawInstanced [| Matrix34.Identity |]
     else
         let rng = System.Random(123456789)
 
         let offsets = [|0 .. 1000|] |> Array.map (fun _ ->
             let x = -20.f + 40.f * float32 (rng.NextDouble())
             let y = -25.f + 40.f * float32 (rng.NextDouble())
-            Matrix.Scaling(0.1f, 0.1f, 0.1f) * Matrix.Translation(x, 7.f, y))
+            Matrix34.Translation(x, 7.f, y) * Matrix34.Scaling(0.1f, 0.1f, 0.1f))
 
         drawInstanced offsets
 
@@ -188,7 +188,7 @@ form.KeyDown.Add(fun args ->
 
 MessagePump.Run(form, fun () ->
     form.Text <- dbg_name.Value
-    device.ImmediateContext.ClearRenderTargetView(backBufferView, Color4 Color.Black)
+    device.ImmediateContext.ClearRenderTargetView(backBufferView, SlimDX.Color4 Color.Black)
     device.ImmediateContext.ClearDepthStencilView(depthBufferView, DepthStencilClearFlags.Depth, 1.f, 0uy)
 
     let context = contextHolder.get()

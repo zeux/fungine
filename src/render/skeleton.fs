@@ -1,6 +1,6 @@
 namespace Render
 
-type Skeleton(transforms: Matrix array, parents: int array) =
+type Skeleton(transforms: Matrix34 array, parents: int array) =
     do assert (transforms.Length = parents.Length)
 
     // get node count
@@ -17,5 +17,5 @@ type Skeleton(transforms: Matrix array, parents: int array) =
         if parents.[index] = -1 then
             transforms.[index]
         else
-            transforms.[index] * (x.AbsoluteTransform parents.[index])
+            (x.AbsoluteTransform parents.[index]) * transforms.[index]
     
