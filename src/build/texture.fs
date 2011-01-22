@@ -4,7 +4,7 @@ open System
 open System.Runtime.InteropServices
 
 // nvtt.dll binding module
-module NvTextureTools =
+module private NvTextureTools =
     type Format =
         | RGB = 0
         | RGBA = 0
@@ -46,90 +46,95 @@ module NvTextureTools =
         | Transparency = 1
         | Premultiplied = 2
 
-    [<DllImport("nvtt")>]
-    extern IntPtr nvttCreateInputOptions()
+    type NvttInputOptions = IntPtr
+    type NvttCompressionOptions = IntPtr
 
     [<DllImport("nvtt")>]
-    extern void nvttDestroyInputOptions(IntPtr inputOptions)
+    extern NvttInputOptions nvttCreateInputOptions()
 
     [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsAlphaMode(IntPtr inputOptions, AlphaMode alphaMode)
+    extern void nvttDestroyInputOptions(NvttInputOptions)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsGamma(IntPtr inputOptions, float inputGamma, float outputGamma)
+    extern void nvttSetInputOptionsAlphaMode(NvttInputOptions, AlphaMode alphaMode)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsWrapMode(IntPtr inputOptions, WrapMode mode)
+    extern void nvttSetInputOptionsGamma(NvttInputOptions, float inputGamma, float outputGamma)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsMipmapFilter(IntPtr inputOptions, MipmapFilter filter)
+    extern void nvttSetInputOptionsWrapMode(NvttInputOptions, WrapMode mode)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsMipmapGeneration(IntPtr inputOptions, bool enabled, int maxLevel)
+    extern void nvttSetInputOptionsMipmapFilter(NvttInputOptions, MipmapFilter filter)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsKaiserParameters(IntPtr inputOptions, float width, float alpha, float stretch)
+    extern void nvttSetInputOptionsMipmapGeneration(NvttInputOptions, bool enabled, int maxLevel)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsNormalMap(IntPtr inputOptions, bool b)
+    extern void nvttSetInputOptionsKaiserParameters(NvttInputOptions, float width, float alpha, float stretch)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsConvertToNormalMap(IntPtr inputOptions, bool convert)
+    extern void nvttSetInputOptionsNormalMap(NvttInputOptions, bool b)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsHeightEvaluation(IntPtr inputOptions, float redScale, float greenScale, float blueScale, float alphaScale)
+    extern void nvttSetInputOptionsConvertToNormalMap(NvttInputOptions, bool convert)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsNormalFilter(IntPtr inputOptions, float sm, float medium, float big, float large)
+    extern void nvttSetInputOptionsHeightEvaluation(NvttInputOptions, float redScale, float greenScale, float blueScale, float alphaScale)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsNormalizeMipmaps(IntPtr inputOptions, bool b)
+    extern void nvttSetInputOptionsNormalFilter(NvttInputOptions, float sm, float medium, float big, float large)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsMaxExtents(IntPtr inputOptions, int dim)
+    extern void nvttSetInputOptionsNormalizeMipmaps(NvttInputOptions, bool b)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetInputOptionsRoundMode(IntPtr inputOptions, RoundMode mode);
+    extern void nvttSetInputOptionsMaxExtents(NvttInputOptions, int dim)
 
     [<DllImport("nvtt")>]
-    extern IntPtr nvttCreateCompressionOptions()
+    extern void nvttSetInputOptionsRoundMode(NvttInputOptions, RoundMode mode);
 
     [<DllImport("nvtt")>]
-    extern void nvttDestroyCompressionOptions(IntPtr compressionOptions)
+    extern NvttCompressionOptions nvttCreateCompressionOptions()
 
     [<DllImport("nvtt")>]
-    extern void nvttSetCompressionOptionsFormat(IntPtr compressionOptions, Format format)
+    extern void nvttDestroyCompressionOptions(NvttCompressionOptions)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetCompressionOptionsQuality(IntPtr compressionOptions, Quality quality)
+    extern void nvttSetCompressionOptionsFormat(NvttCompressionOptions, Format format)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetCompressionOptionsColorWeights(IntPtr compressionOptions, float red, float green, float blue, float alpha)
+    extern void nvttSetCompressionOptionsQuality(NvttCompressionOptions, Quality quality)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetCompressionOptionsPixelFormat(IntPtr compressionOptions, uint32 bitcount, uint32 rmask, uint32 gmask, uint32 bmask, uint32 amask)
+    extern void nvttSetCompressionOptionsColorWeights(NvttCompressionOptions, float red, float green, float blue, float alpha)
 
     [<DllImport("nvtt")>]
-    extern void nvttSetCompressionOptionsQuantization(IntPtr compressionOptions, bool colorDithering, bool alphaDithering, bool binaryAlpha, int alphaThreshold)
-
-    type ErrorCallback = delegate of string -> unit
+    extern void nvttSetCompressionOptionsPixelFormat(NvttCompressionOptions, uint32 bitcount, uint32 rmask, uint32 gmask, uint32 bmask, uint32 amask)
 
     [<DllImport("nvtt")>]
-    extern bool nvttCompressFile(string source, string target, IntPtr inputOptions, IntPtr compressionOptions, ErrorCallback errorCallback)
+    extern void nvttSetCompressionOptionsQuantization(NvttCompressionOptions, bool colorDithering, bool alphaDithering, bool binaryAlpha, int alphaThreshold)
+
+    type NvttErrorCallback = delegate of string -> unit
+
+    [<DllImport("nvtt")>]
+    extern bool nvttCompressFile(string source, string target, NvttInputOptions inputOptions, NvttCompressionOptions compressionOptions, NvttErrorCallback errorCallback)
+
+open NvTextureTools
 
 // compress the texture with the specified options
 let private compressInternal source target input compress =
     let callback = printf "Build.Texture[%s]: error %s" source
-    let result = NvTextureTools.nvttCompressFile(source, target, input, compress, NvTextureTools.ErrorCallback(callback))
+    let result = nvttCompressFile(source, target, input, compress, NvttErrorCallback(callback))
 
-    NvTextureTools.nvttDestroyInputOptions(input)
-    NvTextureTools.nvttDestroyCompressionOptions(compress)
+    nvttDestroyInputOptions(input)
+    nvttDestroyCompressionOptions(compress)
 
     result
 
 // convert the texture with default options
 let build source target =
-    let input = NvTextureTools.nvttCreateInputOptions()
-    let compress = NvTextureTools.nvttCreateCompressionOptions()
+    let input = nvttCreateInputOptions()
+    let compress = nvttCreateCompressionOptions()
 
     compressInternal source target input compress

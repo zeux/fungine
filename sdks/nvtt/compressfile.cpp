@@ -36,9 +36,9 @@
 
 #include <nvtt/nvtt_wrapper.h>
 
-typedef void (__stdcall *ErrorCallback)(const char* message);
+typedef void (__stdcall *NvttErrorCallback)(const char* message);
 
-__declspec(thread) ErrorCallback g_errorCallback;
+__declspec(thread) NvttErrorCallback g_errorCallback;
 
 struct MyMessageHandler: public nv::MessageHandler
 {
@@ -70,7 +70,7 @@ struct MyMessageHandler: public nv::MessageHandler
 
 extern "C" {
 
-NVTT_API NvttBoolean __stdcall nvttCompressFile(const char* source, const char* target, const NvttInputOptions * inputOptionsP, const NvttCompressionOptions * compressionOptions, ErrorCallback errorCallback)
+NVTT_API NvttBoolean __stdcall nvttCompressFile(const char* source, const char* target, const NvttInputOptions * inputOptionsP, const NvttCompressionOptions * compressionOptions, NvttErrorCallback errorCallback)
 {
     struct ErrorCallbackScope
     {
