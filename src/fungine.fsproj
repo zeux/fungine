@@ -54,6 +54,7 @@
     <Compile Include="math\matrix34.fs" />
     <Compile Include="math\matrix44.fs" />
     <Compile Include="math\types.fs" />
+    <Compile Include="math\camera.fs" />
     <Compile Include="math\pack.fs" />
     <Compile Include="render\skeleton.fs" />
     <Compile Include="render\mesh.fs" />

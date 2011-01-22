@@ -51,6 +51,28 @@ type Matrix44 =
     static member (*) (l: Matrix44, r: float32) = Matrix44(l.row0 * r, l.row1 * r, l.row2 * r, l.row3 * r)
     static member (/) (l: Matrix44, r: float32) = Matrix44(l.row0 / r, l.row1 / r, l.row2 / r, l.row3 / r)
 
+    // matrix multiplication
+    static member (*) (l: Matrix44, r: Matrix44) =
+        Matrix44(l.row0.x * r.row0.x + l.row0.y * r.row1.x + l.row0.z * r.row2.x + l.row0.w * r.row3.x,
+                 l.row0.x * r.row0.y + l.row0.y * r.row1.y + l.row0.z * r.row2.y + l.row0.w * r.row3.y,
+                 l.row0.x * r.row0.z + l.row0.y * r.row1.z + l.row0.z * r.row2.z + l.row0.w * r.row3.z,
+                 l.row0.x * r.row0.w + l.row0.y * r.row1.w + l.row0.z * r.row2.w + l.row0.w * r.row3.w,
+
+                 l.row1.x * r.row0.x + l.row1.y * r.row1.x + l.row1.z * r.row2.x + l.row1.w * r.row3.x,
+                 l.row1.x * r.row0.y + l.row1.y * r.row1.y + l.row1.z * r.row2.y + l.row1.w * r.row3.y,
+                 l.row1.x * r.row0.z + l.row1.y * r.row1.z + l.row1.z * r.row2.z + l.row1.w * r.row3.z,
+                 l.row1.x * r.row0.w + l.row1.y * r.row1.w + l.row1.z * r.row2.w + l.row1.w * r.row3.w,
+
+                 l.row2.x * r.row0.x + l.row2.y * r.row1.x + l.row2.z * r.row2.x + l.row2.w * r.row3.x,
+                 l.row2.x * r.row0.y + l.row2.y * r.row1.y + l.row2.z * r.row2.y + l.row2.w * r.row3.y,
+                 l.row2.x * r.row0.z + l.row2.y * r.row1.z + l.row2.z * r.row2.z + l.row2.w * r.row3.z,
+                 l.row2.x * r.row0.w + l.row2.y * r.row1.w + l.row2.z * r.row2.w + l.row2.w * r.row3.w,
+
+                 l.row3.x * r.row0.x + l.row3.y * r.row1.x + l.row3.z * r.row2.x + l.row3.w * r.row3.x,
+                 l.row3.x * r.row0.y + l.row3.y * r.row1.y + l.row3.z * r.row2.y + l.row3.w * r.row3.y,
+                 l.row3.x * r.row0.z + l.row3.y * r.row1.z + l.row3.z * r.row2.z + l.row3.w * r.row3.z,
+                 l.row3.x * r.row0.w + l.row3.y * r.row1.w + l.row3.z * r.row2.w + l.row3.w * r.row3.w)
+
     // string representation
     override this.ToString() = sprintf "%A\n%A\n%A\n%A" this.row0 this.row1 this.row2 this.row3
 
