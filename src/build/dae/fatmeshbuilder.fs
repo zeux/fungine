@@ -82,29 +82,29 @@ let private getVertexComponentData (doc: Document) comp id =
 
 // build vertex buffer
 let private buildVertexBuffer (indices: int array) index_stride (components: (FatVertexComponent * float32 array * int) array) (skin: Skin option) =
+    // create an array with the specified size
+    let arrayCreate size = if size > 0 then Array.zeroCreate size else null
+
+    // get color/uv set count
+    let color_sets = components |> Array.map (fun (comp, _, _) -> match comp with | Color n -> n + 1 | _ -> 0) |> Array.max
+    let uv_sets = components |> Array.map (fun (comp, _, _) -> match comp with | TexCoord n -> n + 1 | _ -> 0) |> Array.max
+
+    // build vertex data
     Array.init (indices.Length / index_stride) (fun index_block ->
         let index_block_offset = index_block * index_stride
 
-        let mutable v = FatVertex()
+        let mutable v = FatVertex(color = arrayCreate color_sets, texcoord = arrayCreate uv_sets)
 
         for (comp, data, index_offset) in components do
             let offset = indices.[index_block_offset + index_offset]
-
-            let add (arr: 'a array) idx value =
-                let length = if arr <> null then arr.Length else 0
-                if length > idx then
-                    arr.[idx] <- value
-                    arr
-                else
-                    Array.init (idx + 1) (fun i -> if i < length then arr.[i] else if i = idx then value else Unchecked.defaultof<'a>)
 
             match comp with
             | Position -> v.position <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
             | Tangent -> v.tangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
             | Bitangent -> v.bitangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
             | Normal -> v.normal <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
-            | Color n -> v.color <- add v.color n (Color4(data.[offset * 4 + 0], data.[offset * 4 + 1], data.[offset * 4 + 2], data.[offset * 4 + 3]))
-            | TexCoord n -> v.texcoord <- add v.texcoord n (Vector2(data.[offset * 2 + 0], 1.0f - data.[offset * 2 + 1]))
+            | Color n -> v.color.[n] <- Color4(data.[offset * 4 + 0], data.[offset * 4 + 1], data.[offset * 4 + 2], data.[offset * 4 + 3])
+            | TexCoord n -> v.texcoord.[n] <- Vector2(data.[offset * 2 + 0], 1.0f - data.[offset * 2 + 1])
             | SkinningInfo _ when skin.IsSome -> v.bones <- skin.Value.vertices.[offset]
             | _ -> failwith "Unknown vertex component"
 
