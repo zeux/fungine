@@ -10,7 +10,7 @@ type TypeCache<'a>(creator) =
     let cache = Dictionary<Type, 'a>()
 
     // get the value from the cache, creating it as necessary
-    member x.Get typ =
+    member this.Get typ =
         match cache.TryGetValue(typ) with
         | true, value -> value
         | _ ->

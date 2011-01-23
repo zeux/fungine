@@ -64,7 +64,7 @@ let private runTestsWithAssertionHandler () =
 
         raise (AssertionException(frame.GetFileName(), frame.GetFileLineNumber(), frame.GetMethod().Name, line))
 
-    let listener = { new System.Diagnostics.DefaultTraceListener() with member x.Fail(msg) = fail msg }
+    let listener = { new System.Diagnostics.DefaultTraceListener() with member this.Fail(msg) = fail msg }
 
     System.Diagnostics.Debug.Listeners.Insert(0, listener)
 

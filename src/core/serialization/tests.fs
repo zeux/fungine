@@ -64,13 +64,13 @@ type int1(x: int) =
 type int2(x: int, y: int) =
     inherit int1(x)
 
-    member x.Y = y
+    member this.Y = y
     override this.Sum = base.Sum + y
 
 type int3(x: int, y: int, z: int) =
     inherit int2(x, y)
 
-    member x.Z = z
+    member this.Z = z
     override this.Sum = base.Sum + z
 
 let testObjectsInheritance () =

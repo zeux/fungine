@@ -5,11 +5,11 @@ open System.Collections.Generic
 
 // XmlNode helpers
 type XmlNode with
-    member x.Attribute (name: string) =
-        x.Attributes.[name].Value
+    member this.Attribute (name: string) =
+        this.Attributes.[name].Value
 
-    member x.Select expr =
-        let nodes = x.SelectNodes(expr)
+    member this.Select expr =
+        let nodes = this.SelectNodes(expr)
         seq { for n in nodes -> n } |> Seq.toArray
 
 // COLLADA document with fast id -> node lookup
@@ -25,8 +25,8 @@ type Document(path: string) =
         for n in doc.SelectNodes("//*[@id]") do
             ids.Add(n.Attribute "id", n)
 
-    member x.Root = doc.DocumentElement
-    member x.Node (id: string) = if id.[0] = '#' then ids.[id.Substring(1)] else ids.[id]
+    member this.Root = doc.DocumentElement
+    member this.Node (id: string) = if id.[0] = '#' then ids.[id.Substring(1)] else ids.[id]
 
 // parse whitespace-delimited string into array
 let splitWhitespace (contents: string) =

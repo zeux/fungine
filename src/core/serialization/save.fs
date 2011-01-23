@@ -12,13 +12,13 @@ type private ObjectTable() =
     let object_ids = Dictionary<obj, int>(HashIdentity.Reference)
 
     // get the list of objects to be serialized
-    member x.PendingObjects = seq { while object_queue.Count > 0 do yield object_queue.Dequeue() }
+    member this.PendingObjects = seq { while object_queue.Count > 0 do yield object_queue.Dequeue() }
 
     // get the list of all objects
-    member x.Objects = object_ids |> Array.ofSeq
+    member this.Objects = object_ids |> Array.ofSeq
 
     // get a serialized id of the object
-    member x.Object (obj: obj) =
+    member this.Object (obj: obj) =
         // null is encoded with 0
         if Object.ReferenceEquals(obj, null) then
             0

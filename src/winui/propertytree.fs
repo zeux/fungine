@@ -5,8 +5,8 @@ open System.Windows.Controls
 
 type private Grid with
     // grid control adding helper
-    member x.Add(control, row, column) =
-        x.Children.Add(control) |> ignore
+    member this.Add(control, row, column) =
+        this.Children.Add(control) |> ignore
         Grid.SetRow(control, row)
         Grid.SetColumn(control, column)
 
@@ -64,7 +64,7 @@ let private (?<-) data key value = data.GetType().GetProperty(key).SetValue(data
 
 // typed value proxy for text box
 type StringAccessor<'T>(data: obj, conv: string -> 'T) =
-    member x.Value
+    member this.Value
         with get () = string (data?Value)
         and set value = data?Value <- box (conv value)
     

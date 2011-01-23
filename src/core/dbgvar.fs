@@ -9,17 +9,17 @@ module DbgVars =
         let event = Event<_>()
 
         // default value accessor
-        member x.DefaultValue = defaults
+        member this.DefaultValue = defaults
 
         // value change notifications
-        member x.ValueChanged = event.Publish
+        member this.ValueChanged = event.Publish
 
         // value accessor
-        member x.Value
+        member this.Value
             with get () = value
             and set rhs =
                 value <- rhs
-                event.Trigger(box x)
+                event.Trigger(box this)
 
     // all registered debug variables
     let private variables = Dictionary<string, Cell>()
@@ -48,4 +48,4 @@ type DbgVar<'T>(defaults: 'T, description: string) =
     let value = DbgVars.add description defaults
 
     // value accessor
-    member x.Value: 'T = unbox value.Value
+    member this.Value: 'T = unbox value.Value

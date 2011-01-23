@@ -18,15 +18,15 @@ type Vertex =
     val triangles: int array // active triangle indices
 
     // remove triangle from vertex
-    member x.RemoveTriangle triangle =
+    member this.RemoveTriangle triangle =
         // update triangle list
-        let idx = Array.findIndex (fun i -> i = triangle) x.triangles
+        let idx = Array.findIndex (fun i -> i = triangle) this.triangles
 
-        assert (x.active_triangles > 0)
-        x.triangles.[idx] <- x.triangles.[x.active_triangles - 1]
+        assert (this.active_triangles > 0)
+        this.triangles.[idx] <- this.triangles.[this.active_triangles - 1]
 
         // update active triangles
-        x.active_triangles <- x.active_triangles - 1
+        this.active_triangles <- this.active_triangles - 1
 
 // use fixed size LRU cache
 let private cache_size = 32

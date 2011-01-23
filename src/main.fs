@@ -28,12 +28,12 @@ let meshes = assets.buildAll()
 type ObjectPool(creator) =
     let s = System.Collections.Concurrent.ConcurrentStack()
 
-    member x.get() =
+    member this.get() =
         match s.TryPop() with
         | true, obj -> obj
         | _ -> creator ()
 
-    member x.put(obj) =
+    member this.put(obj) =
         s.Push(obj)
 
 type Effect(device, vscode, pscode) =
@@ -47,9 +47,9 @@ type Effect(device, vscode, pscode) =
 
         Effect(device, bytecode_vs, bytecode_ps)
 
-    member x.VertexShader = vs
-    member x.PixelShader = ps
-    member x.VertexSignature = signature
+    member this.VertexShader = vs
+    member this.PixelShader = ps
+    member this.VertexSignature = signature
 
 let form = new RenderForm("fungine", Width = 1280, Height = 720)
 let desc = new SwapChainDescription(
