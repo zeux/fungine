@@ -20,8 +20,7 @@ let private runTest test =
         try
             d.Invoke()
             None
-        with
-        | e -> Some e
+        with e -> Some e
 
 // run all tests in all loaded assemblies
 let private runTests () =
