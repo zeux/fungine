@@ -135,7 +135,7 @@ let fromStream stream =
     // read type table
     let type_count = reader.ReadInt32()
     let type_names = Array.init type_count (fun _ -> reader.ReadString())
-    let type_versions = Array.init type_count (fun _ -> reader.ReadUInt32())
+    let type_versions = Array.init type_count (fun _ -> reader.ReadInt32())
 
     // resolve types
     let types =
