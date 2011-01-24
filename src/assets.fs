@@ -13,7 +13,7 @@ let build source target func =
         System.IO.Directory.CreateDirectory(target_info.DirectoryName) |> ignore
 
         let result = func source target
-        if not result then failwith "Error building asset"
+        if not result then failwithf "Error building asset %s" target
 
 let changeExtension name ext =
     System.IO.Path.ChangeExtension(name, ext)

@@ -59,7 +59,7 @@ module MeshPacker =
     let private packVertices (vertices: Build.Geometry.FatVertex array) (format: Render.VertexFormat) vertex_size =
         // only a restricted set of formats supported atm
         let supported_formats = [|Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed|]
-        if not (Array.exists (fun f -> format = f) supported_formats) then failwith "Unsupported format"
+        if not (Array.exists (fun f -> format = f) supported_formats) then failwithf "Unsupported format %A" format
 
         // prepare a stream for writing
         let result : byte array = Array.zeroCreate (vertices.Length * vertex_size)

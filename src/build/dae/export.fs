@@ -55,4 +55,4 @@ let private buildMaya (source: string) (target: string) =
 let build source target =
     match System.IO.FileInfo(source).Extension with
     | ".ma" | ".mb" -> buildMaya source target
-    | _ -> failwith ("Build.Dae: source file " + source + " has unknown extension")
+    | _ -> failwithf "Build.Dae: source file %s has unknown extension" source

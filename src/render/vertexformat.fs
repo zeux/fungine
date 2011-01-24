@@ -43,4 +43,4 @@ module VertexLayouts =
     let get format =
         match format with
         | VertexFormat.Pos_TBN_Tex1_Bone4_Packed -> Pos_TBN_Tex1_Bone4_Packed
-        | _ -> failwith "Unknown format"
+        | _ -> failwith "Unknown format %A" format

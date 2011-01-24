@@ -24,7 +24,7 @@ let isStruct (typ: Type) =
 
 // get all fields from the type and its ancestors that are eligible for serialization
 let getSerializableFields (typ: Type) =
-    if not typ.IsSerializable then failwith (sprintf "Type %A is not serializable" typ)
+    if not typ.IsSerializable then failwithf "Type %A is not serializable" typ
 
     // get all fields
     let fields = typ.FindMembers(MemberTypes.Field, BindingFlags.Instance ||| BindingFlags.NonPublic ||| BindingFlags.Public, null, null) |> Array.map (fun f -> f :?> FieldInfo)

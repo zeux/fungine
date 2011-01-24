@@ -23,7 +23,7 @@ let private getUVRemap (material_instance: XmlNode) =
     |> Array.map (fun (sem, set) ->
         match sem with
         | Regex @"TEX(\d+)" i -> int i, int set
-        | _ -> failwith ("Unknown semantic" + sem))
+        | _ -> failwithf "Unknown semantic %s" sem)
     |> Map.ofSeq
 
 // get vertex input information as (semantics, set, id, offset) tuple
@@ -106,7 +106,7 @@ let private buildVertexBuffer (indices: int array) index_stride (components: (Fa
             | Color n -> v.color.[n] <- Color4(data.[offset * 4 + 0], data.[offset * 4 + 1], data.[offset * 4 + 2], data.[offset * 4 + 3])
             | TexCoord n -> v.texcoord.[n] <- Vector2(data.[offset * 2 + 0], 1.0f - data.[offset * 2 + 1])
             | SkinningInfo _ when skin.IsSome -> v.bones <- skin.Value.vertices.[offset]
-            | _ -> failwith "Unknown vertex component"
+            | _ -> failwithf "Unknown vertex component %A" comp
 
         v)
 

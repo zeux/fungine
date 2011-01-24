@@ -141,7 +141,7 @@ let fromStream stream =
     let types =
         Array.map2 (fun name version ->
             let typ = Type.GetType(name)
-            if version <> Version.get typ then failwith (sprintf "Version mismatch for type %A" typ)
+            if version <> Version.get typ then failwithf "Version mismatch for type %A" typ
             typ) type_names type_versions
 
     // read object table

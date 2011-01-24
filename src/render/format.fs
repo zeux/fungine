@@ -60,7 +60,7 @@ module Formats =
         // RGB10A2
         | Format.R10G10B10_XR_Bias_A2_UNorm -> 8
         // Unknown
-        | _ -> failwith "Unknown format"
+        | _ -> failwithf "Unknown format %A" format
 
     // is the format a depth/stencil one
     let isDepth format =
