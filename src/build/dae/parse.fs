@@ -9,8 +9,7 @@ type XmlNode with
         this.Attributes.[name].Value
 
     member this.Select expr =
-        let nodes = this.SelectNodes(expr)
-        seq { for n in nodes -> n } |> Seq.toArray
+        this.SelectNodes(expr) |> Seq.cast<XmlNode> |> Seq.toArray
 
 // COLLADA document with fast id -> node lookup
 type Document(path: string) =

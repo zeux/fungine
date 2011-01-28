@@ -17,7 +17,7 @@ let private getMayaPath versions =
     List.pick (fun (key, ver) -> getRegistryValue key (sprintf @"SOFTWARE\Autodesk\Maya\%s\Setup\InstallPath" ver) "MAYA_INSTALL_LOCATION") variations
 
 // highest installed Maya version
-let private mayaPath = lazy(getMayaPath ["2011"; "2010"; "2009"; "2008"])
+let private mayaPath = lazy (getMayaPath ["2011"; "2010"; "2009"; "2008"])
 
 // build .dae file via standalone mayabatch
 let private buildMaya (source: string) (target: string) =
