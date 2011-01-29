@@ -15,37 +15,41 @@ open Microsoft.FSharp.NativeInterop
 type MemoryReader(buffer: nativeptr<byte>) =
     let mutable data = NativePtr.toNativeInt buffer
 
+    // get current data pointer
     member this.Data = data
 
+    // read struct value and advance current pointer
     member this.ReadValue<'T when 'T: unmanaged>() =
         let r: 'T = NativePtr.read (NativePtr.ofNativeInt data)
         data <- data + (nativeint sizeof<'T>)
         r
 
-    member this.ReadByte(): byte = this.ReadValue()
+    // read int32 and advance current pointer
     member this.ReadInt32(): int32 = this.ReadValue()
 
+    // read int32 encoded in 7-bit chunks (this matches the BinaryReader/BinaryWriter string length encoding)
     member this.Read7BitEncodedInt() =
-        let mutable result = 0
-        let mutable shift = 0
-        let mutable data = 255uy
+        let rec loop acc shift =
+            match this.ReadValue() with
+            | x when x < 128uy -> acc ||| (int x <<< shift)
+            | x -> loop (acc ||| (int (x - 128uy) <<< shift)) (shift + 7)
 
-        while (data &&& 128uy) <> 0uy do
-            data <- this.ReadByte()
-            result <- result ||| (int (data &&& 127uy) <<< shift)
-            shift <- shift + 7
-            
-        result
+        loop 0 0
 
+    // read string and advance current pointer
     member this.ReadString() =
         let length = this.Read7BitEncodedInt()
         let result = String(((NativePtr.ofNativeInt data): nativeptr<sbyte>), 0, length, Util.stringEncoding)
         data <- data + nativeint length
         result
 
+    // read string into a preallocated native buffer and advance current pointer
     member this.ReadStringData(result: nativeptr<char>, size: int) =
         let length = this.Read7BitEncodedInt()
-        Util.stringEncoding.GetChars(NativePtr.ofNativeInt data, length, result, size) |> ignore
+
+        let decoded = Util.stringEncoding.GetChars(NativePtr.ofNativeInt data, length, result, size)
+        assert (decoded = size)
+
         data <- data + nativeint length
 
 // a table that holds all objects in a loaded graph
@@ -277,7 +281,7 @@ let fromMemory data size =
         d.Invoke(table, reader, obj))
 
     // check bounds
-    assert (NativePtr.ofNativeInt reader.Data = NativePtr.add data size)
+    assert (reader.Data <= (NativePtr.toNativeInt data) + (nativeint size))
 
     objects.[0]
 
