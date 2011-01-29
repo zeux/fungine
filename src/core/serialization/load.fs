@@ -19,15 +19,15 @@ type MemoryReader(buffer: nativeptr<byte>) =
     member this.Data = data
 
     // read struct value and advance current pointer
-    member this.ReadValue<'T when 'T: unmanaged>() =
+    member this.ReadValue<'T when 'T: unmanaged and 'T: struct>() =
         let r: 'T = NativePtr.read (NativePtr.ofNativeInt data)
         data <- data + (nativeint sizeof<'T>)
         r
 
-    // read int32 and advance current pointer
+    // read integer and advance current pointer
     member this.ReadInt32(): int32 = this.ReadValue()
 
-    // read int32 encoded in 7-bit chunks (this matches the BinaryReader/BinaryWriter string length encoding)
+    // read integer encoded in 7-bit chunks (this matches the BinaryReader/BinaryWriter string length encoding)
     member this.Read7BitEncodedInt() =
         let rec loop acc shift =
             match this.ReadValue() with
@@ -67,7 +67,7 @@ type private LoadMethodHost = class end
 // dummy function for callbacks
 let private emitNone gen = ()
 
-// load any value for which there is a BinaryWriter.ReadType method (all primitive types)
+// load any value for which there is a MemoryReader.ReadValue method (all primitive types)
 let private emitLoadValuePrimitive (gen: ILGenerator) objemitpre objemitpost (typ: Type) =
     objemitpre gen
     gen.Emit(OpCodes.Ldarg_1) // reader
@@ -113,7 +113,7 @@ and private emitLoadFields (gen: ILGenerator) objemit (typ: Type) =
         else
             emitLoadValue gen objemit (fun gen -> gen.Emit(OpCodes.Stfld, f)) f.FieldType
 
-// load array (fast path)
+// load an array of primitive type (fast path)
 let private emitLoadPrimitiveArray (gen: ILGenerator) objemit (typ: Type) =
     let data_field = typedefof<MemoryReader>.GetField("data", BindingFlags.Instance ||| BindingFlags.NonPublic)
     let size_local = gen.DeclareLocal(typedefof<int>)
@@ -230,6 +230,19 @@ let private buildCreateDelegate (typ: Type) =
 // a cache for create delegates (one delegate per type)
 let private createDelegateCache = Util.TypeCache(buildCreateDelegate)
 
+// load type table
+let private loadTypeTable (reader: MemoryReader) =
+    // load type data
+    let type_count = reader.ReadInt32()
+    let type_names = Array.init type_count (fun _ -> reader.ReadString())
+    let type_versions = Array.init type_count (fun _ -> reader.ReadInt32())
+
+    // resolve types
+    Array.map2 (fun name version ->
+        let typ = Type.GetType(name)
+        if version <> Version.get typ then failwithf "Version mismatch for type %A" typ
+        typ) type_names type_versions
+
 // load object from memory
 let fromMemory data size =
     let reader = MemoryReader(data)
@@ -239,19 +252,10 @@ let fromMemory data size =
 
     if signature <> "fun" then failwith "Incorrect header"
 
-    // read type table
-    let type_count = reader.ReadInt32()
-    let type_names = Array.init type_count (fun _ -> reader.ReadString())
-    let type_versions = Array.init type_count (fun _ -> reader.ReadInt32())
+    // load type table
+    let types = loadTypeTable reader
 
-    // resolve types
-    let types =
-        Array.map2 (fun name version ->
-            let typ = Type.GetType(name)
-            if version <> Version.get typ then failwithf "Version mismatch for type %A" typ
-            typ) type_names type_versions
-
-    // get delegates
+    // get type-based data once (to reduce lookup overhead)
     let creators = types |> Array.map createDelegateCache.Get
     let loaders = types |> Array.map loadDelegateCache.Get
     let needs_array = types |> Array.map (fun typ -> typ.IsArray || typ = typedefof<string>)
@@ -260,29 +264,21 @@ let fromMemory data size =
     let object_types = Array.init (reader.ReadInt32()) (fun _ -> reader.ReadInt32())
 
     // read array size table
-    let array_size_indices = object_types |> Array.map (fun tid -> if needs_array.[tid] then 1 else 0) |> Array.scan (+) 0
-    assert (array_size_indices.Length = object_types.Length + 1)
-
-    let array_sizes = Array.init array_size_indices.[object_types.Length] (fun _ -> reader.ReadInt32())
+    let array_sizes = object_types |> Array.map (fun tid -> if needs_array.[tid] then reader.ReadInt32() else 0)
 
     // create uninitialized objects
-    let objects = object_types |> Array.mapi (fun idx tid ->
-        let c = creators.[tid]
-
-        c.Invoke(if needs_array.[tid] then array_sizes.[array_size_indices.[idx]] else 0))
+    let objects = Array.map2 (fun tid size -> creators.[tid].Invoke(size)) object_types array_sizes
 
     // create object table (0 is the null object, object indices are 1-based)
     let table = Array.append [|null|] objects
 
     // load objects
-    objects |> Array.iteri (fun idx obj ->
-        let d = loaders.[object_types.[idx]]
-
-        d.Invoke(table, reader, obj))
+    Array.iter2 (fun tid obj -> loaders.[tid].Invoke(table, reader, obj)) object_types objects
 
     // check bounds
     assert (reader.Data <= (NativePtr.toNativeInt data) + (nativeint size))
 
+    // return root object
     objects.[0]
 
 // load object from stream
