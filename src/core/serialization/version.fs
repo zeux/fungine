@@ -15,7 +15,7 @@ let private buildEnumHash (typ: Type) =
     assert typ.IsEnum
 
     // get all enum values
-    let values = Array.zip (typ.GetEnumNames()) [| for v in typ.GetEnumValues() -> v :?> int |]
+    let values = Array.zip (typ.GetEnumNames()) [| for v in typ.GetEnumValues() -> v.GetHashCode() |]
 
     // get enum type hash
     let hash = typ.GetEnumUnderlyingType().GetHashCode()
