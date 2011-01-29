@@ -23,11 +23,21 @@ let testPrimitive () =
     testRoundtripStructural 1UL
     testRoundtripStructural 1.0f
     testRoundtripStructural 1.0
+    testRoundtripStructural 'a'
+    testRoundtripStructural 1.5m
 
 // enums
+type Enum8 =
+    | Value = 1uy
+
+type Enum64 =
+    | Value = 1L
+
 let testEnums () =
     testRoundtripStructural System.DayOfWeek.Wednesday
     testRoundtripStructural (System.UriComponents.Host ||| System.UriComponents.Port)
+    testRoundtripStructural Enum8.Value
+    testRoundtripStructural Enum64.Value
 
 // built-in aggregate types
 let testBuiltinAggregates () =
@@ -45,6 +55,9 @@ let testStrings () =
     testRoundtripStructural ""
     testRoundtripStructural "abc"
     testRoundtripStructural "abc\0 def"
+
+let testStringsUnicode () =
+    testRoundtripStructural "ab\u0123\u101234cd"
 
 // structures
 let testStructs () =
