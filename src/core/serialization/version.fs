@@ -18,7 +18,7 @@ let private buildEnumHash (typ: Type) =
     let values = Array.zip (typ.GetEnumNames()) [| for v in typ.GetEnumValues() -> v.GetHashCode() |]
 
     // get enum type hash
-    let hash = typ.GetEnumUnderlyingType().GetHashCode()
+    let hash = typ.GetEnumUnderlyingType().Name.GetHashCode()
 
     // return hash combined with value hash
     values
