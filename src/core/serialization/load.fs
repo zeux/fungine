@@ -12,8 +12,8 @@ open Microsoft.FSharp.NativeInterop
 #nowarn "9" // Uses of this construct may result in the generation of unverifiable .NET IL code
 
 // a memory chunk-based reader
-type MemoryReader(buffer: nativeptr<byte>) =
-    let mutable data = NativePtr.toNativeInt buffer
+type MemoryReader(buffer: nativeint) =
+    let mutable data = buffer
 
     // get current data pointer
     member this.Data = data
@@ -276,35 +276,32 @@ let fromMemory data size =
     Array.iter2 (fun tid obj -> loaders.[tid].Invoke(table, reader, obj)) object_types objects
 
     // check bounds
-    assert (reader.Data <= (NativePtr.toNativeInt data) + (nativeint size))
+    assert (reader.Data <= data + (nativeint size))
 
     // return root object
     objects.[0]
 
 // load object from stream
 let fromStream (stream: Stream) size =
+    // load data into byte array
     let data = Array.zeroCreate size
 
     let read = stream.Read(data, 0, size)
     assert (read = size)
     
+    // pin buffer and deserialize objects from native memory
     let gch = GCHandle.Alloc(data, GCHandleType.Pinned) 
 
     try
-        fromMemory (gch.AddrOfPinnedObject() |> NativePtr.ofNativeInt) size
+        fromMemory (gch.AddrOfPinnedObject()) size
     finally
         gch.Free()
 
 // load object from file
 let fromFile path =
+    // map entire file to memory
     use file = MemoryMappedFile.CreateFromFile(path)
     use stream = file.CreateViewStream(0L, 0L, MemoryMappedFileAccess.Read)
 
-    let handle = stream.SafeMemoryMappedViewHandle
-    let data = ref (NativePtr.ofNativeInt (nativeint 0))
-    handle.AcquirePointer(data)
-
-    try
-        fromMemory !data (int stream.Length)
-    finally
-        handle.ReleasePointer()
+    // deserialize objects from mapped memory
+    fromMemory (stream.SafeMemoryMappedViewHandle.DangerousGetHandle()) (int stream.Length)
