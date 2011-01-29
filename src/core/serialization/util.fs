@@ -69,3 +69,6 @@ let emitArrayLoop (gen: ILGenerator) objemit bodyemit =
     gen.Emit(OpCodes.Ldloc_0) // index
     gen.Emit(OpCodes.Ldloc_1) // count
     gen.Emit(OpCodes.Blt, loop_begin)
+
+// encoding for serialized strings
+let stringEncoding = System.Text.UTF8Encoding()

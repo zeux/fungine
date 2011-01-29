@@ -4,7 +4,7 @@ let roundtrip (obj: 'a) =
     use stream = new System.IO.MemoryStream()
     Core.Serialization.Save.toStream stream (box obj)
     stream.Position <- 0L
-    (Core.Serialization.Load.fromStream stream) :?> 'a
+    (Core.Serialization.Load.fromStream stream (int stream.Length)) :?> 'a
 
 let testRoundtripStructural obj =
     let rt = roundtrip obj

@@ -43,7 +43,9 @@ type private SaveMethodHost = class end
 let private emitSaveValuePrimitive (gen: ILGenerator) objemit typ =
     gen.Emit(OpCodes.Ldarg_1) // writer
     objemit gen
-    gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [|typ|]))
+
+    // special handling for chars since BinaryWriter saves them as UTF-8
+    gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [| (if typ = typedefof<char> then typedefof<int16> else typ) |]))
 
 // save an object
 let private emitSaveObject (gen: ILGenerator) objemit =
@@ -159,7 +161,7 @@ let toStream stream obj =
             id)
 
     // save header
-    let writer = new BinaryWriter(stream)
+    let writer = new BinaryWriter(stream, Util.stringEncoding)
 
     writer.Write("fun")
 
