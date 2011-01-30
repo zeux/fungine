@@ -117,6 +117,7 @@ and private emitLoadFields (gen: ILGenerator) objemit (typ: Type) =
 let private emitLoadPrimitiveArray (gen: ILGenerator) objemit (typ: Type) =
     let data_field = typedefof<MemoryReader>.GetField("data", BindingFlags.Instance ||| BindingFlags.NonPublic)
     let size_local = gen.DeclareLocal(typedefof<int>)
+    let skip_label = gen.DefineLabel()
 
     // calculate array size in bytes
     objemit gen
@@ -124,6 +125,11 @@ let private emitLoadPrimitiveArray (gen: ILGenerator) objemit (typ: Type) =
     gen.Emit(OpCodes.Sizeof, typ.GetElementType())
     gen.Emit(OpCodes.Mul)
     gen.Emit(OpCodes.Stloc, size_local)
+
+    // return if size is zero
+    gen.Emit(OpCodes.Ldloc, size_local)
+    gen.Emit(OpCodes.Ldc_I4_0)
+    gen.Emit(OpCodes.Beq, skip_label)
 
     // copy data
     objemit gen
@@ -147,6 +153,9 @@ let private emitLoadPrimitiveArray (gen: ILGenerator) objemit (typ: Type) =
     gen.Emit(OpCodes.Add)
 
     gen.Emit(OpCodes.Stfld, data_field)
+
+    // skip here for empty arrays
+    gen.MarkLabel(skip_label)
 
 // load an array
 let private emitLoadArray (gen: ILGenerator) objemit (typ: Type) =
