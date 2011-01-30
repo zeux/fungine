@@ -114,3 +114,37 @@ let testObjectsReferencesCircular () =
     let r1 = unbox !r2
 
     assert (System.Object.ReferenceEquals(!r1, box r3))
+
+// arrays
+let testRoundtripStructuralArray (obj: 'T) =
+    testRoundtripStructural ([||] : 'T array)
+    testRoundtripStructural [| obj |]
+    testRoundtripStructural [| obj; obj; obj |]
+
+let testArraysPrimitive () =
+    testRoundtripStructuralArray true
+    testRoundtripStructuralArray 1
+    testRoundtripStructuralArray 1y
+    testRoundtripStructuralArray 1uy
+    testRoundtripStructuralArray 1s
+    testRoundtripStructuralArray 1us
+    testRoundtripStructuralArray 1u
+    testRoundtripStructuralArray 1L
+    testRoundtripStructuralArray 1UL
+    testRoundtripStructuralArray 1.0f
+    testRoundtripStructuralArray 1.0
+    testRoundtripStructuralArray 'a'
+    testRoundtripStructuralArray 1.5m
+    testRoundtripStructuralArray 1.5m
+
+let testArraysEnum () =
+    testRoundtripStructuralArray System.DayOfWeek.Wednesday
+    testRoundtripStructuralArray (System.UriComponents.Host ||| System.UriComponents.Port)
+    testRoundtripStructuralArray Enum8.Value
+    testRoundtripStructuralArray Enum64.Value
+
+let testArraysStruct () =
+    testRoundtripStructuralArray (System.Collections.Generic.KeyValuePair(5, true))
+
+let testArraysObject () =
+    testRoundtripStructuralArray (System.Version("0.5"))
