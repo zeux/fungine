@@ -39,7 +39,7 @@ type MemoryReader(buffer: nativeint) =
     // read string and advance current pointer
     member this.ReadString() =
         let length = this.Read7BitEncodedInt()
-        let result = String(((NativePtr.ofNativeInt data): nativeptr<sbyte>), 0, length, Util.stringEncoding)
+        let result = String(NativePtr.ofNativeInt data, 0, length, Util.stringEncoding)
         data <- data + nativeint length
         result
 
