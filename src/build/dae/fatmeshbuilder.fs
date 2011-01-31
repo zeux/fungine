@@ -23,6 +23,7 @@ let private getUVRemap (material_instance: XmlNode) =
     |> Array.map (fun (sem, set) ->
         match sem with
         | Regex @"TEX(\d+)" i -> int i, int set
+        | Regex @"CHANNEL(\d+)" i -> int i - 1, int set
         | _ -> failwithf "Unknown semantic %s" sem)
     |> Map.ofSeq
 
