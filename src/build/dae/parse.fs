@@ -136,16 +136,26 @@ let parseIntArray contents =
 let getFloatArray (doc: Document) id stride =
     let source = doc.Node id
 
-    // get accessor (we ignore the accessor attributes
+    // get accessor (we ignore the accessor attributes)
     let accessor = source.SelectSingleNode("technique_common/accessor")
-    assert (accessor.Attribute "stride" = string stride)
+    let source_stride = int (accessor.Attribute "stride")
+    assert (source_stride >= stride)
 
     // get the <float_array> node
     let array = doc.Node (accessor.Attribute "source")
-    assert (int (array.Attribute "count") = stride * int (accessor.Attribute "count"))
+
+    let element_count = int (array.Attribute "count")
+    let group_count = int (accessor.Attribute "count")
+    assert (element_count = source_stride * group_count)
 
     // parse whitespace-delimited string
-    parseFloatArray array.InnerText (int (array.Attribute "count"))
+    let result = parseFloatArray array.InnerText element_count
+
+    // convert strides if necessary
+    if stride = source_stride then
+        result
+    else
+        [| 0..group_count-1 |] |> Array.collect (fun i -> Array.sub result (i * source_stride) stride)
 
 // parse node contents as an integer array
 let getIntArray (node: XmlNode) =
