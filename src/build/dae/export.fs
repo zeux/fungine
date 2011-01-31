@@ -10,11 +10,15 @@ let private getRegistryValue (reg: RegistryKey) (path: string) key =
     let pathValue = if pathKey = null then null else pathKey.GetValue(key) :?> string
     if System.String.IsNullOrEmpty(pathValue) then None else Some(pathValue)
 
+// get the first variant of registry value with the speficied name
+let private getRegistryValueVariant variants path name =
+    let keys = [for hive in [RegistryHive.CurrentUser; RegistryHive.LocalMachine] do for view in [RegistryView.Registry64; RegistryView.Registry32] -> RegistryKey.OpenBaseKey(hive, view)]
+    let variations = [for key in keys do for var in variants -> key, var]
+    List.pick (fun (key, var) -> getRegistryValue key (path var) name) variations
+
 // get the highest version of installed Maya, consider both 64 and 32 bit versions
 let private getMayaPath versions =
-    let keys = [for hive in [RegistryHive.CurrentUser; RegistryHive.LocalMachine] do for view in [RegistryView.Registry64; RegistryView.Registry32] -> RegistryKey.OpenBaseKey(hive, view)]
-    let variations = [for key in keys do for ver in versions -> key, ver]
-    List.pick (fun (key, ver) -> getRegistryValue key (sprintf @"SOFTWARE\Autodesk\Maya\%s\Setup\InstallPath" ver) "MAYA_INSTALL_LOCATION") variations
+    getRegistryValueVariant versions (sprintf @"SOFTWARE\Autodesk\Maya\%s\Setup\InstallPath") "MAYA_INSTALL_LOCATION"
 
 // highest installed Maya version
 let private mayaPath = lazy (getMayaPath ["2011"; "2010"; "2009"; "2008"])
@@ -51,8 +55,30 @@ let private buildMaya (source: string) (target: string) =
     proc.WaitForExit()
     proc.ExitCode = 0
 
+// get the highest version of installed Max, consider both 64 and 32 bit versions
+let private getMaxPath versions =
+    getRegistryValueVariant versions (sprintf @"SOFTWARE\Autodesk\3dsmax\%s\MAX-1:409") "Installdir"
+
+// highest installed Max version
+let private maxPath = lazy (getMaxPath ["12.0"; "11.0"; "10.0"; "9.0"])
+
+// build .dae file via standalone 3dsmax
+let private buildMax (source: string) (target: string) =
+    let max = maxPath.Force() + @"\\3dsmax.exe"
+
+    // export script is in the ms file, so include it and run export proc (' are replaced with \" below)
+    let command = sprintf @"fileIn './src/build/max_dae_export.ms'; export '%s' '%s'" (source.Replace('\\', '/')) (target.Replace('\\', '/'))
+
+    // start 3dsmax.exe with the export command
+    let proc = Process.Start(max, sprintf "-q -silent -vn -mip -mxs \"%s\"" (command.Replace("'", "\\\"")))
+
+    // wait for process exit, exit code is always 0 :(
+    proc.WaitForExit()
+    true
+
 // build .dae file from DCC sources
 let build source target =
     match System.IO.FileInfo(source).Extension with
     | ".ma" | ".mb" -> buildMaya source target
+    | ".max" -> buildMax source target
     | _ -> failwithf "Build.Dae: source file %s has unknown extension" source
