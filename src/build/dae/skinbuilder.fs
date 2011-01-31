@@ -30,7 +30,7 @@ module SkinBuilder =
 
         // create binding
         let bones = joints |> Array.map (fun sid -> sid_map.[sid])
-        let inv_bind_pose = [|0 .. bones.Length - 1|] |> Array.map (fun idx -> bind_shape_matrix * Build.Dae.SkeletonBuilder.parseMatrixArray inv_bind_matrix (idx * 16))
+        let inv_bind_pose = Array.init bones.Length (fun idx -> Build.Dae.SkeletonBuilder.parseMatrixArray inv_bind_matrix (idx * 16) * bind_shape_matrix)
 
         Render.SkinBinding(bones, inv_bind_pose)
 
@@ -76,7 +76,7 @@ module SkinBuilder =
         // build vertex data
         Array.map2 (fun offset count ->
             // get basic weights, as stored in .dae
-            let weights = [|0 .. count - 1|] |> Array.map (fun index ->
+            let weights = Array.init count (fun index ->
                 let influence_offset = offset + index * v_stride
                 let bone_index = v_data.[influence_offset + vertex_joint_offset]
                 let weight_index = v_data.[influence_offset + vertex_weight_offset]
