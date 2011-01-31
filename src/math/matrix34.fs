@@ -65,6 +65,12 @@ type Matrix34 =
     // string representation
     override this.ToString() = sprintf "%A\n%A\n%A" this.row0 this.row1 this.row2
 
+    // determinant
+    member this.Determinant =
+        this.row0.x * (this.row1.y * this.row2.z - this.row1.z * this.row2.y) -
+        this.row0.y * (this.row1.x * this.row2.z - this.row1.z * this.row2.x) +
+        this.row0.z * (this.row1.x * this.row2.y - this.row1.y * this.row2.x)
+
     // constants
     static member Zero = Matrix34()
     static member Identity = Matrix34(Vector4.UnitX, Vector4.UnitY, Vector4.UnitZ)
@@ -95,3 +101,38 @@ type Matrix34 =
                  0.f, 0.f, z,   0.f)
 
     static member Scaling (v: Vector3) = Matrix34.Scaling(v.x, v.y, v.z)
+
+    // transpose
+    static member Transpose (m: Matrix34) =
+        Matrix34(m.row0.x, m.row1.x, m.row2.x, 0.f,
+                 m.row0.y, m.row1.y, m.row2.y, 0.f,
+                 m.row0.z, m.row1.z, m.row2.z, 0.f)
+
+    // inverse for affine transform
+    static member InverseAffine (m: Matrix34) =
+        Matrix34(m.row0.x, m.row1.x, m.row2.x, -(m.row0.x * m.row0.w + m.row0.y * m.row1.w + m.row0.z * m.row2.w),
+                 m.row0.y, m.row1.y, m.row2.y, -(m.row1.x * m.row0.w + m.row1.y * m.row1.w + m.row1.z * m.row2.w),
+                 m.row0.z, m.row1.z, m.row2.z, -(m.row2.x * m.row0.w + m.row2.y * m.row1.w + m.row2.z * m.row2.w))
+
+    // general inverse
+    static member Inverse (m: Matrix34) =
+        // get reciprocal determinant
+        let s = 1.f / m.Determinant
+
+        // get cofactors
+        let r00 =  (m.row1.y * m.row2.z - m.row1.z * m.row2.y) * s
+        let r01 = -(m.row0.y * m.row2.z - m.row0.z * m.row2.y) * s
+        let r02 =  (m.row0.y * m.row1.z - m.row0.z * m.row1.y) * s
+
+        let r10 = -(m.row1.x * m.row2.z - m.row1.z * m.row2.x) * s
+        let r11 =  (m.row0.x * m.row2.z - m.row0.z * m.row2.x) * s
+        let r12 = -(m.row0.x * m.row1.z - m.row0.z * m.row1.x) * s
+
+        let r20 =  (m.row1.x * m.row2.y - m.row1.y * m.row2.x) * s
+        let r21 = -(m.row0.x * m.row2.y - m.row0.y * m.row2.x) * s
+        let r22 =  (m.row0.x * m.row1.y - m.row0.y * m.row1.x) * s
+
+        // get final matrix
+        Matrix34(r00, r01, r02, -(r00 * m.row0.w + r01 * m.row1.w + r02 * m.row2.w),
+                 r10, r11, r12, -(r10 * m.row0.w + r11 * m.row1.w + r12 * m.row2.w),
+                 r20, r21, r22, -(r20 * m.row0.w + r21 * m.row1.w + r22 * m.row2.w))
