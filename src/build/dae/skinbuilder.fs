@@ -15,7 +15,7 @@ type Skin =
 
 module SkinBuilder =
     // build SkinBinding from COLLADA <skin> node
-    let private buildBinding doc (skin: XmlNode) (sid_map: IDictionary<string, int>) =
+    let private buildBinding doc (conv: BasisConverter) (skin: XmlNode) (sid_map: IDictionary<string, int>) =
         // get bind shape matrix (no such concept in our data model, use it to transform inv_bind_pose)
         let bind_shape_matrix = Build.Dae.SkeletonBuilder.parseMatrixNode (skin.SelectSingleNode "bind_shape_matrix")
 
@@ -30,7 +30,7 @@ module SkinBuilder =
 
         // create binding
         let bones = joints |> Array.map (fun sid -> sid_map.[sid])
-        let inv_bind_pose = Array.init bones.Length (fun idx -> Build.Dae.SkeletonBuilder.parseMatrixArray inv_bind_matrix (idx * 16) * bind_shape_matrix)
+        let inv_bind_pose = Array.init bones.Length (fun idx -> Build.Dae.SkeletonBuilder.parseMatrixArray inv_bind_matrix (idx * 16) * bind_shape_matrix) |> Array.map conv.Matrix
 
         Render.SkinBinding(bones, inv_bind_pose)
 
@@ -88,7 +88,7 @@ module SkinBuilder =
         ) voffset vcount_data
 
     // build skin data from controller instance
-    let build (doc: Document) (instance_controller: XmlNode) skeleton max_weights =
+    let build (doc: Document) (conv: BasisConverter) (instance_controller: XmlNode) skeleton max_weights =
         // get controller
         let controller = doc.Node (instance_controller.Attribute "url")
 
@@ -105,7 +105,7 @@ module SkinBuilder =
         let skin = controller.SelectSingleNode "skin"
 
         // create skin binding
-        let binding = buildBinding doc skin sid_map
+        let binding = buildBinding doc conv skin sid_map
 
         // parse vertex binding
         let vertices = buildVertexWeights doc skin max_weights

@@ -82,7 +82,7 @@ let private getVertexComponentData (doc: Document) comp id =
     | _ -> [||]
 
 // build vertex buffer
-let private buildVertexBuffer (indices: int array) index_stride (components: (FatVertexComponent * float32 array * int) array) (skin: Skin option) =
+let private buildVertexBuffer (conv: BasisConverter) (indices: int array) index_stride (components: (FatVertexComponent * float32 array * int) array) (skin: Skin option) =
     // create an array with the specified size
     let arrayCreate size = if size > 0 then Array.zeroCreate size else null
 
@@ -100,10 +100,10 @@ let private buildVertexBuffer (indices: int array) index_stride (components: (Fa
             let offset = indices.[index_block_offset + index_offset]
 
             match comp with
-            | Position -> v.position <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
-            | Tangent -> v.tangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
-            | Bitangent -> v.bitangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
-            | Normal -> v.normal <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2])
+            | Position -> v.position <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2]) |> conv.Position
+            | Tangent -> v.tangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2]) |> conv.Direction
+            | Bitangent -> v.bitangent <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2]) |> conv.Direction
+            | Normal -> v.normal <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2]) |> conv.Direction
             | Color n -> v.color.[n] <- Color4(data.[offset * 4 + 0], data.[offset * 4 + 1], data.[offset * 4 + 2], data.[offset * 4 + 3])
             | TexCoord n -> v.texcoord.[n] <- Vector2(data.[offset * 2 + 0], 1.0f - data.[offset * 2 + 1])
             | SkinningInfo _ when skin.IsSome -> v.bones <- skin.Value.vertices.[offset]
@@ -112,7 +112,7 @@ let private buildVertexBuffer (indices: int array) index_stride (components: (Fa
         v)
 
 // build a single mesh
-let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNode) (material_instance: XmlNode) fvf skin =
+let private buildInternal (doc: Document) (conv: BasisConverter) (geometry: XmlNode) (controller: XmlNode) (material_instance: XmlNode) fvf skin =
     // get UV remap information
     let uv_remap = getUVRemap material_instance
 
@@ -143,12 +143,12 @@ let private buildInternal (doc: Document) (geometry: XmlNode) (controller: XmlNo
     assert (indices.Length % index_stride = 0)
 
     // create the vertex buffer
-    let vertices = buildVertexBuffer indices index_stride components skin
+    let vertices = buildVertexBuffer conv indices index_stride components skin
 
     { new FatMesh with vertices = vertices and skin = if skin.IsSome then Some skin.Value.binding else None }
 
 // build all meshes for <instance_controller> or <instance_geometry> node
-let build (doc: Document) (instance: XmlNode) fvf skeleton =
+let build (doc: Document) (conv: BasisConverter) (instance: XmlNode) fvf skeleton =
     // get controller and shape nodes
     let instance_url = instance.Attribute "url"
     let controller = if instance.Name = "instance_controller" then doc.Node instance_url else null
@@ -157,11 +157,11 @@ let build (doc: Document) (instance: XmlNode) fvf skeleton =
     // get skin data (if we have controller and we need skinning info)
     let skin = Array.tryPick (fun comp ->
         match comp with
-        | SkinningInfo n when controller <> null -> Some (Build.Dae.SkinBuilder.build doc instance skeleton n)
+        | SkinningInfo n when controller <> null -> Some (Build.Dae.SkinBuilder.build doc conv instance skeleton n)
         | _ -> None) fvf
 
     // get material instances
     let material_instances = instance.Select("bind_material/technique_common/instance_material")
 
     // build meshes
-    Array.map (fun mi -> buildInternal doc geometry controller mi fvf skin) material_instances
+    Array.map (fun mi -> buildInternal doc conv geometry controller mi fvf skin) material_instances

@@ -40,7 +40,7 @@ module SkeletonBuilder =
         Array.foldBack (fun comp acc -> (getNodeTransformComponent comp) * acc) [| for n in node.ChildNodes -> n |] Matrix34.Identity
 
     // build skeleton from all scene nodes in the document
-    let build (doc: Document) =
+    let build (doc: Document) (conv: BasisConverter) =
         // get all document nodes in document order (so that parent is always before child)
         let nodes = doc.Root.Select "/COLLADA/library_visual_scenes//node"
 
@@ -48,7 +48,7 @@ module SkeletonBuilder =
         let node_map = nodes |> Array.mapi (fun index node -> node, index) |> dict
 
         // get local transform matrices
-        let transforms = Array.map getNodeTransformLocal nodes
+        let transforms = nodes |> Array.map getNodeTransformLocal |> Array.map conv.Matrix
 
         // get parent indices
         let parents = nodes |> Array.map (fun node ->
