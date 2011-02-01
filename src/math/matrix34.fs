@@ -100,6 +100,7 @@ type Matrix34 =
                  0.f, y,   0.f, 0.f,
                  0.f, 0.f, z,   0.f)
 
+    static member Scaling (v: float32) = Matrix34.Scaling(v, v, v)
     static member Scaling (v: Vector3) = Matrix34.Scaling(v.x, v.y, v.z)
 
     // transpose
