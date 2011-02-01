@@ -3,6 +3,7 @@
 open System.Collections.Generic
 
 open Build.Geometry
+open Build.Dae
 open Build.Dae.Parse
 
 let build source target func =
@@ -30,13 +31,10 @@ let buildTexture source =
 let buildMeshImpl source target =
     // export .dae file
     let dae = ".build/" + changeExtension source ".dae"
-    build source dae Build.Dae.Export.build
+    build source dae Export.build
 
     // parse .dae file
-    let timer = System.Diagnostics.Stopwatch.StartNew()
-
     let doc = Document(dae)
-    let time1 = timer.ElapsedMilliseconds
 
     // export textures
     let nodes = doc.Root.SelectNodes("/COLLADA/library_images/image/init_from/text()")
@@ -44,11 +42,13 @@ let buildMeshImpl source target =
         let path = System.Uri.UnescapeDataString(System.UriBuilder(n.Value).Path)
         let relative_path = relativePath path (System.Environment.CurrentDirectory + "/")
         buildTexture relative_path
-    let time2 = timer.ElapsedMilliseconds
+
+    // get basis converter (converts up axis and units)
+    let target_unit = 1.f // meters
+    let conv = BasisConverter(doc, target_unit)
 
     // export skeleton
-    let skeleton = Build.Dae.SkeletonBuilder.build doc
-    let time3 = timer.ElapsedMilliseconds
+    let skeleton = SkeletonBuilder.build doc conv
 
     // use a constant FVF for now
     let fvf = [|Position; Tangent; Bitangent; Normal; TexCoord 0; SkinningInfo 4|]
@@ -59,7 +59,7 @@ let buildMeshImpl source target =
 
     let meshes = instances |> Array.collect (fun i ->
         // build fat meshes from .dae
-        let fat_meshes = Build.Dae.FatMeshBuilder.build doc i fvf skeleton
+        let fat_meshes = FatMeshBuilder.build doc conv i fvf skeleton
 
         // build packed & indexed meshes
         let packed_meshes = fat_meshes |> Array.map (fun mesh -> Build.Geometry.MeshPacker.pack mesh format)
@@ -74,14 +74,7 @@ let buildMeshImpl source target =
 
         preopt_meshes |> Array.map (fun mesh -> mesh, skeleton.data, skeleton.data.AbsoluteTransform skeleton.node_map.[i.ParentNode]))
 
-    let time4 = timer.ElapsedMilliseconds
-
     Core.Serialization.Save.toFile target meshes
-
-    let time5 = timer.ElapsedMilliseconds
-
-    printfn "parse / export tex / skeleton / mesh %d / %d / %d / %d, save %d" time1 (time2 - time1) (time3 - time2) (time4 - time3) (time5 - time4)
-
     true
 
 let buildMesh source =
@@ -92,7 +85,7 @@ let buildMesh source =
     (Core.Serialization.Load.fromFile target) :?> (PackedMesh * Render.Skeleton * Matrix34) array
     
 let buildMeshes path =
-    let patterns = [|"*.mb"; "*.ma"|]
+    let patterns = [|"*.mb"; "*.ma"; "*.max"|]
     let files = patterns |> Array.collect (fun p -> System.IO.Directory.GetFiles(path, p, System.IO.SearchOption.AllDirectories))
     files |> Array.collect buildMesh
 
