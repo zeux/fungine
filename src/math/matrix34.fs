@@ -136,3 +136,15 @@ type Matrix34 =
         Matrix34(r00, r01, r02, -(r00 * m.row0.w + r01 * m.row1.w + r02 * m.row2.w),
                  r10, r11, r12, -(r10 * m.row0.w + r11 * m.row1.w + r12 * m.row2.w),
                  r20, r21, r22, -(r20 * m.row0.w + r21 * m.row1.w + r22 * m.row2.w))
+
+    // transform vector as a position
+    static member TransformPosition (m: Matrix34, v: Vector3) =
+        Vector3(v.x * m.row0.x + v.y * m.row0.y + v.z * m.row0.z + m.row0.w,
+                v.x * m.row1.x + v.y * m.row1.y + v.z * m.row1.z + m.row1.w,
+                v.x * m.row2.x + v.y * m.row2.y + v.z * m.row2.z + m.row2.w)
+
+    // transform vector as a direction
+    static member TransformDirection (m: Matrix34, v: Vector3) =
+        Vector3(v.x * m.row0.x + v.y * m.row0.y + v.z * m.row0.z,
+                v.x * m.row1.x + v.y * m.row1.y + v.z * m.row1.z,
+                v.x * m.row2.x + v.y * m.row2.y + v.z * m.row2.z)
