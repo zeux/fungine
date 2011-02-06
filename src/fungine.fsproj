@@ -41,6 +41,7 @@
   <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <ItemGroup>
     <Compile Include="core\test.fs" />
+    <Compile Include="core\cache.fs" />
     <Compile Include="core\dbgvar.fs" />
     <Compile Include="core\serialization\util.fs" />
     <Compile Include="core\serialization\version.fs" />
@@ -58,8 +59,6 @@
     <Compile Include="math\pack.fs" />
     <Compile Include="render\skeleton.fs" />
     <Compile Include="render\mesh.fs" />
-    <Compile Include="render\format.fs" />
-    <Compile Include="render\vertexformat.fs" />
     <Compile Include="build\geometry\fatmesh.fs" />
     <Compile Include="build\geometry\meshpacker.fs" />
     <Compile Include="build\geometry\pretloptimizer.fs" />
