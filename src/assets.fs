@@ -19,9 +19,6 @@ let build source target func =
 let changeExtension name ext =
     System.IO.Path.ChangeExtension(name, ext)
 
-let buildTexture source =
-    build source (".build/" + changeExtension source ".dds") Build.Texture.build
-
 let buildMeshImpl source target =
     // export .dae file
     let dae = ".build/" + changeExtension source ".dae"
@@ -32,7 +29,7 @@ let buildMeshImpl source target =
 
     // get cached texture/material builders
     let all_textures = Core.Cache (fun id -> Build.Dae.TextureBuilder.build doc id)
-    let all_materials = Core.Cache (fun id -> Build.Dae.MaterialBuilder.build doc id all_textures.Get)
+    let all_materials = Core.Cache (fun id -> Build.Dae.MaterialBuilder.build doc id (all_textures.Get >> snd))
 
     // get basis converter (converts up axis and units)
     let conv = BasisConverter(doc, 1.f)
@@ -70,7 +67,7 @@ let buildMeshImpl source target =
     Core.Serialization.Save.toFile target meshes
 
     // export textures
-    all_textures.Values |> Seq.iter (fun tex -> buildTexture tex.Path)
+    all_textures.Values |> Seq.iter (fun (source, tex) -> build source tex.Path Build.Texture.build)
 
     true
 

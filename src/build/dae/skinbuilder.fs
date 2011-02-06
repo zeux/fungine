@@ -1,7 +1,8 @@
 ﻿namespace Build.Dae
 
-open System.Xml
 open System.Collections.Generic
+open System.Xml
+
 open Build.Dae.Parse
 open Build.Geometry
 
