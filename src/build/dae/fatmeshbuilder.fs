@@ -164,4 +164,4 @@ let build (doc: Document) (conv: BasisConverter) (instance: XmlNode) fvf skeleto
     let material_instances = instance.Select("bind_material/technique_common/instance_material")
 
     // build meshes
-    Array.map (fun mi -> buildInternal doc conv geometry controller mi fvf skin) material_instances
+    Array.map (fun mi -> buildInternal doc conv geometry controller mi fvf skin, mi.Attribute "target") material_instances
