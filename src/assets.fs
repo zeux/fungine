@@ -19,12 +19,6 @@ let build source target func =
 let changeExtension name ext =
     System.IO.Path.ChangeExtension(name, ext)
 
-let relativePath path root =
-    let uri p = System.Uri(System.IO.Path.GetFullPath(p))
-    let path_full = uri path
-    let root_full = uri root
-    root_full.MakeRelativeUri(path_full).OriginalString
-
 let buildTexture source =
     build source (".build/" + changeExtension source ".dds") Build.Texture.build
 
@@ -36,16 +30,12 @@ let buildMeshImpl source target =
     // parse .dae file
     let doc = Document(dae)
 
-    // export textures
-    let nodes = doc.Root.SelectNodes("/COLLADA/library_images/image/init_from/text()")
-    for n in nodes do
-        let path = System.Uri.UnescapeDataString(System.UriBuilder(n.Value).Path)
-        let relative_path = relativePath path (System.Environment.CurrentDirectory + "/")
-        buildTexture relative_path
+    // get cached texture/material builders
+    let all_textures = Core.Cache (fun id -> Build.Dae.TextureBuilder.build doc id)
+    let all_materials = Core.Cache (fun id -> Build.Dae.MaterialBuilder.build doc id all_textures.Get)
 
     // get basis converter (converts up axis and units)
-    let target_unit = 1.f // meters
-    let conv = BasisConverter(doc, target_unit)
+    let conv = BasisConverter(doc, 1.f)
 
     // export skeleton
     let skeleton = SkeletonBuilder.build doc conv
@@ -61,8 +51,11 @@ let buildMeshImpl source target =
         // build fat meshes from .dae
         let fat_meshes = FatMeshBuilder.build doc conv i fvf skeleton
 
+        // build materials
+        let materials = fat_meshes |> Array.map (fun (_, material) -> all_materials.Get material)
+
         // build packed & indexed meshes
-        let packed_meshes = fat_meshes |> Array.map (fun mesh -> Build.Geometry.MeshPacker.pack mesh format)
+        let packed_meshes = fat_meshes |> Array.map (fun (mesh, _) -> Build.Geometry.MeshPacker.pack mesh format)
 
         // optimize for Post T&L cache
         let postopt_meshes = packed_meshes |> Array.map (fun mesh -> { mesh with indices = Build.Geometry.PostTLOptimizerLinear.optimize mesh.indices })
@@ -72,9 +65,13 @@ let buildMeshImpl source target =
             let (vertices, indices) = Build.Geometry.PreTLOptimizer.optimize mesh.vertices mesh.indices mesh.vertex_size
             { mesh with vertices = vertices; indices = indices })
 
-        preopt_meshes |> Array.map (fun mesh -> mesh, skeleton.data, skeleton.data.AbsoluteTransform skeleton.node_map.[i.ParentNode]))
+        Array.map2 (fun mesh material -> mesh, material, skeleton.data, skeleton.data.AbsoluteTransform skeleton.node_map.[i.ParentNode]) preopt_meshes materials)
 
     Core.Serialization.Save.toFile target meshes
+
+    // export textures
+    all_textures.Values |> Seq.iter (fun tex -> buildTexture tex.Path)
+
     true
 
 let buildMesh source =
@@ -82,7 +79,7 @@ let buildMesh source =
 
     build source target buildMeshImpl
 
-    (Core.Serialization.Load.fromFile target) :?> (PackedMesh * Render.Skeleton * Matrix34) array
+    (Core.Serialization.Load.fromFile target) :?> (PackedMesh * Render.Material * Render.Skeleton * Matrix34) array
     
 let buildMeshes path =
     let patterns = [|"*.mb"; "*.ma"; "*.max"|]

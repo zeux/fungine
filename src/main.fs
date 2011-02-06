@@ -63,6 +63,7 @@ let desc = new SwapChainDescription(
             )
 
 let (_, device, swapChain) = Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.None, desc)
+Render.Device.set device
 
 let factory = swapChain.GetParent<Factory>()
 factory.SetWindowAssociation(form.Handle, WindowAssociationFlags.IgnoreAll) |> ignore
@@ -95,28 +96,38 @@ let createRenderIndexBuffer (indices: int array) =
     createBufferFromStream stream BindFlags.IndexBuffer
 
 let renderMeshes =
-    let index_offsets = meshes |> Array.map (fun (mesh, skeleton, transform) -> mesh.vertices.Length / mesh.vertex_size) |> Array.scan (+) 0
-    let indices = meshes |> Array.mapi (fun index (mesh, skeleton, transform) -> Array.map ((+) index_offsets.[index]) mesh.indices) |> Array.collect id
+    let index_offsets = meshes |> Array.map (fun (mesh, material, skeleton, transform) -> mesh.vertices.Length / mesh.vertex_size) |> Array.scan (+) 0
+    let indices = meshes |> Array.mapi (fun index (mesh, material, skeleton, transform) -> Array.map ((+) index_offsets.[index]) mesh.indices) |> Array.collect id
 
     let posttl = Build.Geometry.PostTLAnalyzer.analyzeFIFO indices 16
 
     printfn "%d triangles, %d vertices, ACMR %f, ATVR %f" (indices.Length / 3) index_offsets.[index_offsets.Length - 1] posttl.acmr posttl.atvr
 
-    meshes |> Array.map (fun (mesh, skeleton, transform) ->
-        mesh, skeleton, transform, createRenderVertexBuffer mesh.vertices, createRenderIndexBuffer mesh.indices)
+    meshes |> Array.map (fun (mesh, material, skeleton, transform) ->
+        mesh, material, skeleton, transform, createRenderVertexBuffer mesh.vertices, createRenderIndexBuffer mesh.indices)
 
 let projection = Math.Camera.projectionPerspective 45.f (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 1.f 1000.f
-let view = Math.Camera.lookAt (Math.Vector3(0.f, 20.f, 35.f)) (Math.Vector3(0.f, 15.f, 0.f)) (Math.Vector3(0.f, 1.f, 0.f)) * Matrix34.Scaling(-1.f, 1.f, 1.f)
+let view = Math.Camera.lookAt (Math.Vector3(0.f, 3.5f, 2.f)) (Math.Vector3(0.f, 0.f, 1.5f)) Math.Vector3.UnitZ
 let view_projection = projection * Matrix44(view)
 
 let constantBuffer0 = new Buffer(device, null, BufferDescription(16448, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
 let constantBuffer1 = new Buffer(device, null, BufferDescription(65536, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
 
-let albedo_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_slavedriver_01.dds")
-let normal_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_slavedriver_01_nm.dds")
-let specular_map = Texture2D.FromFile(device, ".build/art/slave_driver/ch_barb_slavedriver_01_spec.dds")
-
 let contextHolder = new ObjectPool(fun _ -> new DeviceContext(device))
+
+let createDummyTexture color =
+    let stream = new DataStream(4L, canRead = false, canWrite = true)
+    stream.WriteRange(color)
+    stream.Position <- 0L
+
+    let desc = Texture2DDescription(Width = 1, Height = 1, Format = Format.R8G8B8A8_UNorm, ArraySize = 1, MipLevels = 1, SampleDescription = SampleDescription(1, 0), BindFlags = BindFlags.ShaderResource)
+    let texture = new Texture2D(device, desc, DataRectangle(4, stream))
+
+    new ShaderResourceView(device, texture)
+
+let dummy_albedo = createDummyTexture [|128uy; 128uy; 128uy; 255uy|]
+let dummy_normal = createDummyTexture [|128uy; 128uy; 255uy; 255uy|]
+let dummy_specular = createDummyTexture [|0uy; 0uy; 0uy; 0uy|]
 
 let draw (context: DeviceContext) =
     context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
@@ -136,16 +147,19 @@ let draw (context: DeviceContext) =
     context.VertexShader.SetConstantBuffer(constantBuffer1, 1)
     context.PixelShader.SetSampler(SamplerState.FromDescription(device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbg_texfilter.Value, MaximumAnisotropy = 16)), 0)
 
-    context.PixelShader.SetShaderResource(new ShaderResourceView(device, albedo_map :> Resource), 0)
-    context.PixelShader.SetShaderResource(new ShaderResourceView(device, normal_map :> Resource), 1)
-    context.PixelShader.SetShaderResource(new ShaderResourceView(device, specular_map :> Resource), 2)
-
     let drawInstanced offsets =
         let box = context.MapSubresource(constantBuffer1, 0, constantBuffer1.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
         box.Data.WriteRange(offsets)
         context.UnmapSubresource(constantBuffer1, 0)
 
-        for mesh, skeleton, transform, vb, ib in renderMeshes do
+        for mesh, material, skeleton, transform, vb, ib in renderMeshes do
+            let setTexture (tex: Render.Texture option) dummy reg =
+                context.PixelShader.SetShaderResource(tex |> Option.fold (fun _ t -> t.View) dummy, reg)
+
+            setTexture material.albedo_map dummy_albedo 0
+            setTexture material.normal_map dummy_normal 1
+            setTexture material.specular_map dummy_specular 2
+
             let compression_info = mesh.compression_info
 
             let box = context.MapSubresource(constantBuffer0, 0, constantBuffer0.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
