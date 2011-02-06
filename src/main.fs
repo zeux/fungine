@@ -42,8 +42,9 @@ type Effect(device, vscode, pscode) =
     let signature = ShaderSignature.GetInputSignature(vscode)
 
     new (device, path) =
-        let bytecode_vs = ShaderBytecode.CompileFromFile(path, "vs_main", "vs_5_0", ShaderFlags.PackMatrixRowMajor ||| ShaderFlags.WarningsAreErrors, EffectFlags.None)
-        let bytecode_ps = ShaderBytecode.CompileFromFile(path, "ps_main", "ps_5_0", ShaderFlags.PackMatrixRowMajor ||| ShaderFlags.WarningsAreErrors, EffectFlags.None)
+        let flags = ShaderFlags.PackMatrixRowMajor ||| ShaderFlags.WarningsAreErrors
+        let bytecode_vs = ShaderBytecode.CompileFromFile(path, "vs_main", "vs_5_0", flags, EffectFlags.None)
+        let bytecode_ps = ShaderBytecode.CompileFromFile(path, "ps_main", "ps_5_0", flags, EffectFlags.None)
 
         Effect(device, bytecode_vs, bytecode_ps)
 
@@ -54,12 +55,13 @@ type Effect(device, vscode, pscode) =
 let form = new RenderForm("fungine", Width = 1280, Height = 720)
 let desc = new SwapChainDescription(
             BufferCount = 1,
-            ModeDescription = new ModeDescription(form.ClientSize.Width, form.ClientSize.Height, new Rational(60, 1), Format.R8G8B8A8_UNorm),
+            ModeDescription = ModeDescription(form.ClientSize.Width, form.ClientSize.Height, Rational(0, 0), Format.R8G8B8A8_UNorm),
             IsWindowed = true,
             OutputHandle = form.Handle,
-            SampleDescription = new SampleDescription(1, 0),
+            SampleDescription = SampleDescription(1, 0),
             SwapEffect = SwapEffect.Discard,
-            Usage = Usage.RenderTargetOutput
+            Usage = Usage.RenderTargetOutput,
+            Flags = SwapChainFlags.AllowModeSwitch
             )
 
 let (_, device, swapChain) = Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.None, desc)
