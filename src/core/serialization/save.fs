@@ -122,7 +122,7 @@ let private buildSaveDelegate (typ: Type) =
     dm.CreateDelegate(typedefof<SaveDelegate>) :?> SaveDelegate
 
 // a cache for save delegates (one delegate per type)
-let private saveDelegateCache = Util.TypeCache(buildSaveDelegate)
+let private saveDelegateCache = Core.Cache(buildSaveDelegate)
 
 // save object data to a data array
 let private save (context: ObjectTable) obj =

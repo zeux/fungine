@@ -5,19 +5,6 @@ open System.Collections.Generic
 open System.Reflection
 open System.Reflection.Emit
 
-// a cache based on types
-type TypeCache<'a>(creator) =
-    let cache = Dictionary<Type, 'a>()
-
-    // get the value from the cache, creating it as necessary
-    member this.Get typ =
-        match cache.TryGetValue(typ) with
-        | true, value -> value
-        | _ ->
-            let d = creator typ
-            cache.Add(typ, d)
-            d
-
 // return true if type is a struct
 let isStruct (typ: Type) =
     typ.IsValueType && not typ.IsPrimitive && not typ.IsEnum

@@ -212,7 +212,7 @@ let private buildLoadDelegate (typ: Type) =
     dm.CreateDelegate(typedefof<LoadDelegate>) :?> LoadDelegate
 
 // a cache for load delegates (one delegate per type)
-let private loadDelegateCache = Util.TypeCache(buildLoadDelegate)
+let private loadDelegateCache = Core.Cache(buildLoadDelegate)
 
 // create a create delegate for a given type
 let private buildCreateDelegate (typ: Type) =
@@ -237,7 +237,7 @@ let private buildCreateDelegate (typ: Type) =
     dm.CreateDelegate(typedefof<CreateDelegate>) :?> CreateDelegate
 
 // a cache for create delegates (one delegate per type)
-let private createDelegateCache = Util.TypeCache(buildCreateDelegate)
+let private createDelegateCache = Core.Cache(buildCreateDelegate)
 
 // load type table
 let private loadTypeTable (reader: MemoryReader) =
