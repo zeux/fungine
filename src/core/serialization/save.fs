@@ -24,14 +24,7 @@ type private ObjectTable() =
             0
         else
             // non-null objects are encoded with 1-based object index in the object table
-            1 +
-            match object_ids.TryGetValue(obj) with
-            | true, id -> id
-            | _ ->
-                let id = object_ids.Count
-                object_ids.Add(obj, id)
-                object_queue.Enqueue(obj)
-                id
+            1 + Core.CacheUtil.update object_ids obj (fun obj -> object_queue.Enqueue(obj); object_ids.Count)
 
 // a delegate for saving objects; there is an instance of one for each type
 type private SaveDelegate = delegate of ObjectTable * BinaryWriter * obj -> unit
@@ -153,12 +146,7 @@ let toStream stream obj =
     let object_types = table.Objects |> Array.map (fun p ->
         let typ = p.Key.GetType()
 
-        match types.TryGetValue(typ) with
-        | true, id -> id
-        | _ ->
-            let id = types.Count
-            types.Add(typ, id)
-            id)
+        Core.CacheUtil.update types typ (fun _ -> types.Count))
 
     // save header
     let writer = new BinaryWriter(stream, Util.stringEncoding)

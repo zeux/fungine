@@ -118,12 +118,7 @@ module MeshPacker =
         let indices = Array.init mesh.vertices.Length (fun i ->
             let vertex = Array.sub vertices (i * vertex_size) vertex_size
 
-            match remap.TryGetValue(vertex) with
-            | true, index -> index
-            | false, _ ->
-                let index = remap.Count
-                remap.Add(vertex, index)
-                index)
+            Core.CacheUtil.update remap vertex (fun _ -> remap.Count))
 
         // build indexed vertex data
         let indexed_vertices = Array.zeroCreate (remap.Count * vertex_size)
