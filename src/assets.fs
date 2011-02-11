@@ -67,7 +67,7 @@ let buildMeshImpl source target =
     Core.Serialization.Save.toFile target meshes
 
     // export textures
-    all_textures.Values |> Seq.iter (fun (source, tex) -> build source tex.Path Build.Texture.build)
+    all_textures.Pairs |> Seq.iter (fun p -> let (source, tex) = p.Value in build source tex.Path Build.Texture.build)
 
     true
 
