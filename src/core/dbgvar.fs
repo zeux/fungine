@@ -1,6 +1,6 @@
 namespace Core
 
-open System.Collections.Generic
+open System.Collections.Concurrent
 
 module DbgVars =
     // variable storage
@@ -22,25 +22,17 @@ module DbgVars =
                 event.Trigger(box this)
 
     // all registered debug variables
-    let private variables = Dictionary<string, Cell>()
+    let private variables = ConcurrentDictionary<string, Cell>()
 
     // register a debug variable
     let add description defaults =
-        lock variables (fun () ->
-            match variables.TryGetValue(description) with
-            | true, cell ->
-                // the cell already exists (the dbgvar was defined in two modules)
-                assert (cell.DefaultValue = defaults)
-                cell
-            | _ ->
-                // create a new cell
-                let cell = Cell(box defaults)
-                variables.Add(description, cell)
-                cell)
+        let cell = variables.GetOrAdd(description, fun _ -> Cell(box defaults))
+        assert (cell.DefaultValue = defaults) // in case the cell already existed (the dbgvar was defined in two modules)
+        cell
 
     // get all debug variables
     let getVariables () =
-        lock variables (fun () -> Seq.toArray variables |> Array.map (fun p -> p.Key, p.Value))
+        variables.ToArray() |> Array.map (fun p -> p.Key, p.Value)
 
 // debug variable handle
 type DbgVar<'T>(defaults: 'T, description: string) =
