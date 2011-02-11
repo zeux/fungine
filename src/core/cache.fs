@@ -3,6 +3,16 @@ namespace Core
 open System.Collections.Concurrent
 open System.Collections.Generic
 
+// generic cache utils
+module CacheUtil =
+    let update (dict: IDictionary<_, _>) key creator =
+        match dict.TryGetValue(key) with
+        | true, value -> value
+        | _ ->
+            let value = creator key
+            dict.Add(key, value)
+            value
+
 // generic cache helper
 type Cache<'K, 'V when 'K: equality>(creator) =
     let cache = Dictionary<'K, 'V>(HashIdentity.Structural)
@@ -12,12 +22,7 @@ type Cache<'K, 'V when 'K: equality>(creator) =
 
     // get the value from the cache, creating it as necessary
     member this.Get key =
-        match cache.TryGetValue(key) with
-        | true, value -> value
-        | _ ->
-            let value = creator key
-            cache.Add(key, value)
-            value
+        CacheUtil.update cache key creator
 
 // generic thread-safe cache helper
 type ConcurrentCache<'K, 'V when 'K: equality>(creator) =
