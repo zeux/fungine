@@ -27,7 +27,7 @@ let private buildEnumHash (typ: Type) =
         updateHash (updateHash ver value) (name.GetHashCode())) hash
 
 // a cache of enum hash values
-let private enumHashCache = Core.Cache(buildEnumHash)
+let private enumHashCache = Core.ConcurrentCache(buildEnumHash)
 
 // update hash version with type
 let rec private updateVersion toplevel ver (typ: Type) =
@@ -58,7 +58,7 @@ let private buildVersion (typ: Type) =
     updateVersion true initialHash typ
 
 // a cache of type versions
-let private versionCache = Core.Cache(buildVersion)
+let private versionCache = Core.ConcurrentCache(buildVersion)
 
 // get type version
 let get (typ: Type) =

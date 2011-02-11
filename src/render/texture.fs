@@ -17,7 +17,7 @@ type private TextureData(path) =
 
 // texture resource cache
 module private TextureCache =
-    let cache = Core.Cache(fun path -> TextureData(path))
+    let cache = Core.ConcurrentCache(fun path -> TextureData(path))
 
 // texture handle
 type Texture(path) =
