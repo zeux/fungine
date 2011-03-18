@@ -1,22 +1,33 @@
 namespace Render
 
-// skeleton data (mesh node hierarchy)
-type Skeleton(transforms: Matrix34 array, parents: int array) =
-    do assert (transforms.Length = parents.Length)
+// skeleton proto (mesh node hierarchy)
+type Skeleton(parents: int array, names: string array) =
+    do assert (parents.Length = names.Length)
 
-    // get node count
-    member this.Length = transforms.Length
+    // get bone count
+    member this.Length = parents.Length
 
     // get node parent index, or -1 if root
     member this.Parent index = parents.[index]
+
+    // get node name
+    member this.Name index = names.[index]
+
+// skeleton instance (actual transform data)
+type SkeletonInstance(proto: Skeleton, transforms: Matrix34 array) =
+    do assert (transforms.Length = proto.Length)
+
+    // get proto
+    member this.Proto = proto
 
     // get local node transform
     member this.LocalTransform index = transforms.[index]
 
     // get absolute node transform
     member this.AbsoluteTransform index =
-        if parents.[index] = -1 then
+        let parent = proto.Parent index
+        if parent = -1 then
             transforms.[index]
         else
-            (this.AbsoluteTransform parents.[index]) * transforms.[index]
+            (this.AbsoluteTransform parent) * transforms.[index]
     

@@ -76,7 +76,7 @@ let buildMesh source =
 
     build source target buildMeshImpl
 
-    (Core.Serialization.Load.fromFile target) :?> (PackedMesh * Render.Material * Render.Skeleton * Matrix34) array
+    (Core.Serialization.Load.fromFile target) :?> (PackedMesh * Render.Material * Render.SkeletonInstance * Matrix34) array
     
 let buildMeshes path =
     let patterns = [|"*.mb"; "*.ma"; "*.max"|]

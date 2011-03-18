@@ -6,7 +6,7 @@ open Build.Dae.Parse
 
 // build-time skeleton type
 type Skeleton =
-    { data: Render.Skeleton
+    { data: Render.SkeletonInstance
       node_map: IDictionary<XmlNode, int> }
 
 module SkeletonBuilder =
@@ -58,5 +58,8 @@ module SkeletonBuilder =
             else
                 -1)
 
+        // get names
+        let names = nodes |> Array.map (fun node -> node.Attributes.["name"]) |> Array.map (fun attr -> if attr <> null then attr.Value else null)
+
         // build skeleton object
-        { new Skeleton with data = Render.Skeleton(transforms, parents) and node_map = node_map }
+        { new Skeleton with data = Render.SkeletonInstance(Render.Skeleton(parents, names), transforms) and node_map = node_map }
