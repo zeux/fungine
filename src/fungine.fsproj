@@ -79,6 +79,7 @@
     <Compile Include="build\dae\fatmeshbuilder.fs" />
     <Compile Include="build\dae\texturebuilder.fs" />
     <Compile Include="build\dae\materialbuilder.fs" />
+    <Compile Include="build\dae\meshbuilder.fs" />
     <Compile Include="build\texture.fs" />
     <Compile Include="winui\propertytree.fs" />
     <Compile Include="assets.fs" />
