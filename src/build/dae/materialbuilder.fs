@@ -35,7 +35,7 @@ module MaterialBuilder =
 
         // get all parameter nodes
         let subnodes = [|"lambert"; "blinn"; "phong"; "extra/technique"|]
-        let nodes = effect.Select (System.String.Join(" | ", subnodes |> Array.map (sprintf "profile_COMMON/technique/%s/*")))
+        let nodes = effect.Select (subnodes |> Array.map (sprintf "profile_COMMON/technique/%s/*") |> String.concat " | ")
 
         // get textures
         let albedo_map = buildTexture effect nodes "diffuse" texture_creator
