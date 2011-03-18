@@ -60,6 +60,7 @@
     <Compile Include="render\device.fs" />
     <Compile Include="render\format.fs" />
     <Compile Include="render\vertexformat.fs" />
+    <Compile Include="render\buffer.fs" />
     <Compile Include="render\texture.fs" />
     <Compile Include="render\material.fs" />
     <Compile Include="render\skeleton.fs" />
