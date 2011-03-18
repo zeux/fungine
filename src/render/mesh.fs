@@ -7,3 +7,28 @@ type SkinBinding(bones: int array, inv_bind_pose: Matrix34 array) =
     // compute bone-space transforms from the skeleton
     member this.ComputeBoneTransforms (skeleton: SkeletonInstance) =
         Array.map2 (fun bone inv_bind -> (skeleton.AbsoluteTransform bone) * inv_bind) bones inv_bind_pose
+
+// mesh fragment; represents one draw call
+type MeshFragment =
+    { material: Material
+      skin: SkinBinding
+      vertex_format: Render.VertexFormat
+      index_format: Render.Format
+      vertex_offset: int
+      index_offset: int
+      primitive_count: int
+    }
+
+// mesh
+type Mesh =
+    { fragments: MeshFragment array
+      vertices: Buffer
+      indices: Buffer
+      skeleton: SkeletonInstance
+    }
+
+// mesh instance
+type MeshInstance =
+    { proto: Mesh
+      skeleton: SkeletonInstance
+    }
