@@ -9,7 +9,7 @@ type Buffer(bind_flags, contents: byte array) =
     let mutable data = null
 
     // lazy initializing resource accessor ($$ replace with post-serialization callback)
-    member private this.Resource =
+    member this.Resource =
         if data = null then
             data <- new SlimDX.Direct3D11.Buffer(Render.Device.get(), BufferDescription(SizeInBytes = contents.Length, BindFlags = bind_flags))
         data
