@@ -2,16 +2,9 @@ namespace Build.Geometry
 
 open System.Collections.Generic
 
-// quantization coefficients for compressed vertex data
-type PackedMeshCompressionInfo =
-    { position_offset: Vector3
-      position_scale: Vector3
-      texcoord_offset: Vector2
-      texcoord_scale: Vector2 }
-
 // an indexed mesh with compressed vertex data
 type PackedMesh =
-    { compression_info: PackedMeshCompressionInfo
+    { compression_info: Render.MeshCompressionInfo
       format: Render.VertexFormat
       vertex_size: int
       vertices: byte array
@@ -66,17 +59,17 @@ module MeshPacker =
         use stream = new SlimDX.DataStream(result, canRead = false, canWrite = true)
 
         // get position and texcoord bounds for compression
-        let (position_offset, position_scale) = getComponentBounds vertices (fun v -> v.position) Vector3.Minimize Vector3.Maximize
-        let (texcoord_offset, texcoord_scale) = getComponentBounds vertices (fun v -> if v.texcoord <> null then v.texcoord.[0] else Vector2()) Vector2.Minimize Vector2.Maximize
+        let (pos_offset, pos_scale) = getComponentBounds vertices (fun v -> v.position) Vector3.Minimize Vector3.Maximize
+        let (uv_offset, uv_scale) = getComponentBounds vertices (fun v -> if v.texcoord <> null then v.texcoord.[0] else Vector2()) Vector2.Minimize Vector2.Maximize
 
         // pack the data
         for v in vertices do
             let rescale value offset scale = if scale = 0.f then 0.f else (value - offset) / scale
 
             // position: 3 unorm16 + padding
-            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale v.position.x position_offset.x position_scale.x) 16))
-            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale v.position.y position_offset.y position_scale.y) 16))
-            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale v.position.z position_offset.z position_scale.z) 16))
+            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale v.position.x pos_offset.x pos_scale.x) 16))
+            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale v.position.y pos_offset.y pos_scale.y) 16))
+            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale v.position.z pos_offset.z pos_scale.z) 16))
             stream.Write(uint16 0)
 
             // TBN: assume orthonormal basis, normal is 3 unorm8 + padding, tangent is 3 unorm8 + bitangent sign
@@ -89,8 +82,8 @@ module MeshPacker =
             // texcoord: 2 unorm16
             let uv0 = if v.texcoord <> null then v.texcoord.[0] else Vector2()
 
-            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale uv0.x texcoord_offset.x texcoord_scale.x) 16))
-            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale uv0.y texcoord_offset.y texcoord_scale.y) 16))
+            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale uv0.x uv_offset.x uv_scale.x) 16))
+            stream.Write(uint16 (Math.Pack.packFloatUNorm (rescale uv0.y uv_offset.y uv_scale.y) 16))
 
             // bone data: 4 uint8 indices, 4 unorm8 weights, weights are normalized to give sum of 255
             let (bone_indices, bone_weights) = if v.bones <> null then packBoneInfluences v.bones else [|0uy; 0uy; 0uy; 0uy|], [|255uy; 0uy; 0uy; 0uy|]
@@ -99,7 +92,7 @@ module MeshPacker =
             stream.WriteRange(bone_weights)
 
         // get the vertex and compression data
-        let compression_info = { new PackedMeshCompressionInfo with position_offset = position_offset and position_scale = position_scale and texcoord_offset = texcoord_offset and texcoord_scale = texcoord_scale }
+        let compression_info = { new Render.MeshCompressionInfo with pos_offset = pos_offset and pos_scale = pos_scale and uv_offset = uv_offset and uv_scale = uv_scale }
         
         result, compression_info
 
