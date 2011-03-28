@@ -28,12 +28,12 @@ let buildMesh source =
         true)
 
     // load .mesh file
-    (Core.Serialization.Load.fromFile target) :?> (Build.Geometry.PackedMesh * Render.Material * Render.SkeletonInstance * Matrix34) array
+    (Core.Serialization.Load.fromFile target) :?> Render.Mesh
     
 let buildMeshes path =
     let patterns = [|"*.mb"; "*.ma"; "*.max"|]
     let files = patterns |> Array.collect (fun p -> System.IO.Directory.GetFiles(path, p, System.IO.SearchOption.AllDirectories))
-    files |> Array.collect buildMesh
+    files |> Array.map buildMesh
 
 let buildAll () =
     buildMeshes "art"

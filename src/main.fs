@@ -12,7 +12,8 @@ open SlimDX.Direct3D11
 [<STAThread>]
 do()
 
-let dbg_stress_test = Core.DbgVar(false, "render/stress test")
+Core.Test.run ()
+
 let dbg_wireframe = Core.DbgVar(false, "render/wireframe")
 let dbg_present_interval = Core.DbgVar(0, "vsync interval")
 let dbg_name = Core.DbgVar("foo", "name")
@@ -81,33 +82,6 @@ let basic_textured = Effect(device, "src/shaders/basic_textured.hlsl")
 let vertex_size = (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).size
 let layout = new InputLayout(device, basic_textured.VertexSignature, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
 
-let createBufferFromStream stream bind_flags =
-    new Buffer(device, stream, BufferDescription(int stream.Length, ResourceUsage.Default, bind_flags, CpuAccessFlags.None, ResourceOptionFlags.None, 0))
-
-let createRenderVertexBuffer (vertices: byte array) =
-    use stream = new DataStream(vertices, canRead = false, canWrite = false)
-
-    createBufferFromStream stream BindFlags.VertexBuffer
-
-let createRenderIndexBuffer (indices: int array) =
-    use stream = new DataStream(2L * indices.LongLength, canRead = false, canWrite = true)
-
-    stream.WriteRange(indices |> Array.map (fun i -> uint16 i))
-    stream.Position <- 0L
-
-    createBufferFromStream stream BindFlags.IndexBuffer
-
-let renderMeshes =
-    let index_offsets = meshes |> Array.map (fun (mesh, material, skeleton, transform) -> mesh.vertices.Length / mesh.vertex_size) |> Array.scan (+) 0
-    let indices = meshes |> Array.mapi (fun index (mesh, material, skeleton, transform) -> Array.map ((+) index_offsets.[index]) mesh.indices) |> Array.collect id
-
-    let posttl = Build.Geometry.PostTLAnalyzer.analyzeFIFO indices 16
-
-    printfn "%d triangles, %d vertices, ACMR %f, ATVR %f" (indices.Length / 3) index_offsets.[index_offsets.Length - 1] posttl.acmr posttl.atvr
-
-    meshes |> Array.map (fun (mesh, material, skeleton, transform) ->
-        mesh, material, skeleton, transform, createRenderVertexBuffer mesh.vertices, createRenderIndexBuffer mesh.indices)
-
 let projection = Math.Camera.projectionPerspective 45.f (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 1.f 1000.f
 let view = Math.Camera.lookAt (Math.Vector3(0.f, 3.5f, 2.f)) (Math.Vector3(0.f, 0.f, 1.5f)) Math.Vector3.UnitZ
 let view_projection = projection * Matrix44(view)
@@ -154,49 +128,36 @@ let draw (context: DeviceContext) =
         box.Data.WriteRange(offsets)
         context.UnmapSubresource(constantBuffer1, 0)
 
-        for mesh, material, skeleton, transform, vb, ib in renderMeshes do
+        for mesh, fragment in meshes |> Array.collect (fun mesh -> mesh.fragments |> Array.map (fun f -> mesh, f)) do
             let setTexture (tex: Render.Texture option) dummy reg =
                 context.PixelShader.SetShaderResource(tex |> Option.fold (fun _ t -> t.View) dummy, reg)
+
+            let material = fragment.material
 
             setTexture material.albedo_map dummy_albedo 0
             setTexture material.normal_map dummy_normal 1
             setTexture material.specular_map dummy_specular 2
 
-            let compression_info = mesh.compression_info
+            let compression_info = fragment.compression_info
 
             let box = context.MapSubresource(constantBuffer0, 0, constantBuffer0.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
             box.Data.Write(view_projection)
-            box.Data.Write(compression_info.position_offset)
+            box.Data.Write(compression_info.pos_offset)
             box.Data.Write(0.f)
-            box.Data.Write(compression_info.position_scale)
+            box.Data.Write(compression_info.pos_scale)
             box.Data.Write(0.f)
-            box.Data.Write(compression_info.texcoord_offset)
-            box.Data.Write(compression_info.texcoord_scale)
-            if mesh.skin.IsSome then
-                box.Data.WriteRange(mesh.skin.Value.ComputeBoneTransforms skeleton)
-            else
-                box.Data.Write(transform)
+            box.Data.Write(compression_info.uv_offset)
+            box.Data.Write(compression_info.uv_scale)
+            box.Data.WriteRange(fragment.skin.ComputeBoneTransforms mesh.skeleton)
             context.UnmapSubresource(constantBuffer0, 0)
 
-            context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(vb, vertex_size, 0))
-            context.InputAssembler.SetIndexBuffer(ib, Format.R16_UInt, 0)
-            context.DrawIndexedInstanced(mesh.indices.Length, offsets.Length, 0, 0, 0)
+            context.InputAssembler.SetVertexBuffers(0, VertexBufferBinding(mesh.vertices.Resource, vertex_size, fragment.vertex_offset))
+            context.InputAssembler.SetIndexBuffer(mesh.indices.Resource, fragment.index_format, fragment.index_offset)
+            context.DrawIndexedInstanced(fragment.index_count, offsets.Length, 0, 0, 0)
 
-    if not dbg_stress_test.Value then
-        drawInstanced [| Matrix34.Identity |]
-    else
-        let rng = System.Random(123456789)
+    drawInstanced [| Matrix34.Identity |]
 
-        let offsets = [|0 .. 1000|] |> Array.map (fun _ ->
-            let x = -20.f + 40.f * float32 (rng.NextDouble())
-            let y = -25.f + 40.f * float32 (rng.NextDouble())
-            Matrix34.Translation(x, 7.f, y) * Matrix34.Scaling(0.1f, 0.1f, 0.1f))
-
-        drawInstanced offsets
-
-    context.FinishCommandList(false)
-
-form.KeyDown.Add(fun args ->
+form.KeyUp.Add(fun args ->
     if args.Alt && args.KeyCode = System.Windows.Forms.Keys.Oemcomma then
         let w = WinUI.PropertyTree.create (Core.DbgVars.getVariables() |> Array.map (fun (name, v) -> name, box v))
         w.KeyUp.Add (fun args -> if args.Key = System.Windows.Input.Key.Escape then w.Close())
@@ -204,14 +165,10 @@ form.KeyDown.Add(fun args ->
 
 MessagePump.Run(form, fun () ->
     form.Text <- dbg_name.Value
-    device.ImmediateContext.ClearRenderTargetView(backBufferView, SlimDX.Color4 Color.Black)
+    device.ImmediateContext.ClearRenderTargetView(backBufferView, SlimDX.Color4 Color.Gray)
     device.ImmediateContext.ClearDepthStencilView(depthBufferView, DepthStencilClearFlags.Depth, 1.f, 0uy)
 
-    let context = contextHolder.get()
-    use cl = draw context
-    contextHolder.put(context)
-
-    device.ImmediateContext.ExecuteCommandList(cl, false)
+    draw device.ImmediateContext
 
     swapChain.Present(dbg_present_interval.Value, PresentFlags.None) |> ignore
 )
