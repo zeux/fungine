@@ -1,5 +1,7 @@
 ﻿module Build.Dae.MeshBuilder
 
+open System.Xml
+
 open Build.Geometry
 open Build.Dae.Parse
 
@@ -57,6 +59,47 @@ let private mergeMeshGeometry (meshes: PackedMesh array) =
 
     merged_vertices, merged_indices, mesh_data
 
+// build packed & optimized meshes from document
+let private buildPackedMeshes (doc: Document) conv skeleton =
+    // use a constant FVF for now
+    let fvf = [|Position; Tangent; Bitangent; Normal; TexCoord 0; SkinningInfo 4|]
+    let format = Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed
+
+    // get all instance nodes
+    let instances = doc.Root.Select("/COLLADA/library_visual_scenes//node/instance_geometry | /COLLADA/library_visual_scenes//node/instance_controller")
+
+    // get all meshes
+    let fat_meshes = instances |> Array.collect (fun i ->
+        FatMeshBuilder.build doc conv i fvf skeleton
+        |> Array.map (fun (mesh, material) -> i, mesh, material))
+
+    // build packed & optimized meshes
+    fat_meshes |> Array.map (fun (inst, mesh, material) -> inst, buildOptimizedMesh mesh format, material)
+
+// build mesh fragments
+let private buildMeshFragments meshes mesh_data materials skeleton =
+    let dummy_inv_bind_pose = [|Matrix34.Identity|]
+
+    meshes |> Array.mapi (fun idx (inst: XmlNode, mesh, _) ->
+        let (vertex_offset, index_offset, index_format) = Array.get mesh_data idx
+
+        // create dummy 1-bone skin binding for non-skinned meshes
+        let skin =
+            match mesh.skin with
+            | Some binding -> binding
+            | None -> Render.SkinBinding([| skeleton.node_map.[inst.ParentNode] |], dummy_inv_bind_pose)
+        
+        // build fragment structure
+        { new Render.MeshFragment
+          with material = Array.get materials idx
+          and skin = skin
+          and compression_info = mesh.compression_info
+          and vertex_format = mesh.format
+          and index_format = index_format
+          and vertex_offset = vertex_offset
+          and index_offset = index_offset
+          and index_count = mesh.indices.Length })
+
 // build mesh file from dae file
 let build source target =
     // parse .dae file
@@ -72,46 +115,19 @@ let build source target =
     // export skeleton
     let skeleton = SkeletonBuilder.build doc conv
 
-    // use a constant FVF for now
-    let fvf = [|Position; Tangent; Bitangent; Normal; TexCoord 0; SkinningInfo 4|]
-    let format = Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed
-
-    // get all instance nodes
-    let instances = doc.Root.Select("/COLLADA/library_visual_scenes//node/instance_geometry | /COLLADA/library_visual_scenes//node/instance_controller")
-
-    // get all meshes
-    let fat_meshes = instances |> Array.collect (fun i ->
-        FatMeshBuilder.build doc conv i fvf skeleton
-        |> Array.map (fun (mesh, material) -> i, mesh, material))
-
     // build packed & optimized meshes
-    let packed_meshes = fat_meshes |> Array.map (fun (_, mesh, _) -> buildOptimizedMesh mesh format)
+    let meshes = buildPackedMeshes doc conv skeleton
 
     // build merged vertex & index buffers
-    let (vertices, indices, mesh_data) = mergeMeshGeometry packed_meshes
+    let (vertices, indices, mesh_data) = mergeMeshGeometry (meshes |> Array.map (fun (_, mesh, _) -> mesh))
     let vertex_buffer = Render.Buffer(SlimDX.Direct3D11.BindFlags.VertexBuffer, vertices)
     let index_buffer = Render.Buffer(SlimDX.Direct3D11.BindFlags.IndexBuffer, indices)
 
     // build materials
-    let materials = fat_meshes |> Array.map (fun (_, _, material) -> all_materials.Get material)
+    let materials = meshes |> Array.map (fun (_, _, material) -> all_materials.Get material)
 
     // build mesh fragments
-    let dummy_inv_bind_pose = [|Matrix34.Identity|]
-
-    let fragments = packed_meshes |> Array.mapi (fun idx mesh ->
-        let (inst, _, _) = fat_meshes.[idx]
-        let (vertex_offset, index_offset, index_format) = mesh_data.[idx]
-
-        // create dummy 1-bone skin binding for non-skinned meshes
-        let skin =
-            match mesh.skin with
-            | Some binding -> binding
-            | None -> Render.SkinBinding([| skeleton.node_map.[inst.ParentNode] |], dummy_inv_bind_pose)
-        
-        // build fragment structure
-        // $$$: WTF? How do I split this line?
-        { new Render.MeshFragment with material = materials.[idx] and skin = skin and compression_info = mesh.compression_info and vertex_format = mesh.format and index_format = index_format and vertex_offset = vertex_offset and index_offset = index_offset and index_count = mesh.indices.Length }
-        )
+    let fragments = buildMeshFragments meshes mesh_data materials skeleton
 
     // build & save mesh
     let mesh = { new Render.Mesh with fragments = fragments and vertices = vertex_buffer and indices = index_buffer and skeleton = skeleton.data }
