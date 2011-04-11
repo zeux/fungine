@@ -111,9 +111,9 @@ type Matrix34 =
 
     // inverse for affine transform
     static member InverseAffine (m: Matrix34) =
-        Matrix34(m.row0.x, m.row1.x, m.row2.x, -(m.row0.x * m.row0.w + m.row0.y * m.row1.w + m.row0.z * m.row2.w),
-                 m.row0.y, m.row1.y, m.row2.y, -(m.row1.x * m.row0.w + m.row1.y * m.row1.w + m.row1.z * m.row2.w),
-                 m.row0.z, m.row1.z, m.row2.z, -(m.row2.x * m.row0.w + m.row2.y * m.row1.w + m.row2.z * m.row2.w))
+        Matrix34(m.row0.x, m.row1.x, m.row2.x, -(m.row0.x * m.row0.w + m.row1.x * m.row1.w + m.row2.x * m.row2.w),
+                 m.row0.y, m.row1.y, m.row2.y, -(m.row0.y * m.row0.w + m.row1.y * m.row1.w + m.row2.y * m.row2.w),
+                 m.row0.z, m.row1.z, m.row2.z, -(m.row0.z * m.row0.w + m.row1.z * m.row1.w + m.row2.z * m.row2.w))
 
     // general inverse
     static member Inverse (m: Matrix34) =
