@@ -19,12 +19,13 @@ let dbg_present_interval = Core.DbgVar(0, "vsync interval")
 let dbg_name = Core.DbgVar("foo", "name")
 let dbg_fillmode = Core.DbgVar(FillMode.Solid, "render/fill mode")
 let dbg_texfilter = Core.DbgVar(Filter.Anisotropic, "render/texture/filter")
+let dbg_fov = Core.DbgVar(45.f, "camera/fov")
 
 System.Threading.Thread.CurrentThread.CurrentCulture <- System.Globalization.CultureInfo.InvariantCulture
 System.Environment.CurrentDirectory <- System.IO.Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath) + "/../.."
 System.Console.WindowWidth <- max System.Console.WindowWidth 140
 
-let meshes = assets.buildAll()
+assets.buildMeshes "art"
 
 type ObjectPool(creator) =
     let s = System.Collections.Concurrent.ConcurrentStack()
@@ -82,10 +83,6 @@ let basic_textured = Effect(device, "src/shaders/basic_textured.hlsl")
 let vertex_size = (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).size
 let layout = new InputLayout(device, basic_textured.VertexSignature, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
 
-let projection = Math.Camera.projectionPerspective 45.f (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 1.f 1000.f
-let view = Math.Camera.lookAt (Math.Vector3(0.f, 3.5f, 2.f)) (Math.Vector3(0.f, 0.f, 1.5f)) Math.Vector3.UnitZ
-let view_projection = projection * Matrix44(view)
-
 let constantBuffer0 = new Buffer(device, null, BufferDescription(16448, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
 let constantBuffer1 = new Buffer(device, null, BufferDescription(65536, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
 
@@ -105,7 +102,25 @@ let dummy_albedo = createDummyTexture [|128uy; 128uy; 128uy; 255uy|]
 let dummy_normal = createDummyTexture [|128uy; 128uy; 255uy; 255uy|]
 let dummy_specular = createDummyTexture [|0uy; 0uy; 0uy; 0uy|]
 
+let camera_controller = Camera.CameraController()
+
+let meshes = Core.Cache(fun path -> (Core.Serialization.Load.fromFile path) :?> Render.Mesh)
+let scene = List<Render.Mesh * Matrix34>()
+
+let placeMesh path transform =
+    try
+        let mesh = meshes.Get (".build/art/" + System.IO.Path.ChangeExtension(path, ".mesh"))
+        let fixup = Matrix34(Vector4.UnitX, Vector4.UnitZ, Vector4.UnitY)
+        scene.Add((mesh, transform))
+    with e -> printfn "%A" e
+
+Scene.heaven_heaven placeMesh Matrix34.Identity
+
 let draw (context: DeviceContext) =
+    let projection = Math.Camera.projectionPerspective (dbg_fov.Value / 180.f * float32 Math.PI) (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 0.01f 1000.f
+    let view = camera_controller.ViewMatrix
+    let view_projection = projection * Matrix44(view)
+
     context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
     context.OutputMerger.SetTargets(depthBufferView, backBufferView)
     context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.Less))
@@ -121,14 +136,16 @@ let draw (context: DeviceContext) =
 
     context.VertexShader.SetConstantBuffer(constantBuffer0, 0)
     context.VertexShader.SetConstantBuffer(constantBuffer1, 1)
-    context.PixelShader.SetSampler(SamplerState.FromDescription(device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbg_texfilter.Value, MaximumAnisotropy = 16)), 0)
+    context.PixelShader.SetSampler(SamplerState.FromDescription(device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbg_texfilter.Value, MaximumAnisotropy = 16, MaximumLod = infinityf)), 0)
 
-    let drawInstanced offsets =
+    for mesh, instances in scene |> Seq.groupBy (fun (mesh, transform) -> mesh) do
+        let transforms = instances |> Seq.toArray |> Array.map (fun (mesh, transform) -> transform)
+
         let box = context.MapSubresource(constantBuffer1, 0, constantBuffer1.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
-        box.Data.WriteRange(offsets)
+        box.Data.WriteRange(transforms)
         context.UnmapSubresource(constantBuffer1, 0)
 
-        for mesh, fragment in meshes |> Array.collect (fun mesh -> mesh.fragments |> Array.map (fun f -> mesh, f)) do
+        for fragment in mesh.fragments do
             let setTexture (tex: Render.Texture option) dummy reg =
                 context.PixelShader.SetShaderResource(tex |> Option.fold (fun _ t -> t.View) dummy, reg)
 
@@ -153,9 +170,7 @@ let draw (context: DeviceContext) =
 
             context.InputAssembler.SetVertexBuffers(0, VertexBufferBinding(mesh.vertices.Resource, vertex_size, fragment.vertex_offset))
             context.InputAssembler.SetIndexBuffer(mesh.indices.Resource, fragment.index_format, fragment.index_offset)
-            context.DrawIndexedInstanced(fragment.index_count, offsets.Length, 0, 0, 0)
-
-    drawInstanced [| Matrix34.Identity |]
+            context.DrawIndexedInstanced(fragment.index_count, transforms.Length, 0, 0, 0)
 
 form.KeyUp.Add(fun args ->
     if args.Alt && args.KeyCode = System.Windows.Forms.Keys.Oemcomma then
@@ -164,6 +179,8 @@ form.KeyUp.Add(fun args ->
         w.Show())
 
 MessagePump.Run(form, fun () ->
+    camera_controller.Update(1.f / 60.f)
+
     form.Text <- dbg_name.Value
     device.ImmediateContext.ClearRenderTargetView(backBufferView, SlimDX.Color4 Color.Gray)
     device.ImmediateContext.ClearDepthStencilView(depthBufferView, DepthStencilClearFlags.Depth, 1.f, 0uy)

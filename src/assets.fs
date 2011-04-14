@@ -26,14 +26,8 @@ let buildMesh source =
         let textures = Build.Dae.MeshBuilder.build source target
         textures |> Seq.iter (fun (source, tex) -> build source tex.Path Build.Texture.build)
         true)
-
-    // load .mesh file
-    (Core.Serialization.Load.fromFile target) :?> Render.Mesh
     
 let buildMeshes path =
     let patterns = [|"*.mb"; "*.ma"; "*.max"|]
     let files = patterns |> Array.collect (fun p -> System.IO.Directory.GetFiles(path, p, System.IO.SearchOption.AllDirectories))
-    files |> Array.map buildMesh
-
-let buildAll () =
-    buildMeshes "art"
+    files |> Array.iter buildMesh

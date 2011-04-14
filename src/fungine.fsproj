@@ -83,6 +83,8 @@
     <Compile Include="build\texture.fs" />
     <Compile Include="winui\propertytree.fs" />
     <Compile Include="assets.fs" />
+    <Compile Include="camera.fs" />
+    <Compile Include="heaven.fs" />
     <Compile Include="main.fs" />
     <None Include="..\sdks\nvtt\nvtt.dll">
       <Link>nvtt.dll</Link>
