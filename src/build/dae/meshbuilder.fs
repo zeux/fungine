@@ -109,8 +109,8 @@ let build source target =
     let all_textures = Core.Cache (fun id -> TextureBuilder.build doc id)
     let all_materials = Core.Cache (fun id -> MaterialBuilder.build doc id (all_textures.Get >> snd))
 
-    // get basis converter (converts up axis and units)
-    let conv = BasisConverter(doc, 1.f)
+    // get basis converter (convert up axis, skip unit conversion)
+    let conv = BasisConverter(doc)
 
     // export skeleton
     let skeleton = SkeletonBuilder.build doc conv

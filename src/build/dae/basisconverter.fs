@@ -8,10 +8,13 @@ type BasisConverter(transform: Matrix34) =
     let transform_inv = Matrix34.Inverse(transform)
 
     // build converter from document
-    new (doc: Document, scale) =
+    new (doc: Document, ?scale) =
         // convert units
         let unit = doc.Root.SelectSingleNode "/COLLADA/asset/unit/@meter"
-        let unit_transform = Matrix34.Scaling(float32 unit.Value * scale)
+        let unit_transform =
+            match scale with
+            | Some value -> Matrix34.Scaling(float32 unit.Value * value)
+            | None -> Matrix34.Identity
 
         // convert up axis to Z and change handedness (COLLADA is RH)
         let up_axis = doc.Root.SelectSingleNode("/COLLADA/asset/up_axis/text()")
