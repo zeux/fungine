@@ -6,7 +6,7 @@ open SlimDX.Multimedia
 
 let dbg_yaw_speed = Core.DbgVar(0.01f, "camera/yaw speed")
 let dbg_pitch_speed = Core.DbgVar(0.01f, "camera/pitch speed")
-let dbg_movement_speed = Core.DbgVar(100.f, "camera/movement speed")
+let dbg_movement_speed = Core.DbgVar(20.f, "camera/movement speed")
 
 type CameraController() =
     let mutable yaw = 0.f
@@ -45,8 +45,9 @@ type CameraController() =
 
         if offsets.Length > 0 then
             let transform = this.Transform
+            let speed = dbg_movement_speed.Value * (if pressed.[int Keys.ShiftKey] then 5.f else 1.f)
 
-            position <- position + Matrix34.TransformDirection(transform, Array.sum offsets) * (dbg_movement_speed.Value * dt)
+            position <- position + Matrix34.TransformDirection(transform, Array.sum offsets) * (speed * dt)
 
     member this.Transform =
         Matrix34.Translation(position) *
