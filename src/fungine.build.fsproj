@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Name>fungine.build</Name>
+    <OutputType>Library</OutputType>
+    <ProjectGuid>{ff03a2b1-9469-4131-aab7-46fc36b582d6}</ProjectGuid>
+  </PropertyGroup>
+  <Import Project="fungine.targets" />
+  <ItemGroup>
+    <Compile Include="build\geometry\fatmesh.fs" />
+    <Compile Include="build\geometry\meshpacker.fs" />
+    <Compile Include="build\geometry\pretloptimizer.fs" />
+    <Compile Include="build\geometry\posttlanalyzer.fs" />
+    <Compile Include="build\geometry\posttloptimizerd3dx.fs" />
+    <Compile Include="build\geometry\posttloptimizerlinear.fs" />
+    <Compile Include="build\dae\parse.fs" />
+    <Compile Include="build\dae\export.fs" />
+    <Compile Include="build\dae\basisconverter.fs" />
+    <Compile Include="build\dae\skeletonbuilder.fs" />
+    <Compile Include="build\dae\skinbuilder.fs" />
+    <Compile Include="build\dae\fatmeshbuilder.fs" />
+    <Compile Include="build\dae\texturebuilder.fs" />
+    <Compile Include="build\dae\materialbuilder.fs" />
+    <Compile Include="build\dae\meshbuilder.fs" />
+    <Compile Include="build\texture.fs" />
+    <None Include="..\sdks\nvtt\nvtt.dll">
+      <Link>nvtt.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="SlimDX">
+      <HintPath>../sdks/SlimDX/SlimDX.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\src\fungine.fsproj">
+      <Name>fungine</Name>
+      <Project>{1da9d6e3-6745-46c2-ade2-421f7039664c}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

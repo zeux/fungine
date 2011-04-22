@@ -2,43 +2,10 @@
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Name>fungine</Name>
-    <AssemblyName>$(Name)</AssemblyName>
-    <IntermediateOutputPath>../.build</IntermediateOutputPath>
-    <OutputPath>../bin</OutputPath>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>fungine</RootNamespace>
-    <WarningLevel>4</WarningLevel>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
-    <ProductVersion>8.0.30703</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
+    <OutputType>Library</OutputType>
     <ProjectGuid>{1da9d6e3-6745-46c2-ade2-421f7039664c}</ProjectGuid>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
-    <EnableUnmanagedDebugging>true</EnableUnmanagedDebugging>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Platform)' != '' and $(Configuration) != '' ">
-    <IntermediateOutputPath>$(IntermediateOutputPath)/$(Name)_$(Configuration)_$(Platform)/</IntermediateOutputPath>
-    <OutputPath>$(OutputPath)/$(Configuration)_$(Platform)</OutputPath>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Platform)' == 'x86' ">
-    <PlatformTarget>x86</PlatformTarget>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <Tailcalls>false</Tailcalls>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <Tailcalls>true</Tailcalls>
-    <DefineConstants>TRACE</DefineConstants>
-  </PropertyGroup>
-  <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
-  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
+  <Import Project="fungine.targets" />
   <ItemGroup>
     <Compile Include="core\test.fs" />
     <Compile Include="core\cache.fs" />
@@ -65,46 +32,17 @@
     <Compile Include="render\material.fs" />
     <Compile Include="render\skeleton.fs" />
     <Compile Include="render\mesh.fs" />
-    <Compile Include="build\geometry\fatmesh.fs" />
-    <Compile Include="build\geometry\meshpacker.fs" />
-    <Compile Include="build\geometry\pretloptimizer.fs" />
-    <Compile Include="build\geometry\posttlanalyzer.fs" />
-    <Compile Include="build\geometry\posttloptimizerd3dx.fs" />
-    <Compile Include="build\geometry\posttloptimizerlinear.fs" />
-    <Compile Include="build\dae\parse.fs" />
-    <Compile Include="build\dae\export.fs" />
-    <Compile Include="build\dae\basisconverter.fs" />
-    <Compile Include="build\dae\skeletonbuilder.fs" />
-    <Compile Include="build\dae\skinbuilder.fs" />
-    <Compile Include="build\dae\fatmeshbuilder.fs" />
-    <Compile Include="build\dae\texturebuilder.fs" />
-    <Compile Include="build\dae\materialbuilder.fs" />
-    <Compile Include="build\dae\meshbuilder.fs" />
-    <Compile Include="build\texture.fs" />
     <Compile Include="winui\propertytree.fs" />
-    <Compile Include="sandbox\assets.fs" />
-    <Compile Include="sandbox\camera.fs" />
-    <Compile Include="sandbox\heaven.fs" />
-    <Compile Include="sandbox\main.fs" />
-    <None Include="..\sdks\nvtt\nvtt.dll">
-      <Link>nvtt.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="mscorlib" />
-    <Reference Include="FSharp.Core" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="SlimDX">
       <HintPath>../sdks/SlimDX/SlimDX.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xaml" />
-    <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
