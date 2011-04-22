@@ -82,10 +82,10 @@
     <Compile Include="build\dae\meshbuilder.fs" />
     <Compile Include="build\texture.fs" />
     <Compile Include="winui\propertytree.fs" />
-    <Compile Include="assets.fs" />
-    <Compile Include="camera.fs" />
-    <Compile Include="heaven.fs" />
-    <Compile Include="main.fs" />
+    <Compile Include="sandbox\assets.fs" />
+    <Compile Include="sandbox\camera.fs" />
+    <Compile Include="sandbox\heaven.fs" />
+    <Compile Include="sandbox\main.fs" />
     <None Include="..\sdks\nvtt\nvtt.dll">
       <Link>nvtt.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
