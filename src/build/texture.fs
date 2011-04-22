@@ -137,4 +137,8 @@ let build source target =
     let input = nvttCreateInputOptions()
     let compress = nvttCreateCompressionOptions()
 
+    nvttSetInputOptionsAlphaMode(input, AlphaMode.Transparency)
+    nvttSetCompressionOptionsFormat(compress, Format.BC1a)
+    nvttSetCompressionOptionsQuantization(compress, false, false, true, 128)
+
     compressInternal source target input compress
