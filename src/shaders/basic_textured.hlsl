@@ -60,12 +60,34 @@ PS_IN vs_main(VS_IN I, uint instance: SV_InstanceId)
 	O.pos = mul(view_projection, float4(pos_ws, 1));
 
     O.pos_ws = pos_ws;
-    O.normal = normalize(mul((float3x3)transform, I.normal * 2 - 1));
-    O.tangent = normalize(mul((float3x3)transform, I.tangent.xyz * 2 - 1));
+    O.normal = normalize(mul((float3x3)offsets[instance], mul((float3x3)transform, I.normal * 2 - 1)));
+    O.tangent = normalize(mul((float3x3)offsets[instance], mul((float3x3)transform, I.tangent.xyz * 2 - 1)));
     O.bitangent = cross(O.normal, O.tangent) * (I.tangent.w * 2 - 1);
     O.uv0 = I.uv0 * texcoord_scale + texcoord_offset;
 	
 	return O;
+}
+
+static const float GAMMA = 2.2;
+
+float3 degamma(float3 v)
+{
+    return pow(saturate(v), GAMMA);
+}
+
+float4 degamma(float4 v)
+{
+    return float4(degamma(v.xyz), v.w);
+}
+
+float3 gamma(float3 v)
+{
+    return pow(saturate(v), 1 / GAMMA);
+}
+
+float4 gamma(float4 v)
+{
+    return float4(gamma(v.xyz), v.w);
 }
 
 float4 ps_main(PS_IN I): SV_Target
@@ -73,19 +95,16 @@ float4 ps_main(PS_IN I): SV_Target
     float3 normal_ts = normal_map.Sample(default_sampler, I.uv0) * 2 - 1;
     float3 normal = normalize(normal_ts.x * I.tangent + normal_ts.y * I.bitangent + normal_ts.z * I.normal);
 
-    float4 albedo = albedo_map.Sample(default_sampler, I.uv0);
+    float4 albedo = degamma(albedo_map.Sample(default_sampler, I.uv0));
 
     if (albedo.a < 0.5) discard;
 
-    float3 spec = specular_map.Sample(default_sampler, I.uv0);
+    float3 spec = degamma(specular_map.Sample(default_sampler, I.uv0));
 
-    float3 light = normalize(float3(0, 1, 1));
-    float diffuse = saturate(dot(normal, light) * 0.5 + 0.5);
+    float3 light = normalize(float3(1, 0, 1));
+    float3 diffuse = lerp(degamma(float3(0, 0.5, 1)) * 0.04, degamma(float3(1, 0.9, 0.2)) * 2, saturate(dot(normal, light)));
 
-    float3 view = normalize(float3(0, 20, 35) - I.pos_ws);
-    float3 reflected = reflect(-view, normal);
+    float3 specular = spec * 0.0;
 
-    float3 specular = spec * pow(saturate(dot(reflected, light)), 20);
-
-	return albedo * diffuse + float4(specular, 0);
+	return float4(gamma(albedo.rgb * (diffuse + specular)), albedo.a);
 }
