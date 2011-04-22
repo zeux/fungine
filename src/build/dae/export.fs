@@ -23,37 +23,110 @@ let private getMayaPath versions =
 // highest installed Maya version
 let private mayaPath = lazy (getMayaPath ["2011"; "2010"; "2009"; "2008"])
 
-// build .dae file via standalone mayabatch
-let private buildMaya (source: string) (target: string) =
+// start maya batch process
+let private launchMayaBatch prompt (command: string) =
     let mayaBatch = mayaPath.Force() + @"\\bin\mayabatch.exe"
 
-    // export script is in the mel file, so source it and run export proc (' are replaced with \" below)
-    let command = sprintf "source './src/build/maya_dae_export.mel'; export('%s', '%s');" (source.Replace('\\', '/')) (target.Replace('\\', '/'))
-
     // start mayabatch.exe with the export command
-    let startInfo = ProcessStartInfo(mayaBatch, sprintf "-batch -noAutoloadPlugins -command \"%s\"" (command.Replace("'", "\\\"")),
-                        UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true)
+    let startInfo =
+        ProcessStartInfo(mayaBatch,
+            sprintf "-%s -noAutoloadPlugins -command \"%s\"" (if prompt then "prompt" else "batch") (command.Replace("'", "\\\"")),
+            UseShellExecute = false, RedirectStandardInput = prompt, RedirectStandardOutput = true, RedirectStandardError = true)
 
     // work around Maya multi-threaded evaluation bugs
     startInfo.EnvironmentVariables.Add("MAYA_NO_TBB", "1")
 
     // launch the process
-    let proc = Process.Start(startInfo)
+    Process.Start(startInfo)
+
+// output handler
+let private getOutputHandler source =
+    DataReceivedEventHandler(fun _ args ->
+        let s = args.Data
+        lock source (fun () -> if s <> null && s.Length > 0 then printfn "Build.Dae[%s]: %s" source s))
+
+// build .dae file via standalone mayabatch
+let private buildMayaStandalone source target =
+    // export script is in the mel file, so source it and run export proc (' are replaced with \" in launchMayaBatch)
+    let command = (sprintf "source './src/build/maya_dae_export.mel'; export('%s', '%s');" source target).Replace('\\', '/')
+
+    // launch the process
+    let proc = launchMayaBatch false command
 
     // echo process output
-    let handler (args: System.Diagnostics.DataReceivedEventArgs) =
-        let s = args.Data
-        lock proc (fun () -> if s <> null && s.Length > 0 then printfn "Build.Dae[%s]: %s" source s)
+    let handler = getOutputHandler source
 
-    proc.OutputDataReceived.Add(handler)
+    proc.OutputDataReceived.AddHandler(handler)
     proc.BeginOutputReadLine()
 
-    proc.ErrorDataReceived.Add(handler)
+    proc.ErrorDataReceived.AddHandler(handler)
     proc.BeginErrorReadLine()
 
     // wait for process exit, exit code is 0 if export succeeded (see maya_dae_export.mel)
     proc.WaitForExit()
     proc.ExitCode = 0
+
+// read stream data until prompt
+let private readStreamUpTo (stream: System.IO.Stream) (prompt: string) =
+    let sb = System.Text.StringBuilder()
+
+    seq {
+        // read stream byte by byte
+        while sb.ToString() <> prompt do
+            match stream.ReadByte() with
+            | c when c >= 32 -> sb.Append(char c) |> ignore
+            | 10 ->
+                yield sb.ToString()
+                sb.Clear() |> ignore
+            | -1 -> failwithf "Premature stream termination while waiting for '%s'" prompt
+            | _ -> ()
+    }
+
+// maya batch building service
+let private createMayaBatcher () =
+    // export script is in the mel file, so source it (' are replaced with \" in launchMayaBatch)
+    let proc = launchMayaBatch true "source './src/build/maya_dae_export.mel'"
+    let processOutput f = readStreamUpTo proc.StandardOutput.BaseStream "mel: " |> Seq.iter f
+
+    // wait for initial output & start watchdog thread
+    processOutput ignore
+    proc.StandardInput.WriteLine(sprintf "startBatchWatchdog(%d);" (System.Diagnostics.Process.GetCurrentProcess().Id))
+    processOutput ignore
+
+    // process commands
+    MailboxProcessor.Start (fun inbox -> async {
+        while true do
+            let! (chan: AsyncReplyChannel<_>, source, target) = inbox.Receive()
+
+            // install error output handler
+            let handler = getOutputHandler source
+
+            proc.ErrorDataReceived.AddHandler(handler)
+            proc.BeginErrorReadLine()
+
+            // issue export command
+            proc.StandardInput.WriteLine((sprintf "exportBatch(\"%s\", \"%s\");" source target).Replace('\\', '/'))
+
+            // wait for response (export is successful if the last line is "Result: 0")
+            let result = ref false
+            processOutput (fun s ->
+                result := s = "Result: 0"
+                if s.Length > 0 && not !result then lock source (fun _ -> printfn "Build.Dae[%s]: %s" source s))
+
+            // remove error output handler
+            proc.CancelErrorRead()
+            proc.ErrorDataReceived.RemoveHandler(handler)
+
+            // finish processing
+            chan.Reply(!result)
+        })
+
+// maya batcher instance
+let private mayaBatcher = lazy (createMayaBatcher ())
+
+// build .dae file via mayabatcher
+let private buildMayaBatcher source target =
+    mayaBatcher.Force().PostAndReply(fun chan -> chan, source, target)
 
 // get the highest version of installed Max, consider both 64 and 32 bit versions
 let private getMaxPath versions =
@@ -63,11 +136,11 @@ let private getMaxPath versions =
 let private maxPath = lazy (getMaxPath ["12.0"; "11.0"; "10.0"; "9.0"])
 
 // build .dae file via standalone 3dsmax
-let private buildMax (source: string) (target: string) =
+let private buildMax source target =
     let max = maxPath.Force() + @"\\3dsmax.exe"
 
     // export script is in the ms file, so include it and run export proc (' are replaced with \" below)
-    let command = sprintf @"fileIn './src/build/max_dae_export.ms'; export '%s' '%s'" (source.Replace('\\', '/')) (target.Replace('\\', '/'))
+    let command = (sprintf "fileIn './src/build/max_dae_export.ms'; export '%s' '%s'" source target).Replace('\\', '/')
 
     // start 3dsmax.exe with the export command
     let proc = Process.Start(max, sprintf "-q -silent -vn -mip -mxs \"%s\"" (command.Replace("'", "\\\"")))
@@ -79,6 +152,6 @@ let private buildMax (source: string) (target: string) =
 // build .dae file from DCC sources
 let build source target =
     match System.IO.FileInfo(source).Extension with
-    | ".ma" | ".mb" -> buildMaya source target
+    | ".ma" | ".mb" -> buildMayaBatcher source target
     | ".max" -> buildMax source target
     | _ -> failwithf "Build.Dae: source file %s has unknown extension" source

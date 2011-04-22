@@ -5,9 +5,30 @@ proc exportOpenCollada(string $source, string $target)
     loadPlugin -quiet "COLLADAMaya.mll";
     file -force -open $source;
     file -force -type "OpenCOLLADA exporter" -options $options -exportAll $target;
+    file -force -new;
 }
 
 global proc export(string $source, string $target)
 {
     if (catch(exportOpenCollada($source, $target))) quit -abort -exitCode 1;
+}
+
+global proc int exportBatch(string $source, string $target)
+{
+    return catch(exportOpenCollada($source, $target));
+}
+
+global proc startBatchWatchdog(int $pid)
+{
+    python "\
+import ctypes\n\
+import thread\n\
+import os\n\
+\n\
+def watchdog(pid):\n\
+    handle = ctypes.windll.kernel32.OpenProcess(0x100000, False, pid)\n\
+    ctypes.windll.kernel32.WaitForSingleObject(handle, -1)\n\
+    os._exit(0)\n";
+
+    python ("thread.start_new_thread(watchdog, (" + $pid + ",))");
 }
