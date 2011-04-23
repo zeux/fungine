@@ -3,6 +3,7 @@ module main
 open System
 open System.Collections.Generic
 open System.Drawing
+open System.Windows.Forms
 open SlimDX
 open SlimDX.DXGI
 open SlimDX.Windows
@@ -54,7 +55,7 @@ type Effect(device, vscode, pscode) =
     member this.PixelShader = ps
     member this.VertexSignature = signature
 
-let form = new RenderForm("fungine", Width = 1280, Height = 720)
+let form = new Form(Text = "fungine", Width = 1280, Height = 720)
 let desc = new SwapChainDescription(
             BufferCount = 1,
             ModeDescription = ModeDescription(form.ClientSize.Width, form.ClientSize.Height, Rational(0, 0), Format.R8G8B8A8_UNorm),
