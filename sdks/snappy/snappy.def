@@ -1,0 +1,7 @@
+LIBRARY snappy
+EXPORTS
+    snappy_compress
+    snappy_uncompress
+    snappy_max_compressed_length
+    snappy_uncompressed_length
+    snappy_validate_compressed_buffer
