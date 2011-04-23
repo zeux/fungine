@@ -49,75 +49,75 @@ module private NvTextureTools =
     type NvttInputOptions = IntPtr
     type NvttCompressionOptions = IntPtr
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern NvttInputOptions nvttCreateInputOptions()
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttDestroyInputOptions(NvttInputOptions)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetInputOptionsAlphaMode(NvttInputOptions, AlphaMode alphaMode)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetInputOptionsGamma(NvttInputOptions, float inputGamma, float outputGamma)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetInputOptionsWrapMode(NvttInputOptions, WrapMode mode)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetInputOptionsMipmapFilter(NvttInputOptions, MipmapFilter filter)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetInputOptionsMipmapGeneration(NvttInputOptions, bool enabled, int maxLevel)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetInputOptionsKaiserParameters(NvttInputOptions, float width, float alpha, float stretch)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetInputOptionsNormalMap(NvttInputOptions, bool b)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetInputOptionsConvertToNormalMap(NvttInputOptions, bool convert)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetInputOptionsHeightEvaluation(NvttInputOptions, float redScale, float greenScale, float blueScale, float alphaScale)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetInputOptionsNormalFilter(NvttInputOptions, float sm, float medium, float big, float large)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetInputOptionsNormalizeMipmaps(NvttInputOptions, bool b)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetInputOptionsMaxExtents(NvttInputOptions, int dim)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetInputOptionsRoundMode(NvttInputOptions, RoundMode mode);
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern NvttCompressionOptions nvttCreateCompressionOptions()
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttDestroyCompressionOptions(NvttCompressionOptions)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetCompressionOptionsFormat(NvttCompressionOptions, Format format)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetCompressionOptionsQuality(NvttCompressionOptions, Quality quality)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetCompressionOptionsColorWeights(NvttCompressionOptions, float red, float green, float blue, float alpha)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetCompressionOptionsPixelFormat(NvttCompressionOptions, uint32 bitcount, uint32 rmask, uint32 gmask, uint32 bmask, uint32 amask)
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern void nvttSetCompressionOptionsQuantization(NvttCompressionOptions, bool colorDithering, bool alphaDithering, bool binaryAlpha, int alphaThreshold)
 
     type NvttErrorCallback = delegate of string -> unit
 
-    [<DllImport("nvtt")>]
+    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
     extern bool nvttCompressFile(string source, string target, NvttInputOptions inputOptions, NvttCompressionOptions compressionOptions, NvttErrorCallback errorCallback)
 
 open NvTextureTools
