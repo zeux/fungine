@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="core\test.fs" />
     <Compile Include="core\cache.fs" />
+    <Compile Include="core\compression.fs" />
     <Compile Include="core\dbgvar.fs" />
     <Compile Include="core\serialization\util.fs" />
     <Compile Include="core\serialization\version.fs" />
@@ -33,6 +34,10 @@
     <Compile Include="render\skeleton.fs" />
     <Compile Include="render\mesh.fs" />
     <Compile Include="winui\propertytree.fs" />
+    <None Include="..\sdks\snappy\snappy.dll">
+      <Link>snappy.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="PresentationCore" />
