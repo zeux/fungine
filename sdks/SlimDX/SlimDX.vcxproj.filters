@@ -1,0 +1,882 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="RawInput">
+      <UniqueIdentifier>{083381f1-1bf4-46eb-8094-46159c675cbf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Direct3D11">
+      <UniqueIdentifier>{12b5e7b1-dd6c-4157-b900-11cc78569673}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DXGI">
+      <UniqueIdentifier>{5d2fffea-5299-4c7f-b29b-18816efa7c2f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="D3DCompiler">
+      <UniqueIdentifier>{780ff319-2743-43ce-8b10-a73b729568d7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Math">
+      <UniqueIdentifier>{f4da5126-41c6-4884-9d9f-39b95ecf267d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows">
+      <UniqueIdentifier>{bebf30a3-8a2c-4fa0-a8c0-4917f2e061aa}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="slimdx\source\rawinput\DeviceInfo.cpp">
+      <Filter>RawInput</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\rawinput\DeviceRI.cpp">
+      <Filter>RawInput</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\rawinput\InputMessageFilter.cpp">
+      <Filter>RawInput</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\AssemblyInfo.cpp" />
+    <ClCompile Include="slimdx\source\ComObject.cpp" />
+    <ClCompile Include="slimdx\source\CompilationException.cpp" />
+    <ClCompile Include="slimdx\source\Configuration.cpp" />
+    <ClCompile Include="slimdx\source\DataBox.cpp" />
+    <ClCompile Include="slimdx\source\DataRectangle.cpp" />
+    <ClCompile Include="slimdx\source\DataStream.cpp" />
+    <ClCompile Include="slimdx\source\Performance.cpp" />
+    <ClCompile Include="slimdx\source\Result.cpp" />
+    <ClCompile Include="slimdx\source\SlimDXException.cpp" />
+    <ClCompile Include="slimdx\source\Utilities.cpp" />
+    <ClCompile Include="slimdx\source\direct3d11\Asynchronous11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\BlendState11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\BlendStateDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Buffer11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\BufferDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\ClassInstance11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\ClassInstanceDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\ClassLinkage11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\CommandList11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\ComputeShader11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\ComputeShaderWrapper11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Counter11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\CounterCapabilities11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\CounterMetadata11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Debug11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\DebugMessage11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\DepthStencilOperationDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\DepthStencilState11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\DepthStencilStateDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\DepthStencilView11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\DepthStencilViewDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Device11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\DeviceChild11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\DeviceContext11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Direct3D11Exception.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\DomainShader11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\DomainShaderWrapper11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\FastFourierTransform11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\FastFourierTransformBufferRequirements11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\FastFourierTransformDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\GeometryShader11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\GeometryShaderWrapper11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\HullShader11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\HullShaderWrapper11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\ImageInformation11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\ImageLoadInformation11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\InfoQueue11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\InfoQueueFilter11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\InfoQueueFilterDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\InputAssemblerWrapper11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\InputElement11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\InputLayout11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\OutputMergerWrapper11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\PipelineStatistics11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\PixelShader11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\PixelShaderWrapper11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Predicate11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Query11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\QueryDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\RasterizerState11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\RasterizerStateDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\RasterizerWrapper11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\RenderTargetBlendDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\RenderTargetView11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\RenderTargetViewDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Resource11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\ResourceRegion11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\ResourceView11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\ResultCode11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\SamplerDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\SamplerState11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Scan11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\SegmentedScan11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\ShaderResourceView11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\ShaderResourceViewDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\StateBlockMask11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\StreamOutputBufferBinding11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\StreamOutputElement11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\StreamOutputStatistics11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\StreamOutputWrapper11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Texture1D11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Texture1DDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Texture2D11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Texture2DDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Texture3D11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Texture3DDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\TextureLoadInformation11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\TimestampQueryData11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\UnorderedAccessView11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\UnorderedAccessViewDescription11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\VertexBufferBinding11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\VertexShader11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\VertexShaderWrapper11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\direct3d11\Viewport11.cpp">
+      <Filter>Direct3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\Adapter.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\Adapter1.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\AdapterDescription.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\AdapterDescription1.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\Device1.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\DeviceChildDxgi.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\DeviceDxgi.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\DXGIException.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\Factory.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\Factory1.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\FrameStatistics.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\GammaControl.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\GammaControlCapabilities.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\KeyedMutex.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\ModeDescription.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\ObjectDxgi.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\Output.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\OutputDescription.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\ResourceDxgi.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\ResultCodeDxgi.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\SampleDescription.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\Surface1.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\SurfaceDescription.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\SurfaceDxgi.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\SwapChainDescription.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\dxgi\SwapChainDxgi.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\ConstantBufferDC.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\ConstantBufferDescriptionDC.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\D3DCompilerException.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\IncludeDC.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\InputBindingDescriptionDC.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\ShaderBytecodeDC.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\ShaderDescriptionDC.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\ShaderMacroDC.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\ShaderParameterDescriptionDC.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\ShaderReflectionDC.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\ShaderReflectionTypeDC.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\ShaderReflectionVariableDC.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\ShaderSignatureDC.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\ShaderTypeDescriptionDC.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\d3dcompiler\ShaderVariableDescriptionDC.cpp">
+      <Filter>D3DCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\math\Color4.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\math\Rational.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\math\Color3.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="slimdx\source\windows\MessagePump.cpp">
+      <Filter>Windows</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="slimdx\source\rawinput\DeviceInfo.h">
+      <Filter>RawInput</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\rawinput\DeviceRI.h">
+      <Filter>RawInput</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\rawinput\Enums.h">
+      <Filter>RawInput</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\rawinput\HidInfo.h">
+      <Filter>RawInput</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\rawinput\InputMessageFilter.h">
+      <Filter>RawInput</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\rawinput\KeyboardInfo.h">
+      <Filter>RawInput</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\rawinput\KeyboardInputEventArgs.h">
+      <Filter>RawInput</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\rawinput\MouseInfo.h">
+      <Filter>RawInput</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\rawinput\MouseInputEventArgs.h">
+      <Filter>RawInput</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\rawinput\RawInputEventArgs.h">
+      <Filter>RawInput</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\auto_array.h" />
+    <ClInclude Include="slimdx\source\CollectionShim.h" />
+    <ClInclude Include="slimdx\source\ComObject.h" />
+    <ClInclude Include="slimdx\source\ComObjectMacros.h" />
+    <ClInclude Include="slimdx\source\CompilationException.h" />
+    <ClInclude Include="slimdx\source\Configuration.h" />
+    <ClInclude Include="slimdx\source\DataBox.h" />
+    <ClInclude Include="slimdx\source\DataRectangle.h" />
+    <ClInclude Include="slimdx\source\DataStream.h" />
+    <ClInclude Include="slimdx\source\Enums.h" />
+    <ClInclude Include="slimdx\source\InternalHelpers.h" />
+    <ClInclude Include="slimdx\source\ObjectTable.h" />
+    <ClInclude Include="slimdx\source\Performance.h" />
+    <ClInclude Include="slimdx\source\Result.h" />
+    <ClInclude Include="slimdx\source\SlimDXException.h" />
+    <ClInclude Include="slimdx\source\stack_array.h" />
+    <ClInclude Include="slimdx\source\stdafx.h" />
+    <ClInclude Include="slimdx\source\Utilities.h" />
+    <ClInclude Include="slimdx\source\VersionConfig.h" />
+    <ClInclude Include="slimdx\source\direct3d11\Asynchronous11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\BlendState11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\BlendStateDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Buffer11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\BufferDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\ClassInstance11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\ClassInstanceDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\ClassLinkage11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\CommandList11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\ComputeShader11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\ComputeShaderWrapper11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Counter11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\CounterCapabilities11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\CounterMetadata11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Debug11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\DebugMessage11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\DebugMessageID11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\DepthStencilOperationDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\DepthStencilState11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\DepthStencilStateDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\DepthStencilView11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\DepthStencilViewDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Device11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\DeviceChild11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\DeviceContext11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Direct3D11Exception.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\DomainShader11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\DomainShaderWrapper11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Enums11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\FastFourierTransform11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\FastFourierTransformBufferRequirements11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\FastFourierTransformDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\GeometryShader11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\GeometryShaderWrapper11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\HullShader11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\HullShaderWrapper11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\ImageInformation11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\ImageLoadInformation11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\InfoQueue11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\InfoQueueFilter11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\InfoQueueFilterDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\InputAssemblerWrapper11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\InputElement11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\InputLayout11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\OutputMergerWrapper11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\PipelineStatistics11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\PixelShader11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\PixelShaderWrapper11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Predicate11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Query11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\QueryDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\RasterizerState11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\RasterizerStateDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\RasterizerWrapper11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\RenderTargetBlendDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\RenderTargetView11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\RenderTargetViewDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Resource11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\ResourceRegion11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\ResourceView11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\ResultCode11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\SamplerDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\SamplerState11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Scan11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\SegmentedScan11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\ShaderResourceView11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\ShaderResourceViewDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\StateBlockMask11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\StreamOutputBufferBinding11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\StreamOutputElement11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\StreamOutputStatistics11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\StreamOutputWrapper11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Texture1D11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Texture1DDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Texture2D11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Texture2DDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Texture3D11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Texture3DDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\TextureLoadInformation11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\TimestampQueryData11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\UnorderedAccessView11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\UnorderedAccessViewDescription11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\VertexBufferBinding11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\VertexShader11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\VertexShaderWrapper11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\direct3d11\Viewport11.h">
+      <Filter>Direct3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\Adapter.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\Adapter1.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\AdapterDescription.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\AdapterDescription1.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\Device1.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\DeviceChildDxgi.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\DeviceDxgi.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\DXGIException.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\Enums.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\Factory.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\Factory1.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\FrameStatistics.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\GammaControl.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\GammaControlCapabilities.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\KeyedMutex.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\ModeDescription.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\ObjectDxgi.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\Output.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\OutputDescription.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\ResourceDxgi.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\ResultCodeDxgi.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\SampleDescription.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\Surface1.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\SurfaceDescription.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\SurfaceDxgi.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\SwapChainDescription.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\dxgi\SwapChainDxgi.h">
+      <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\ConstantBufferDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\ConstantBufferDescriptionDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\D3DCompilerException.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\EnumsDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\IncludeDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\InputBindingDescriptionDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\ShaderBytecodeDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\ShaderDescriptionDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\ShaderMacroDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\ShaderParameterDescriptionDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\ShaderReflectionDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\ShaderReflectionTypeDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\ShaderReflectionVariableDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\ShaderSignatureDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\ShaderTypeDescriptionDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\d3dcompiler\ShaderVariableDescriptionDC.h">
+      <Filter>D3DCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\math\Color4.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\math\Rational.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\math\Color3.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="slimdx\source\windows\MessagePump.h">
+      <Filter>Windows</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
