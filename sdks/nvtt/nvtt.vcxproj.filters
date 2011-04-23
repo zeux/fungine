@@ -1,10 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
     <Filter Include="nvtt">
       <UniqueIdentifier>{cb20c5eb-3b58-406b-9b95-db7356ffe509}</UniqueIdentifier>
     </Filter>
@@ -29,27 +25,12 @@
     <Filter Include="nvtt\nvtt\squish">
       <UniqueIdentifier>{1b4cb94e-c205-4702-a476-29ac0932c221}</UniqueIdentifier>
     </Filter>
-    <Filter Include="libjpeg">
-      <UniqueIdentifier>{e697f535-8494-4aa9-a328-bb10b7828e63}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="libpng">
-      <UniqueIdentifier>{2f2a1866-8e70-4439-ad32-31d6e22d6717}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="zlib">
-      <UniqueIdentifier>{7631e7b9-c58b-48fd-a296-8a0ce8f4d8ca}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="extra">
-      <UniqueIdentifier>{5c1e5a12-7cda-416a-be24-3cd036e71933}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="nvtt\src\nvtt\CompressionOptions.cpp">
       <Filter>nvtt\nvtt</Filter>
     </ClCompile>
     <ClCompile Include="nvtt\src\nvtt\CompressorDX10.cpp">
-      <Filter>nvtt\nvtt</Filter>
-    </ClCompile>
-    <ClCompile Include="nvtt\src\nvtt\CompressorDX11.cpp">
       <Filter>nvtt\nvtt</Filter>
     </ClCompile>
     <ClCompile Include="nvtt\src\nvtt\CompressorDX9.cpp">
@@ -166,7 +147,20 @@
     <ClCompile Include="nvtt\src\nvtt\bc6h\zohtwo.cpp">
       <Filter>nvtt\nvtt\bc6h</Filter>
     </ClCompile>
-    <ClCompile Include="nvtt\src\nvtt\squish\weightedclusterfit.cpp">
+    <ClCompile Include="compressfile.cpp" />
+    <ClCompile Include="nvtt\src\nvimage\ErrorMetric.cpp">
+      <Filter>nvtt\nvimage</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvimage\ImageIO.cpp">
+      <Filter>nvtt\nvimage</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\ClusterFit.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\TaskDispatcher.cpp">
+      <Filter>nvtt\nvtt</Filter>
+    </ClCompile>
+    <ClCompile Include="nvtt\src\nvtt\squish\colourblock.cpp">
       <Filter>nvtt\nvtt\squish</Filter>
     </ClCompile>
     <ClCompile Include="nvtt\src\nvtt\squish\colourfit.cpp">
@@ -175,188 +169,14 @@
     <ClCompile Include="nvtt\src\nvtt\squish\colourset.cpp">
       <Filter>nvtt\nvtt\squish</Filter>
     </ClCompile>
-    <ClCompile Include="nvtt\src\nvtt\squish\colourblock.cpp">
+    <ClCompile Include="nvtt\src\nvtt\squish\fastclusterfit.cpp">
       <Filter>nvtt\nvtt\squish</Filter>
     </ClCompile>
     <ClCompile Include="nvtt\src\nvtt\squish\maths.cpp">
       <Filter>nvtt\nvtt\squish</Filter>
     </ClCompile>
-    <ClCompile Include="compressfile.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdapimin.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdapistd.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdatadst.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdatasrc.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdcoefct.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdcolor.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jddctmgr.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdhuff.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdinput.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdmainct.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdmarker.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdmaster.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdmerge.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdphuff.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdpostct.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdsample.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jdtrans.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jerror.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jfdctflt.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jfdctfst.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jfdctint.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jidctflt.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jidctfst.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jidctint.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jidctred.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jmemnobs.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jutils.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jcomapi.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jmemmgr.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jquant1.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="jpeg-6b\jquant2.c">
-      <Filter>libjpeg</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\png.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\pngerror.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\pngget.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\pngmem.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\pngpread.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\pngread.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\pngrio.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\pngrtran.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\pngrutil.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\pngset.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\pngtrans.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\pngwio.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\pngwrite.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\pngwtran.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="libpng-1.4.4\pngwutil.c">
-      <Filter>libpng</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib-1.2.5\adler32.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib-1.2.5\compress.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib-1.2.5\crc32.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib-1.2.5\deflate.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib-1.2.5\infback.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib-1.2.5\inffast.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib-1.2.5\inflate.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib-1.2.5\inftrees.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib-1.2.5\trees.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib-1.2.5\uncompr.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib-1.2.5\zutil.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="extra\ImageIO.cpp">
-      <Filter>extra</Filter>
+    <ClCompile Include="nvtt\src\nvtt\squish\weightedclusterfit.cpp">
+      <Filter>nvtt\nvtt\squish</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -370,9 +190,6 @@
       <Filter>nvtt\nvtt</Filter>
     </ClInclude>
     <ClInclude Include="nvtt\src\nvtt\CompressorDX10.h">
-      <Filter>nvtt\nvtt</Filter>
-    </ClInclude>
-    <ClInclude Include="nvtt\src\nvtt\CompressorDX11.h">
       <Filter>nvtt\nvtt</Filter>
     </ClInclude>
     <ClInclude Include="nvtt\src\nvtt\CompressorDX9.h">
@@ -561,95 +378,49 @@
     <ClInclude Include="nvtt\src\nvtt\bc6h\zoh.h">
       <Filter>nvtt\nvtt\bc6h</Filter>
     </ClInclude>
+    <ClInclude Include="nvtt\src\nvimage\ErrorMetric.h">
+      <Filter>nvtt\nvimage</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvcore\ForEach.h">
+      <Filter>nvtt\nvcore</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvmath\SimdVector.h">
+      <Filter>nvtt\nvmath</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvmath\SimdVector_SSE.h">
+      <Filter>nvtt\nvmath</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvmath\SimdVector_VE.h">
+      <Filter>nvtt\nvmath</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\ClusterFit.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\TaskDispatcher.h">
+      <Filter>nvtt\nvtt</Filter>
+    </ClInclude>
+    <ClInclude Include="nvtt\src\nvtt\squish\colourblock.h">
+      <Filter>nvtt\nvtt\squish</Filter>
+    </ClInclude>
     <ClInclude Include="nvtt\src\nvtt\squish\colourfit.h">
       <Filter>nvtt\nvtt\squish</Filter>
     </ClInclude>
     <ClInclude Include="nvtt\src\nvtt\squish\colourset.h">
       <Filter>nvtt\nvtt\squish</Filter>
     </ClInclude>
-    <ClInclude Include="nvtt\src\nvtt\squish\weightedclusterfit.h">
-      <Filter>nvtt\nvtt\squish</Filter>
-    </ClInclude>
-    <ClInclude Include="nvtt\src\nvtt\squish\colourblock.h">
+    <ClInclude Include="nvtt\src\nvtt\squish\fastclusterfit.h">
       <Filter>nvtt\nvtt\squish</Filter>
     </ClInclude>
     <ClInclude Include="nvtt\src\nvtt\squish\maths.h">
       <Filter>nvtt\nvtt\squish</Filter>
     </ClInclude>
-    <ClInclude Include="jpeg-6b\jdct.h">
-      <Filter>libjpeg</Filter>
+    <ClInclude Include="nvtt\src\nvtt\squish\weightedclusterfit.h">
+      <Filter>nvtt\nvtt\squish</Filter>
     </ClInclude>
-    <ClInclude Include="jpeg-6b\jdhuff.h">
-      <Filter>libjpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="jpeg-6b\jerror.h">
-      <Filter>libjpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="jpeg-6b\jinclude.h">
-      <Filter>libjpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="jpeg-6b\jmemsys.h">
-      <Filter>libjpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="jpeg-6b\jmorecfg.h">
-      <Filter>libjpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="jpeg-6b\jpegint.h">
-      <Filter>libjpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="jpeg-6b\jpeglib.h">
-      <Filter>libjpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="jpeg-6b\jversion.h">
-      <Filter>libjpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="libpng-1.4.4\png.h">
-      <Filter>libpng</Filter>
-    </ClInclude>
-    <ClInclude Include="libpng-1.4.4\pngconf.h">
-      <Filter>libpng</Filter>
-    </ClInclude>
-    <ClInclude Include="libpng-1.4.4\pngpriv.h">
-      <Filter>libpng</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib-1.2.5\crc32.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib-1.2.5\deflate.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib-1.2.5\inffast.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib-1.2.5\inffixed.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib-1.2.5\inflate.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib-1.2.5\inftrees.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib-1.2.5\trees.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib-1.2.5\zconf.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib-1.2.5\zlib.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib-1.2.5\zutil.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="extra\BmpFile.H">
-      <Filter>extra</Filter>
-    </ClInclude>
-    <ClInclude Include="extra\jconfig.h">
-      <Filter>extra</Filter>
-    </ClInclude>
-    <ClInclude Include="extra\nvconfig.h">
-      <Filter>extra</Filter>
-    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="nvtt\src\nvtt\squish\fastclusterlookup.inl">
+      <Filter>nvtt\nvtt\squish</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -70,11 +70,11 @@ struct MyMessageHandler: public nv::MessageHandler
 
 extern "C" {
 
-NVTT_API NvttBoolean __stdcall nvttCompressFile(const char* source, const char* target, const NvttInputOptions * inputOptionsP, const NvttCompressionOptions * compressionOptions, NvttErrorCallback errorCallback)
+NVTT_API NvttBoolean nvttCompressFile(const char* source, const char* target, const NvttInputOptions * inputOptionsP, const NvttCompressionOptions * compressionOptions, NvttErrorCallback errorCallback)
 {
     struct ErrorCallbackScope
     {
-        ErrorCallbackScope(ErrorCallback errorCallback)
+        ErrorCallbackScope(NvttErrorCallback errorCallback)
         {
             g_errorCallback = errorCallback;
         }
@@ -142,38 +142,17 @@ NVTT_API NvttBoolean __stdcall nvttCompressFile(const char* source, const char* 
         }
     }
     else
-    {
-        if (nv::strCaseCmp(input.extension(), ".exr") == 0 || nv::strCaseCmp(input.extension(), ".hdr") == 0)
+	{
+        // Regular image.
+        nv::Image image;
+        if (!image.load(input.str()))
         {
-            nv::AutoPtr<nv::FloatImage> image(nv::ImageIO::loadFloat(input.str()));
-
-            if (image == NULL)
-            {
-                nvDebug("The file '%s' is not a supported image type.\n", input.str());
-                return NVTT_False;
-            }
-
-            inputOptions.setFormat(nvtt::InputFormat_RGBA_32F);
-            inputOptions.setTextureLayout(nvtt::TextureType_2D, image->width(), image->height());
-
-            for (uint i = 0; i < image->componentNum(); i++)
-            {
-                inputOptions.setMipmapChannelData(image->channel(i), i, image->width(), image->height());
-            }
+            nvDebug("The file '%s' is not a supported image type.\n", input.str());
+            return NVTT_False;
         }
-        else
-        {
-            // Regular image.
-            nv::Image image;
-            if (!image.load(input.str()))
-            {
-                nvDebug("The file '%s' is not a supported image type.\n", input.str());
-                return NVTT_False;
-            }
 
-            inputOptions.setTextureLayout(nvtt::TextureType_2D, image.width(), image.height());
-            inputOptions.setMipmapData(image.pixels(), image.width(), image.height());
-        }
+        inputOptions.setTextureLayout(nvtt::TextureType_2D, image.width(), image.height());
+        inputOptions.setMipmapData(image.pixels(), image.width(), image.height());
     }
 
     nvtt::Context context;
