@@ -124,7 +124,7 @@ open NvTextureTools
 
 // compress the texture with the specified options
 let private compressInternal source target input compress =
-    let callback = printf "Build.Texture[%s]: error %s" source
+    let callback = printf "Build.Texture[%s]: %s" source
     let result = nvttCompressFile(source, target, input, compress, NvttErrorCallback(callback))
 
     nvttDestroyInputOptions(input)
