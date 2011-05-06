@@ -33,7 +33,7 @@
     <Compile Include="render\material.fs" />
     <Compile Include="render\skeleton.fs" />
     <Compile Include="render\mesh.fs" />
-    <Compile Include="winui\propertytree.fs" />
+    <Compile Include="winui\propertygrid.fs" />
     <None Include="..\sdks\snappy\snappy.dll">
       <Link>snappy.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

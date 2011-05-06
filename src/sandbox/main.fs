@@ -175,7 +175,7 @@ let draw (context: DeviceContext) =
 
 form.KeyUp.Add(fun args ->
     if args.Alt && args.KeyCode = System.Windows.Forms.Keys.Oemcomma then
-        let w = WinUI.PropertyTree.create (Core.DbgVars.getVariables() |> Array.map (fun (name, v) -> name, box v))
+        let w = WinUI.PropertyGrid.create (Core.DbgVars.getVariables() |> Array.map (fun (name, v) -> name, box v))
         w.KeyUp.Add (fun args -> if args.Key = System.Windows.Input.Key.Escape then w.Close())
         w.Show())
 
