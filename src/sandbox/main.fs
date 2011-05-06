@@ -3,6 +3,8 @@ module main
 open System
 open System.Collections.Generic
 open System.Drawing
+open System.IO
+open System.Text
 open System.Windows.Forms
 open SlimDX
 open SlimDX.DXGI
@@ -23,8 +25,15 @@ let dbg_texfilter = Core.DbgVar(Filter.Anisotropic, "render/texture/filter")
 let dbg_fov = Core.DbgVar(45.f, "camera/fov")
 
 System.Threading.Thread.CurrentThread.CurrentCulture <- System.Globalization.CultureInfo.InvariantCulture
-System.Environment.CurrentDirectory <- System.IO.Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath) + "/../.."
+System.Environment.CurrentDirectory <- Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath) + "/../.."
 System.Console.WindowWidth <- max System.Console.WindowWidth 140
+
+let watcher = new FileSystemWatcher(".", IncludeSubdirectories = true, EnableRaisingEvents = true)
+
+type Reloadable<'T>(creator, path) =
+    let mutable data: 'T = creator path
+    do watcher.Changed.Add (fun args -> if FileInfo(args.FullPath).FullName = FileInfo(path).FullName then data <- creator path)
+    member this.Value = data
 
 assets.buildMeshes "art"
 
@@ -79,10 +88,10 @@ let backBufferView = new RenderTargetView(device, backBuffer)
 let depthBuffer = new Texture2D(device, Texture2DDescription(Width = form.ClientSize.Width, Height = form.ClientSize.Height, Format = Format.D24_UNorm_S8_UInt, ArraySize = 1, MipLevels = 1, SampleDescription = SampleDescription(1, 0), BindFlags = BindFlags.DepthStencil))
 let depthBufferView = new DepthStencilView(device, depthBuffer)
 
-let basic_textured = Effect(device, "src/shaders/basic_textured.hlsl")
+let basic_textured = Reloadable((fun path -> Effect(device, path)), "src/shaders/basic_textured.hlsl")
 
 let vertex_size = (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).size
-let layout = new InputLayout(device, basic_textured.VertexSignature, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
+let layout = new InputLayout(device, basic_textured.Value.VertexSignature, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
 
 let constantBuffer0 = new Buffer(device, null, BufferDescription(16448, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
 let constantBuffer1 = new Buffer(device, null, BufferDescription(65536, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
@@ -108,14 +117,152 @@ let camera_controller = Camera.CameraController()
 let meshes = Core.Cache(fun path -> (Core.Serialization.Load.fromFile path) :?> Render.Mesh)
 let scene = List<Render.Mesh * Matrix34>()
 
-let placeMesh path transform =
+module MJSON =
+    module private Lexer =
+        type Lexeme =
+        | Identifier of string
+        | String of string
+        | Number of float
+        | Token of char
+        | End
+
+        let readWhile (s: TextReader) pred =
+            let sb = StringBuilder()
+            while s.Peek() <> -1 && s.Peek() |> char |> pred do
+                sb.Append(s.Read() |> char) |> ignore
+            sb.ToString()
+
+        let rec next (s: TextReader) =
+            match s.Read() with
+            | -1 -> End
+            | b ->
+                match char b with
+                | '\t' | '\r' | '\n' | ' ' -> next s
+                | '/' ->
+                    match s.Read() |> char with
+                    | '/' ->
+                        while s.Read() <> int '\n' do ()
+                        next s
+                    | c -> failwith "Unexpected character '%c' (expected '/')" c
+                | '=' | '{' | '}' | '[' | ']' | ',' as c -> Token c
+                | '"' ->
+                    let sb = StringBuilder()
+                    let rec loop () =
+                        match s.Read() with
+                        | -1 -> failwith "Unexpected end of input (unterminated string)"
+                        | c when char c = '"' -> ()
+                        | c ->
+                            sb.Append((if char c = '\\' then s.Read() else c) |> char) |> ignore
+                            loop ()
+                    loop ()
+                    String (sb.ToString())
+                | c when (c = '-' || c = '.' || Char.IsDigit(c)) ->
+                    let value = c.ToString() + readWhile s (fun c -> c = '-' || c = '.' || c = 'e' || c = 'E' || c = '+' || c = '-' || Char.IsDigit(c))
+                    Number (float value)
+                | c when (c = '_' || Char.IsLetterOrDigit(c)) ->
+                    let value = c.ToString() + readWhile s (fun c -> c = '_' || Char.IsLetterOrDigit(c))
+                    Identifier value
+                | c -> failwithf "Unknown character '%c'" c
+
+    type Node =
+    | Number of float
+    | String of string
+    | Array of Node array
+    | Object of (string * Node) array
+
+    let rec private parseFields s term =
+        let rec loop acc =
+            match Lexer.next s with
+            | Lexer.Identifier id ->
+                let value =
+                    match Lexer.next s with
+                    | Lexer.Token '=' ->
+                        parseNode s (Lexer.next s)
+                    | l -> parseNode s l
+                loop ((id, value) :: acc)
+            | t when t = term -> acc
+            | l -> failwith "Expected '%A' or identifier, got '%A'" term s
+        Object (loop [] |> List.toArray |> Array.rev)
+
+    and private parseNode s l =
+        match l with
+        | Lexer.Number v -> Node.Number v
+        | Lexer.String s -> Node.String s
+        | Lexer.Token '[' ->
+            let rec loop acc =
+                match Lexer.next s with
+                | Lexer.Token ']' -> acc
+                | l ->
+                    let n = parseNode s l
+                    match Lexer.next s with
+                    | Lexer.Token ',' -> loop (n :: acc)
+                    | Lexer.Token ']' -> n :: acc
+                    | l -> failwithf "Expected ',' or ']', got '%A'" l
+            Array (loop [] |> List.toArray |> Array.rev)
+        | Lexer.Token '{' ->
+            parseFields s (Lexer.Token '}')
+        | l -> failwithf "Unexpected token '%A'" l
+
+    let parse (s: TextReader) =
+        parseFields s Lexer.End
+
+    let parseFile path =
+        use s = File.OpenText(path)
+        parse s
+
+let placeMesh path parent =
     try
         let mesh = meshes.Get (".build/art/" + System.IO.Path.ChangeExtension(path, ".mesh"))
         let fixup = Matrix34(Vector4.UnitX, Vector4.UnitZ, Vector4.UnitY)
-        scene.Add((mesh, transform))
+        scene.Add((mesh, parent))
     with e -> printfn "%A" e
 
-Scene.heaven_heaven placeMesh Matrix34.Identity
+let placeFile path parent =
+    let nodes =
+        match MJSON.parseFile path with
+        | MJSON.Object list -> list |> dict
+        | _ -> failwith "Expected object"
+
+    let parseTransform node =
+        match node with
+        | MJSON.Array elements ->
+            let v = elements |> Array.map (function | MJSON.Number n -> float32 n | _ -> failwith "Incorrect transform element")
+            assert (v.Length = 12)
+            Matrix34(v.[0], v.[1], v.[2], v.[3], v.[4], v.[5], v.[6], v.[7], v.[8], v.[9], v.[10], v.[11])
+        | _ -> failwith "Incorrect transform value"
+        
+    let rec placeNode node parent =
+        match node with
+        | MJSON.Object list ->
+            list
+            |> Array.fold
+                (fun parent (name, value) ->
+                    match name with
+                    | "transform" ->
+                        parent * parseTransform value
+                    | "node" ->
+                        placeNode value parent
+                        parent
+                    | "mesh" ->
+                        match value with
+                        | MJSON.Object ([|"path", MJSON.String path|]) -> placeMesh path parent
+                        | _ -> failwith "Incorrect mesh node"
+                        parent
+                    | "reference" ->
+                        match value with
+                        | MJSON.Object ([|"name", MJSON.String name|]) -> placeNode nodes.[name] parent
+                        | _ -> failwith "Incorrect reference node"
+                        parent
+                    | _ -> parent) parent
+            |> ignore
+        | _ -> failwith "Expected object"
+
+    let root = Path.GetFileNameWithoutExtension(path)
+
+    placeNode nodes.[root + "_" + root] parent
+
+let scene_name = "heaven"
+placeFile (sprintf "art/%s/%s.world" scene_name scene_name) Matrix34.Identity
 
 let draw (context: DeviceContext) =
     let projection = Math.Camera.projectionPerspective (dbg_fov.Value / 180.f * float32 Math.PI) (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 0.01f 1000.f
@@ -132,8 +279,8 @@ let draw (context: DeviceContext) =
     context.InputAssembler.InputLayout <- layout
     context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
 
-    context.VertexShader.Set(basic_textured.VertexShader)
-    context.PixelShader.Set(basic_textured.PixelShader)
+    context.VertexShader.Set(basic_textured.Value.VertexShader)
+    context.PixelShader.Set(basic_textured.Value.PixelShader)
 
     context.VertexShader.SetConstantBuffer(constantBuffer0, 0)
     context.VertexShader.SetConstantBuffer(constantBuffer1, 1)

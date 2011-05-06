@@ -9,7 +9,6 @@
   <ItemGroup>
     <Compile Include="sandbox\assets.fs" />
     <Compile Include="sandbox\camera.fs" />
-    <Compile Include="sandbox\heaven.fs" />
     <Compile Include="sandbox\main.fs" />
   </ItemGroup>
   <ItemGroup>
