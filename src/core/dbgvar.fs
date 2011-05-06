@@ -6,20 +6,14 @@ module DbgVars =
     // variable storage
     type Cell(defaults) =
         let mutable value = defaults
-        let event = Event<_>()
 
         // default value accessor
         member this.DefaultValue = defaults
 
-        // value change notifications
-        member this.ValueChanged = event.Publish
-
         // value accessor
         member this.Value
             with get () = value
-            and set rhs =
-                value <- rhs
-                event.Trigger(box this)
+            and set rhs = value <- rhs
 
     // all registered debug variables
     let private variables = ConcurrentDictionary<string, Cell>()
