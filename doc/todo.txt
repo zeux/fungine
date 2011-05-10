@@ -1,13 +1,42 @@
 - build
     - tipsify implementation
-    - materials export
-    - mesh data serialization
     - animation export
     - proper building framework - md5 checks, dependencies, etc.
+    - shader building - errors have wrong file name, + includes don't work, + cache
+    - play with D3DCompressShaders & D3DDecompressShaders
+    - 3dsmax error handling
+
+- build system
+    - debug output (build graph, depends list, just-print, etc.)
+    - multiple targets from one source
+    - build batching (+ max group size)
+    - smart cleanup (remove stale files)
+    - temp file helper (remove temp files on builder exit)
+    - pseudo files with contents stored in db (i.e. *.d files)
+    - mt output gather (immediate; capture & print after build; mixed, like in tundra)
+    - edges: depends/requires/includes
+    - targets: always build, no care, temporary
+    - custom signature scan
+    - (network) result cache (+ access time update + script to remove old files)
+    - max job count for parallel builds
+    - colored output
+    - parallelism viewer
+    - logging with levels (incl. task output)
+    - globbing utility
+    - target removal, target folder creation, & precious targets
+    - parallel builds: side effects (jam semaphores)
 
 - core
 	- dbgvar w/serialization
+    - custom assert handler
+    - minidump handler & stuff - AppDomain.Currentdomain.UnhandledException += handler (+ Environment.FailFast(null))
+    - serialization autosharing support (w/structural identity or manual recursive field comparison)
+    - serialization callbacks (.NET already has some - OnSerializing, OnSerialized, OnDeserializing, OnDeserialized) support, use in Texture & Buffer
 
 - winui
 	- propertytree for dbgvar
+    - color picker
 	- move to wpf from winforms
+
+- misc
+    - eval mono perf
