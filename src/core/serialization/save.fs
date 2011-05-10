@@ -65,7 +65,7 @@ let rec private emitSaveValue (gen: ILGenerator) objemit (typ: Type) =
         emitSaveFields gen objemit typ
     // save objects as object ids (defer actual saving)
     else
-        assert typ.IsClass
+        assert (typ.IsClass || typ.IsInterface)
         emitSaveObject gen objemit
 
 // save all fields of a class/struct

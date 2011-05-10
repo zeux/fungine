@@ -99,7 +99,7 @@ let rec private emitLoadValue (gen: ILGenerator) objemitpre objemitpost (typ: Ty
         emitLoadFields gen objemitpre typ
     // load objects as object ids
     else
-        assert typ.IsClass
+        assert (typ.IsClass || typ.IsInterface)
         emitLoadObject gen objemitpre objemitpost
 
 // load all fields of a class/struct

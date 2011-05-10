@@ -50,7 +50,7 @@ let rec private updateVersion toplevel ver (typ: Type) =
         |> Array.fold (updateVersion false) basever
     // recursing into class types is not necessary because versioning will take place if objects of embedded types are actually serialized
     else
-        assert typ.IsClass
+        assert (typ.IsClass || typ.IsInterface)
         basever
 
 // build a full version for type
