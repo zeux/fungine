@@ -1,5 +1,7 @@
 module Core.Serialization.Tests
 
+open System.Collections.Generic
+
 let roundtrip (obj: 'a) =
     use stream = new System.IO.MemoryStream()
     Core.Serialization.Save.toStream stream (box obj)
@@ -9,6 +11,10 @@ let roundtrip (obj: 'a) =
 let testRoundtripStructural obj =
     let rt = roundtrip obj
     assert (HashIdentity.Structural.Equals(rt, obj))
+
+let testRoundtripStructuralSeq obj =
+    let rt = roundtrip obj
+    assert (Seq.forall2 (fun a b -> HashIdentity.Structural.Equals(a, b)) rt obj)
 
 // primitive types
 let testPrimitive () =
@@ -144,7 +150,26 @@ let testArraysEnum () =
     testRoundtripStructuralArray Enum64.Value
 
 let testArraysStruct () =
-    testRoundtripStructuralArray (System.Collections.Generic.KeyValuePair(5, true))
+    testRoundtripStructuralArray (KeyValuePair(5, true))
 
 let testArraysObject () =
     testRoundtripStructuralArray (System.Version("0.5"))
+
+// generic collections
+let testCollectionsList () =
+    let list = List<string>()
+    list.Add("hello")
+    list.Add("world")
+    testRoundtripStructuralSeq (list)
+    testRoundtripStructuralSeq (List<int>())
+
+let testCollectionsLinkedList () =
+    let list = LinkedList<string>()
+    list.AddLast("hello") |> ignore
+    list.AddFirst("world") |> ignore
+    testRoundtripStructuralSeq (list)
+    testRoundtripStructuralSeq (LinkedList<obj>())
+
+// interfaces
+let testInterfaceAggregation () =
+    roundtrip ((HashIdentity.Structural<float> : IEqualityComparer<float>), 1) |> ignore
