@@ -45,7 +45,7 @@ let private launchMayaBatch prompt (command: string) =
 let private getOutputHandler source =
     DataReceivedEventHandler(fun _ args ->
         let s = args.Data
-        lock source (fun () -> if s <> null && s.Length > 0 then printfn "Build.Dae[%s]: %s" source s))
+        if s <> null && s.Length > 0 then Output.echo s)
 
 // build .dae file via standalone mayabatch
 let private buildMayaStandalone source target =
@@ -113,7 +113,7 @@ let private createMayaBatcher () =
             let result = ref false
             processOutput (fun s ->
                 result := s = "Result: 0"
-                if s.Length > 0 && not !result then lock source (fun _ -> printfn "Build.Dae[%s]: %s" source s))
+                if s.Length > 0 && not !result then Output.echo s)
 
             // remove error output handler
             proc.CancelErrorRead()
