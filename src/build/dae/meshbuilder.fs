@@ -140,5 +140,24 @@ let private build source target =
     all_textures.Pairs |> Seq.map (fun p -> p.Value)
 
 // .dae -> .mesh builder object
-let builder = ActionBuilder("Mesh", fun task ->
-    build task.Sources.[0].Path task.Targets.[0].Path |> ignore)
+let builder = { new Builder("Mesh") with
+    // build mesh
+    override this.Build task =
+        // build mesh and get texture list
+        let textures = build task.Sources.[0].Path task.Targets.[0].Path
+
+        // convert texture list to path list and store it; we convert it to texture tasks in post build
+        textures
+        |> Seq.toArray
+        |> Array.map (fun (source, tex) -> source, tex.Path)
+        |> box
+        |> Some
+
+    // build textures
+    override this.PostBuild (task, result) =
+        let textures: (string * string) array = unbox result
+        let context: Context = unbox task.Context
+
+        for (source, target) in textures do
+            context.Task(Build.Texture.builder, source = Node source, target = Node target)
+    }
