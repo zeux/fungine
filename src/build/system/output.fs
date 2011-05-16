@@ -14,7 +14,8 @@ type Options =
 let mutable options = Options.None
 
 // print message to the output
-let echo format = Printf.kprintf (fun s -> Console.WriteLine(s)) format
+let echo (s: string) = Console.WriteLine(s)
+let echof format = Printf.kprintf echo format
 
 // print debug message to the output
-let debug option cont = if options.HasFlag(option) then cont (Printf.kprintf (fun s -> Console.WriteLine(sprintf "<%A> %s" option s)))
+let debug option cont = if options.HasFlag(option) then cont (Printf.kprintf (fun s -> echof "<%A> %s" option s))

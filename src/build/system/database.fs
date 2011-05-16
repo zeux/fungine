@@ -45,7 +45,7 @@ type Database(path) =
             for s in storage.tsigs do tsigs.TryAdd(s.Key, s.Value) |> ignore
         with
         | e ->
-            Output.echo "*** warning: database load error: %s ***" e.Message
+            Output.echof "*** warning: database load error: %s ***" e.Message
 
     // save to file
     member this.Flush () =

@@ -119,7 +119,7 @@ type private TaskScheduler(db: Database) =
             let builder = task.Builder
 
             let descr = builder.Description task
-            if descr <> null then Output.echo "%s" descr
+            if descr <> null then Output.echo descr
 
             let result =
                 try
@@ -154,7 +154,7 @@ type private TaskScheduler(db: Database) =
 
     // run all tasks
     member this.Run () =
-        Output.echo "*** building %d targets... ***" tasks.Count
+        Output.echof "*** building %d targets... ***" tasks.Count
         let timer = Stopwatch.StartNew()
         for state in tasks do this.Wait state
-        Output.echo "*** finished in %.2f sec ***" timer.Elapsed.TotalSeconds
+        Output.echof "*** finished in %.2f sec ***" timer.Elapsed.TotalSeconds
