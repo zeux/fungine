@@ -15,7 +15,16 @@ open SlimDX.Direct3D11
 [<STAThread>]
 do()
 
+// initial setup
+System.Threading.Thread.CurrentThread.CurrentCulture <- System.Globalization.CultureInfo.InvariantCulture
+System.Environment.CurrentDirectory <- Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath) + "/../.."
+System.Console.WindowWidth <- max System.Console.WindowWidth 140
+
+// run tests
 Core.Test.run ()
+
+// build assets
+assets.context.Run()
 
 let dbg_wireframe = Core.DbgVar(false, "render/wireframe")
 let dbg_present_interval = Core.DbgVar(0, "vsync interval")
@@ -24,18 +33,12 @@ let dbg_fillmode = Core.DbgVar(FillMode.Solid, "render/fill mode")
 let dbg_texfilter = Core.DbgVar(Filter.Anisotropic, "render/texture/filter")
 let dbg_fov = Core.DbgVar(45.f, "camera/fov")
 
-System.Threading.Thread.CurrentThread.CurrentCulture <- System.Globalization.CultureInfo.InvariantCulture
-System.Environment.CurrentDirectory <- Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath) + "/../.."
-System.Console.WindowWidth <- max System.Console.WindowWidth 140
-
 let watcher = new FileSystemWatcher(".", IncludeSubdirectories = true, EnableRaisingEvents = true)
 
 type Reloadable<'T>(creator, path) =
     let mutable data: 'T = creator path
     do watcher.Changed.Add (fun args -> if FileInfo(args.FullPath).FullName = FileInfo(path).FullName then data <- creator path)
     member this.Value = data
-
-assets.buildMeshes "art"
 
 type ObjectPool(creator) =
     let s = System.Collections.Concurrent.ConcurrentStack()

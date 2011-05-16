@@ -1,33 +1,28 @@
 ﻿module assets
 
-let build source target func =
-    let source_info = System.IO.FileInfo(source)
-    let target_info = System.IO.FileInfo(target)
+open Build
+open BuildSystem
 
-    if not target_info.Exists || source_info.LastWriteTime > target_info.LastWriteTime then
-        System.IO.Directory.CreateDirectory(target_info.DirectoryName) |> ignore
+open System.IO
 
-        let result = func source target
-        if not result then failwithf "Error building asset %s" target
+let context = Context(System.Environment.CurrentDirectory, ".build")
 
-let changeExtension name ext =
-    System.IO.Path.ChangeExtension(name, ext)
+// create target name
+let getTarget (source: Node) ext = Node (Path.Combine(context.BuildPath, Path.ChangeExtension(source.Path, ext)))
 
-let buildMesh source =
+// mesh export
+let Mesh path =
     // export .dae file
-    let dae = ".build/" + changeExtension source ".dae"
-
-    build source dae Build.Dae.Export.build
+    let dae = getTarget path ".dae"
+    context.Task(Dae.Export.builder, source = path, target = dae)
 
     // export .mesh file
-    let target = ".build/" + changeExtension source ".mesh"
+    let mesh = getTarget path ".mesh"
+    context.Task(Dae.MeshBuilder.builder, source = dae, target = mesh)
 
-    build dae target (fun source target ->
-        let textures = Build.Dae.MeshBuilder.build source target
-        textures |> Seq.iter (fun (source, tex) -> build source tex.Path Build.Texture.build)
-        true)
-    
 let buildMeshes path =
     let patterns = [|"*.mb"; "*.ma"; "*.max"|]
     let files = patterns |> Array.collect (fun p -> System.IO.Directory.GetFiles(path, p, System.IO.SearchOption.AllDirectories))
-    files |> Array.iter buildMesh
+    files |> Array.iter (fun p -> Mesh (Node p))
+
+buildMeshes "art"
