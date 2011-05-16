@@ -40,6 +40,10 @@ let rec private updateVersion toplevel ver (typ: Type) =
     // enum version depends on enum values
     else if typ.IsEnum then
         updateHash basever (enumHashCache.Get(typ))
+    // array version depends on element version
+    else if typ.IsArray then
+        assert (typ.GetArrayRank() = 1)
+        updateVersion false basever (typ.GetElementType())
     // aggregates' version depends on versions of all serializable fields
     else if Util.isStruct typ || (typ.IsClass && toplevel) then
         let fields = Util.getSerializableFields typ
