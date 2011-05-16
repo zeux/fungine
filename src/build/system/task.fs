@@ -1,7 +1,7 @@
 namespace BuildSystem
 
 // build task
-type Task(sources: Node array, targets: Node array, builder: Builder) =
+type Task(sources: Node array, targets: Node array, builder: Builder, context: obj) =
     let uid = targets |> Array.map (fun n -> n.Uid) |> String.concat "|"
 
     // build sources (also act as dependencies)
@@ -15,6 +15,9 @@ type Task(sources: Node array, targets: Node array, builder: Builder) =
 
     // unique id
     member this.Uid = uid
+
+    // context (typeless to break context <-> task dependency :-/)
+    member this.Context = context
 
 // builder interface
 and [<AbstractClass>] Builder(name) =
