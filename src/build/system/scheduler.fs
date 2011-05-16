@@ -126,7 +126,7 @@ type private TaskScheduler(db: Database) =
                     for target in task.Targets do Directory.CreateDirectory(target.Info.DirectoryName) |> ignore
                     builder.Build task
                 with
-                | e -> failwithf "%s: %s" task.Uid e.Message
+                | e -> failwithf "%s: error: %s" task.Uid e.Message
 
             db.TaskSignature task.Uid <- tsig
 

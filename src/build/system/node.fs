@@ -28,6 +28,9 @@ type Node private(path: string, uid: string) =
     // file info
     member this.Info = FileInfo(path)
 
+    // string conversion
+    override this.ToString() = path
+
     // root path accessor
     static member Root
         with get () = root
