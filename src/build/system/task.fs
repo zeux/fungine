@@ -38,3 +38,10 @@ and [<AbstractClass>] Builder(name) =
             | a -> sprintf "[%s]" (a |> Array.map (fun n -> n.Path) |> String.concat ", ")
 
         sprintf "[%s] %s => %s" name (str task.Sources) (str task.Targets)
+
+// simple action builder
+type ActionBuilder(name, f) =
+    inherit Builder(name) with
+        override this.Build task =
+            f task
+            None
