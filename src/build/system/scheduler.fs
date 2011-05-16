@@ -61,15 +61,15 @@ type private TaskScheduler(db: Database) =
         }
 
     // is task current or does it need to be built?
-    member private this.IsCurrent (task: Task, tsig: TaskSignature) =
+    member private this.UpToDate (task: Task, tsig: TaskSignature) =
         if not (task.Targets |> Array.forall (fun p -> p.Info.Exists)) then
             Output.debug Output.Options.DebugExplain (fun e -> e "Building %s: one of the targets does not exist" task.Uid)
-            false
+            None
         else
             match db.TaskSignature task.Uid with
             | Some s ->
-                if tsig = s then
-                    true
+                if tsig.Inputs = s.Inputs then
+                    Some s
                 else
                     Output.debug Output.Options.DebugExplain (fun e ->
                         let diffs = this.Diff(s, tsig) |> Seq.toArray
@@ -84,10 +84,10 @@ type private TaskScheduler(db: Database) =
                                 |> sprintf "because:\n%s"
 
                         e "Building %s %s" task.Uid reason)
-                    false
+                    None
             | None ->
                 Output.debug Output.Options.DebugExplain (fun e -> e "Building %s: no previous build info" task.Uid)
-                false
+                None
 
     // wait for task to complete, running it inline if necessary
     member private this.Wait (state: TaskState) =
@@ -112,23 +112,38 @@ type private TaskScheduler(db: Database) =
             | true, dep -> this.Wait dep
             | _ -> ()
 
-        // check task & build
-        let tsig = TaskSignature(inputs |> Array.map (fun n -> n.Uid, db.ContentSignature n))
+        let builder = task.Builder
 
-        if not (this.IsCurrent(task, tsig)) then
-            let builder = task.Builder
+        try
+            // compute current signature
+            let tsig = TaskSignature(inputs |> Array.map (fun n -> n.Uid, db.ContentSignature n), None)
 
-            let descr = builder.Description task
-            if descr <> null then Output.echo descr
-
+            // build task if necessary
             let result =
-                try
-                    for target in task.Targets do Directory.CreateDirectory(target.Info.DirectoryName) |> ignore
-                    builder.Build task
-                with
-                | e -> failwithf "%s: error: %s" task.Uid e.Message
+                match this.UpToDate(task, tsig) with
+                | Some s -> s.Result
+                | None ->
+                    // output task description
+                    let descr = builder.Description task
+                    if descr <> null then Output.echo descr
 
-            db.TaskSignature task.Uid <- tsig
+                    // make sure all targets can be created
+                    for target in task.Targets do Directory.CreateDirectory(target.Info.DirectoryName) |> ignore
+
+                    // build task
+                    let result = builder.Build task
+
+                    // store signature with updated result
+                    db.TaskSignature task.Uid <- TaskSignature(tsig.Inputs, result)
+
+                    result
+
+            // run post-build step if necessary
+            match result with
+            | Some result -> builder.PostBuild(task, result)
+            | None -> ()
+        with
+        | e -> failwithf "%s: error: %s" task.Uid e.Message
 
         state.Status <- TaskStatus.Completed
 
