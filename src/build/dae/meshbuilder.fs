@@ -5,6 +5,8 @@ open System.Xml
 open Build.Geometry
 open Build.Dae.Parse
 
+open BuildSystem
+
 // convert fat mesh to packed & optimized mesh
 let private buildOptimizedMesh fat_mesh format =
     // build packed & indexed mesh
@@ -101,7 +103,7 @@ let private buildMeshFragments meshes mesh_data materials skeleton =
           and index_count = mesh.indices.Length })
 
 // build mesh file from dae file
-let build source target =
+let private build source target = 
     // parse .dae file
     let doc = Document(source)
 
@@ -136,3 +138,7 @@ let build source target =
 
     // return texture list
     all_textures.Pairs |> Seq.map (fun p -> p.Value)
+
+// .dae -> .mesh builder object
+let builder = ActionBuilder("Mesh", fun task ->
+    build task.Sources.[0].Path task.Targets.[0].Path |> ignore)

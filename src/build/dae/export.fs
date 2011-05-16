@@ -1,5 +1,7 @@
 ﻿module Build.Dae.Export
 
+open BuildSystem
+
 open System.Diagnostics
 open Microsoft.Win32
 
@@ -64,7 +66,7 @@ let private buildMayaStandalone source target =
 
     // wait for process exit, exit code is 0 if export succeeded (see maya_dae_export.mel)
     proc.WaitForExit()
-    proc.ExitCode = 0
+    if proc.ExitCode <> 0 then failwithf "exit code %d" proc.ExitCode
 
 // read stream data until prompt
 let private readStreamUpTo (stream: System.IO.Stream) (prompt: string) =
@@ -126,7 +128,9 @@ let private mayaBatcher = lazy (createMayaBatcher ())
 
 // build .dae file via mayabatcher
 let private buildMayaBatcher source target =
-    mayaBatcher.Force().PostAndReply(fun chan -> chan, source, target)
+    match mayaBatcher.Force().PostAndReply(fun chan -> chan, source, target) with
+    | true -> ()
+    | false -> failwith "unknown error"
 
 // get the highest version of installed Max, consider both 64 and 32 bit versions
 let private getMaxPath versions =
@@ -147,11 +151,17 @@ let private buildMax source target =
 
     // wait for process exit, exit code is always 0 :(
     proc.WaitForExit()
-    true
 
 // build .dae file from DCC sources
-let build source target =
-    match System.IO.FileInfo(source).Extension with
+let private build ext source target =
+    match ext with
     | ".ma" | ".mb" -> buildMayaBatcher source target
     | ".max" -> buildMax source target
-    | _ -> failwithf "Build.Dae: source file %s has unknown extension" source
+    | _ -> failwithf "source file %s has unknown extension" source
+
+// .dae builder object
+let builder = ActionBuilder("DaeExport", fun task ->
+    let source = task.Sources.[0]
+    let target = task.Targets.[0]
+
+    build source.Info.Extension source.Path target.Path)
