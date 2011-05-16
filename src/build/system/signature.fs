@@ -4,10 +4,11 @@ open System
 open System.IO
 open System.Net
 open System.Security.Cryptography
+open System.Threading
 
 [<Struct>]
 type Signature(high: uint64, low: uint64) =
-    static let generator = MD5.Create()
+    static let generator = new ThreadLocal<_>(fun () -> MD5.Create())
     static let encoding = Text.UTF8Encoding()
 
     // byte array ctor
@@ -23,7 +24,7 @@ type Signature(high: uint64, low: uint64) =
     member this.ValueLow = low
 
     // compute signature from stream
-    static member FromStream (data: Stream) = Signature(generator.ComputeHash(data))
+    static member FromStream (data: Stream) = Signature(generator.Value.ComputeHash(data))
 
     // compute signature from file
     static member FromFile path =
@@ -31,7 +32,7 @@ type Signature(high: uint64, low: uint64) =
         Signature.FromStream(stream)
 
     // compute signature from byte array
-    static member FromBytes (data: byte[]) = Signature(generator.ComputeHash(data))
+    static member FromBytes (data: byte[]) = Signature(generator.Value.ComputeHash(data))
 
     // compute signature from string
     static member FromString (data: string) = Signature.FromBytes(encoding.GetBytes(data))

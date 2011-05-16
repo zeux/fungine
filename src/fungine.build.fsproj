@@ -7,6 +7,13 @@
   </PropertyGroup>
   <Import Project="fungine.targets" />
   <ItemGroup>
+    <Compile Include="build\system\output.fs" />
+    <Compile Include="build\system\signature.fs" />
+    <Compile Include="build\system\node.fs" />
+    <Compile Include="build\system\database.fs" />
+    <Compile Include="build\system\task.fs" />
+    <Compile Include="build\system\scheduler.fs" />
+    <Compile Include="build\system\context.fs" />
     <Compile Include="build\geometry\fatmesh.fs" />
     <Compile Include="build\geometry\meshpacker.fs" />
     <Compile Include="build\geometry\pretloptimizer.fs" />
