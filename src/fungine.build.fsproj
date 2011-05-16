@@ -20,6 +20,7 @@
     <Compile Include="build\geometry\posttlanalyzer.fs" />
     <Compile Include="build\geometry\posttloptimizerd3dx.fs" />
     <Compile Include="build\geometry\posttloptimizerlinear.fs" />
+    <Compile Include="build\texture\texture.fs" />
     <Compile Include="build\dae\parse.fs" />
     <Compile Include="build\dae\export.fs" />
     <Compile Include="build\dae\basisconverter.fs" />
@@ -29,7 +30,6 @@
     <Compile Include="build\dae\texturebuilder.fs" />
     <Compile Include="build\dae\materialbuilder.fs" />
     <Compile Include="build\dae\meshbuilder.fs" />
-    <Compile Include="build\texture.fs" />
     <None Include="..\sdks\nvtt\nvtt.dll">
       <Link>nvtt.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
