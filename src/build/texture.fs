@@ -1,5 +1,7 @@
 module Build.Texture
 
+open BuildSystem
+
 open System
 open System.Runtime.InteropServices
 
@@ -124,16 +126,16 @@ open NvTextureTools
 
 // compress the texture with the specified options
 let private compressInternal source target input compress =
-    let callback = printf "Build.Texture[%s]: %s" source
+    let callback (msg: string) = Output.echo (msg.Trim())
     let result = nvttCompressFile(source, target, input, compress, NvttErrorCallback(callback))
 
     nvttDestroyInputOptions(input)
     nvttDestroyCompressionOptions(compress)
 
-    result
+    if not result then failwith "exit code %d" result
 
 // convert the texture with default options
-let build source target =
+let private build source target =
     let input = nvttCreateInputOptions()
     let compress = nvttCreateCompressionOptions()
 
@@ -142,3 +144,7 @@ let build source target =
     nvttSetCompressionOptionsQuantization(compress, false, false, true, 128)
 
     compressInternal source target input compress
+
+// texture builder object
+let builder = ActionBuilder("Texture", fun task ->
+    build task.Sources.[0].Path task.Targets.[0].Path)
