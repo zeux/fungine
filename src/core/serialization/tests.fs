@@ -163,13 +163,6 @@ let testCollectionsList () =
     testRoundtripStructuralSeq (list)
     testRoundtripStructuralSeq (List<int>())
 
-let testCollectionsLinkedList () =
-    let list = LinkedList<string>()
-    list.AddLast("hello") |> ignore
-    list.AddFirst("world") |> ignore
-    testRoundtripStructuralSeq (list)
-    testRoundtripStructuralSeq (LinkedList<obj>())
-
 // interfaces
 let testInterfaceAggregation () =
     roundtrip ((HashIdentity.Structural<float> : IEqualityComparer<float>), 1) |> ignore
