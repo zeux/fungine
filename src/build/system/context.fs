@@ -1,6 +1,7 @@
 namespace BuildSystem
 
 open System.Collections.Generic
+open System.Diagnostics
 
 // build context
 type Context(root_path, build_path) =
@@ -35,12 +36,23 @@ type Context(root_path, build_path) =
         this.Task(builder, [| source |], [| target |])
 
     // run all tasks
-    member this.Run () =
+    member private this.RunAll () =
         // run all tasks
-        try
-            scheduler.Run()
-        with
-        | e -> printfn "*** Error %s" e.Message
+        let result =
+            try scheduler.Run(); None
+            with e -> Some e
 
         // save database
         db.Flush()
+
+        result
+
+    // run all tasks
+    member this.Run () =
+        Output.echof "*** found %d targets, building... ***" tasks.Count
+
+        let timer = Stopwatch.StartNew()
+        
+        match this.RunAll() with
+        | Some e -> Output.echof "*** error %s" e.Message
+        | None -> Output.echof "*** built %d targets in %.2f sec ***" tasks.Count timer.Elapsed.TotalSeconds

@@ -1,7 +1,6 @@
 namespace BuildSystem
 
 open System.Collections.Generic
-open System.Diagnostics
 open System.IO
 
 // current task status
@@ -167,8 +166,11 @@ type private TaskScheduler(db: Database) =
 
         tasks.Add(state)
 
-    // run all tasks (implementation)
-    member private this.RunAll () =
+    // run all tasks
+    member this.Run () =
+        // reset status for all task (so that we can run build multiple times)
+        for task in tasks do task.Status <- TaskStatus.Created
+
         // use manual loop instead of foreach because we can add tasks during Run ()
         let rec loop i =
             if i < tasks.Count then
@@ -176,10 +178,3 @@ type private TaskScheduler(db: Database) =
                 loop (i + 1)
 
         loop 0
-
-    // run all tasks
-    member this.Run () =
-        Output.echof "*** building %d targets... ***" tasks.Count
-        let timer = Stopwatch.StartNew()
-        this.RunAll()
-        Output.echof "*** finished in %.2f sec ***" timer.Elapsed.TotalSeconds
