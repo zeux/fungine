@@ -17,18 +17,24 @@ type Task(sources: Node array, targets: Node array, builder: Builder) =
     member this.Uid = uid
 
 // builder interface
-and [<AbstractClass>] Builder(name) =
+and [<AbstractClass>] Builder(name, ?version) =
     // build task, return optional result (post build is called if result is present)
     abstract member Build: Task -> obj option
 
     // perform post-build processing; this gets called even if build was not called (with previous result)
     abstract member PostBuild: Task * obj -> unit
 
+    // task version, used for dependency checking
+    abstract member Version: Task -> string
+
     // task description, used for output
     abstract member Description: Task -> string
 
     // default post-build processing: do nothing
     default this.PostBuild(task, result) = ()
+
+    // default version: consists of fixed string
+    default this.Version(task) = defaultArg version ""
 
     // default description: consists of builder name, source and target paths
     default this.Description task =
@@ -40,8 +46,12 @@ and [<AbstractClass>] Builder(name) =
         sprintf "[%s] %s => %s" name (str task.Sources) (str task.Targets)
 
 // simple action builder
-type ActionBuilder(name, f) =
-    inherit Builder(name) with
+type ActionBuilder(name, version, f) =
+    inherit Builder(name, version) with
+        // just build the task
         override this.Build task =
             f task
             None
+    
+        // versionless constructor
+        new (name, f) = ActionBuilder(name, "", f)

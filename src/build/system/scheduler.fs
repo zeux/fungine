@@ -57,6 +57,9 @@ type private TaskScheduler(db: Database) =
                 (fun (path, s) -> sprintf "%s is no longer a dependency" path)
                 (fun (path0, s0) (path1, s1) -> sprintf "%s changed" path0)
                 (fun l r -> sprintf "dependency order changed (%A -> %A)" (l |> Array.map fst) (r |> Array.map fst)))
+
+            // diff versions
+            if lhs.Version <> rhs.Version then yield (sprintf "version changed (%A -> %A)" lhs.Version rhs.Version)
         }
 
     // is task current or does it need to be built?
@@ -67,7 +70,7 @@ type private TaskScheduler(db: Database) =
         else
             match db.TaskSignature task.Uid with
             | Some s ->
-                if tsig.Inputs = s.Inputs then
+                if tsig.Inputs = s.Inputs && tsig.Version = s.Version then
                     Some s
                 else
                     Output.debug Output.Options.DebugExplain (fun e ->
@@ -115,7 +118,7 @@ type private TaskScheduler(db: Database) =
 
         try
             // compute current signature
-            let tsig = TaskSignature(inputs |> Array.map (fun n -> n.Uid, db.ContentSignature n), None)
+            let tsig = TaskSignature(inputs |> Array.map (fun n -> n.Uid, db.ContentSignature n), builder.Version task, None)
 
             // build task if necessary
             let result =
@@ -133,7 +136,7 @@ type private TaskScheduler(db: Database) =
                     let result = builder.Build task
 
                     // store signature with updated result
-                    db.TaskSignature task.Uid <- TaskSignature(tsig.Inputs, result)
+                    db.TaskSignature task.Uid <- TaskSignature(tsig.Inputs, tsig.Version, result)
 
                     result
 

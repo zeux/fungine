@@ -23,9 +23,12 @@ type ContentSignature(size: int64, time: int64, csig: Signature) =
 
 // task signature; stores information about last successful task build
 [<Struct>]
-type TaskSignature(inputs: (string * Signature) array, result: obj option) =
+type TaskSignature(inputs: (string * Signature) array, version: string, result: obj option) =
     // task inputs (sources and explicit dependencies)
     member this.Inputs = inputs
+
+    // task version
+    member this.Version = version
 
     // task build result
     member this.Result = result
