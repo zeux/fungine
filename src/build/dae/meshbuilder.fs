@@ -156,8 +156,7 @@ let builder = { new Builder("Mesh") with
     // build textures
     override this.PostBuild (task, result) =
         let textures: (string * string) array = unbox result
-        let context: Context = unbox task.Context
 
         for (source, target) in textures do
-            context.Task(Build.Texture.builder, source = Node source, target = Node target)
+            Context.Current.Task(Build.Texture.builder, source = Node source, target = Node target)
     }

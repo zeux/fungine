@@ -1,13 +1,9 @@
 ﻿module Build.Dae.TextureBuilder
 
 open System
-open System.IO
 
 open Build.Dae.Parse
-
-// get relative path
-let private relativePath path root =
-    Uri(root).MakeRelativeUri(Uri(path)).OriginalString
+open BuildSystem
 
 // get texture path from id
 let build (doc: Document) id =
@@ -16,11 +12,9 @@ let build (doc: Document) id =
 
     // get image path
     let path = image.SelectSingleNode("init_from/text()").Value
-    let relative_path = relativePath path (Environment.CurrentDirectory + "/")
-    if Path.IsPathRooted(relative_path) || relative_path.StartsWith("../") then failwithf "Out-of-source texture paths are not supported: %s" path
 
     // build texture object
-    let source = relative_path
-    let target = ".build/" + Path.ChangeExtension(relative_path, ".dds")
+    let source = Node (Uri(path).AbsolutePath)
+    let target = Context.Current.Target source ".dds"
 
-    source, Render.Texture(target)
+    source.Path, Render.Texture(target.Path)
