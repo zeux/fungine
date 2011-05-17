@@ -5,9 +5,11 @@ open System.Collections.Generic
 
 // XmlNode helpers
 type XmlNode with
+    // get attribute value by name
     member this.Attribute (name: string) =
         this.Attributes.[name].Value
 
+    // XPath array select helper
     member this.Select expr =
         this.SelectNodes(expr) |> Seq.cast<XmlNode> |> Seq.toArray
 
@@ -15,6 +17,7 @@ type XmlNode with
 type Document(path: string) =
     let doc = XmlDocument()
     let ids = Dictionary<string, XmlNode>()
+
     do
         // load the document without namespaces so that XPath works
         use reader = new XmlTextReader(path, Namespaces = false)
@@ -24,7 +27,10 @@ type Document(path: string) =
         for n in doc.SelectNodes("//*[@id]") do
             ids.Add(n.Attribute "id", n)
 
+    // COLLADA node
     member this.Root = doc.DocumentElement
+
+    // id/url -> node lookup
     member this.Node (id: string) = if id.[0] = '#' then ids.[id.Substring(1)] else ids.[id]
 
 // parse whitespace-delimited string into array
