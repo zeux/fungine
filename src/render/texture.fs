@@ -6,7 +6,11 @@ open SlimDX.Direct3D11
 [<AllowNullLiteral>]
 type private TextureData(path) =
     // load texture from file
-    let resource = Texture2D.FromFile(Render.Device.get(), path)
+    let resource = Texture2D.FromFile(Render.Device.get(), path,
+                    let image = ImageInformation.FromFile(path)
+                    let mutable info = ImageLoadInformation.FromDefaults()
+                    info.MipLevels <- image.Value.MipLevels
+                    info)
     let view = new ShaderResourceView(Render.Device.get(), resource)
 
     // texture resource
