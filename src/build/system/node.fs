@@ -8,16 +8,22 @@ open System.IO
 type Node private(path: string, uid: string) =
     // root path (used for normalization)
     static let mutable root = ""
-    static let normalize path = Path.GetFullPath(path).ToLowerInvariant().Replace('\\', '/')
+    static let normalize path = Path.GetFullPath(path).Replace('\\', '/')
 
     // get node from path
     new (path) =
-        Node(path,
+        // get root-relative path
+        let relpath =
             let full = normalize path
-            if full.StartsWith(root) then
+
+            // optimization (this is faster than MakeRelativeUri)
+            if full.StartsWith(root, StringComparison.InvariantCultureIgnoreCase) then
                 full.Substring(root.Length)
             else
-                Uri(root).MakeRelativeUri(Uri(full)).OriginalString)
+                Uri(root).MakeRelativeUri(Uri(full)).OriginalString
+
+        // construct node
+        Node(relpath, relpath.ToLowerInvariant())
 
     // unique id
     member this.Uid = uid

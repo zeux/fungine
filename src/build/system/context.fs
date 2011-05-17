@@ -2,9 +2,12 @@ namespace BuildSystem
 
 open System.Collections.Generic
 open System.Diagnostics
+open System.IO
 
 // build context
 type Context(root_path, build_path) =
+    static let mutable current: Context option = None
+
     // setup node root so that DB paths are stable
     do Node.Root <- root_path
 
@@ -15,9 +18,14 @@ type Context(root_path, build_path) =
     // get build path
     member this.BuildPath = build_path
 
+    // get target
+    member this.Target (source: Node) ext =
+        if Path.IsPathRooted(source.Path) || source.Path.StartsWith("../") then failwithf "Out-of-source paths are not supported: %s" source.Path
+        Node (Path.Combine(this.BuildPath, Path.ChangeExtension(source.Path, ext)))
+
     // add task
     member this.Task(builder, sources: Node array, targets: Node array) =
-        let task = Task(sources, targets, builder, this)
+        let task = Task(sources, targets, builder)
 
         // check task uniqueness
         match tasks.TryGetValue(task.Uid) with
@@ -37,10 +45,17 @@ type Context(root_path, build_path) =
 
     // run all tasks
     member private this.RunAll () =
+        // set current context for the duration of the build
+        assert (current.IsNone)
+        current <- Some this
+
         // run all tasks
         let result =
             try scheduler.Run(); None
             with e -> Some e
+
+        // reset current context
+        current <- None
 
         // save database
         db.Flush()
@@ -56,3 +71,6 @@ type Context(root_path, build_path) =
         match this.RunAll() with
         | Some e -> Output.echof "*** error %s" e.Message
         | None -> Output.echof "*** built %d targets in %.2f sec ***" tasks.Count timer.Elapsed.TotalSeconds
+
+    // current context accessor
+    static member Current = current.Value
