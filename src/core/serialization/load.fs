@@ -247,7 +247,7 @@ let private dummyFixupDelegate = FixupDelegate(fun ctx obj -> ())
 
 // create a fixup delegate for a given type
 let private buildFixupDelegate (typ: Type) =
-    match typ.GetMethod("Fixup", BindingFlags.Instance ||| BindingFlags.NonPublic) with
+    match typ.GetMethod("Fixup", BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic) with
     | null -> dummyFixupDelegate
     | mi ->
         // get closed method info
