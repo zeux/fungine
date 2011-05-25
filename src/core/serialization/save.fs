@@ -107,7 +107,7 @@ let private emitSave (gen: ILGenerator) (typ: Type) =
 
 // create a save delegate for a given type
 let private buildSaveDelegate (typ: Type) =
-    let dm = DynamicMethod(typ.ToString(), null, [|typedefof<ObjectTable>; typedefof<BinaryWriter>; typedefof<obj>|], typedefof<SaveMethodHost>, true)
+    let dm = DynamicMethod(typ.ToString(), null, [|typedefof<ObjectTable>; typedefof<BinaryWriter>; typedefof<obj>|], typedefof<SaveMethodHost>, skipVisibility = true)
     let gen = dm.GetILGenerator()
 
     emitSave gen typ

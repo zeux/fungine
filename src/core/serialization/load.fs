@@ -61,6 +61,9 @@ type private CreateDelegate = delegate of int -> obj
 // a delegate for loading objects; there is an instance of one for each type
 type private LoadDelegate = delegate of ObjectTable * MemoryReader * obj -> unit
 
+// a delegate for object fixup; there is an instnace of one for each type
+type private FixupDelegate = delegate of obj * obj -> unit
+
 // all load methods are created as methods of this type
 type private LoadMethodHost = class end
 
@@ -204,7 +207,7 @@ let private emitLoad (gen: ILGenerator) (typ: Type) =
 
 // create a load delegate for a given type
 let private buildLoadDelegate (typ: Type) =
-    let dm = DynamicMethod("load " + typ.ToString(), null, [|typedefof<ObjectTable>; typedefof<MemoryReader>; typedefof<obj>|], typedefof<LoadMethodHost>, true)
+    let dm = DynamicMethod("load " + typ.ToString(), null, [|typedefof<ObjectTable>; typedefof<MemoryReader>; typedefof<obj>|], typedefof<LoadMethodHost>, skipVisibility = true)
     let gen = dm.GetILGenerator()
 
     emitLoad gen typ
@@ -216,7 +219,7 @@ let private loadDelegateCache = Core.ConcurrentCache(buildLoadDelegate)
 
 // create a create delegate for a given type
 let private buildCreateDelegate (typ: Type) =
-    let dm = DynamicMethod("create " + typ.ToString(), typedefof<obj>, [|typedefof<int>|], typedefof<LoadMethodHost>, true)
+    let dm = DynamicMethod("create " + typ.ToString(), typedefof<obj>, [|typedefof<int>|], typedefof<LoadMethodHost>, skipVisibility = true)
     let gen = dm.GetILGenerator()
 
     if typ.IsArray then
@@ -239,6 +242,36 @@ let private buildCreateDelegate (typ: Type) =
 // a cache for create delegates (one delegate per type)
 let private createDelegateCache = Core.ConcurrentCache(buildCreateDelegate)
 
+// dummy fixup delegate
+let private dummyFixupDelegate = FixupDelegate(fun ctx obj -> ())
+
+// create a fixup delegate for a given type
+let private buildFixupDelegate (typ: Type) =
+    match typ.GetMethod("Fixup", BindingFlags.Instance ||| BindingFlags.NonPublic) with
+    | null -> dummyFixupDelegate
+    | mi ->
+        // get closed method info
+        let cmi = if mi.IsGenericMethodDefinition then mi.MakeGenericMethod([|typedefof<obj>|]) else mi
+
+        // check arguments & return type
+        match cmi.GetParameters() with
+        | [| p |] when not p.ParameterType.IsValueType -> if cmi.ReturnType <> typedefof<Void> then failwithf "%A: %A: fixup method should have unit return type" typ mi
+        | _ -> failwithf "%A: %A: fixup method should have exactly one non-value argument" typ mi
+
+        // build calling method
+        let dm = DynamicMethod("fixup " + typ.ToString(), null, [|typedefof<obj>; typedefof<obj>|], typedefof<LoadMethodHost>, skipVisibility = true)
+        let gen = dm.GetILGenerator()
+        gen.Emit(OpCodes.Ldarg_1)
+        gen.Emit(OpCodes.Ldarg_0)
+        gen.Emit(OpCodes.Call, cmi)
+        gen.Emit(OpCodes.Ret)
+
+        // build delegate
+        dm.CreateDelegate(typedefof<FixupDelegate>) :?> FixupDelegate
+
+// a cache for fixup delegates (one delegate per type)
+let private fixupDelegateCache = Core.ConcurrentCache(buildFixupDelegate)
+
 // load type table
 let private loadTypeTable (reader: MemoryReader) =
     // load type data
@@ -253,7 +286,7 @@ let private loadTypeTable (reader: MemoryReader) =
         typ) type_names type_versions
 
 // load object from memory
-let fromMemory data size =
+let fromMemoryEx data size context =
     let reader = MemoryReader(data)
 
     // read header
@@ -267,6 +300,7 @@ let fromMemory data size =
     // get type-based data once (to reduce lookup overhead)
     let creators = types |> Array.map createDelegateCache.Get
     let loaders = types |> Array.map loadDelegateCache.Get
+    let fixupers = types |> Array.map fixupDelegateCache.Get
     let needs_array = types |> Array.map (fun typ -> typ.IsArray || typ = typedefof<string>)
 
     // read object table
@@ -287,11 +321,17 @@ let fromMemory data size =
     // check bounds
     assert (reader.Data <= data + (nativeint size))
 
+    // call fixup handlers
+    Array.iter2 (fun tid obj -> fixupers.[tid].Invoke(context, obj)) object_types objects
+
     // return root object
     objects.[0]
 
+// load object from memory
+let fromMemory data size = fromMemoryEx data size null
+
 // load object from stream
-let fromStream (stream: Stream) size =
+let fromStreamEx (stream: Stream) size context =
     // load data into byte array
     let data = Array.zeroCreate size
 
@@ -302,15 +342,21 @@ let fromStream (stream: Stream) size =
     let gch = GCHandle.Alloc(data, GCHandleType.Pinned) 
 
     try
-        fromMemory (gch.AddrOfPinnedObject()) size
+        fromMemoryEx (gch.AddrOfPinnedObject()) size context
     finally
         gch.Free()
 
+// load object from stream
+let fromStream (stream: Stream) size = fromStreamEx stream size null
+
 // load object from file
-let fromFile path =
+let fromFileEx path context =
     // map entire file to memory
     use file = MemoryMappedFile.CreateFromFile(path)
     use stream = file.CreateViewStream(0L, 0L, MemoryMappedFileAccess.Read)
 
     // deserialize objects from mapped memory
-    fromMemory (stream.SafeMemoryMappedViewHandle.DangerousGetHandle()) (int stream.Length)
+    fromMemoryEx (stream.SafeMemoryMappedViewHandle.DangerousGetHandle()) (int stream.Length) context
+
+// load object from file
+let fromFile path = fromFileEx path null
