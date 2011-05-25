@@ -166,3 +166,16 @@ let testCollectionsList () =
 // interfaces
 let testInterfaceAggregation () =
     roundtrip ((HashIdentity.Structural<float> : IEqualityComparer<float>), 1) |> ignore
+
+// fixup callback
+type TestHandle() =
+    let mutable data = 0
+
+    member this.Data = data
+    member private this.Fixup ctx = data <- data + 1
+
+let testFixupCallback () =
+    let h = TestHandle()
+    h |> fun x -> assert (x.Data = 0)
+    h |> roundtrip |> fun x -> assert (x.Data = 1)
+    h |> roundtrip |> roundtrip |> fun x -> assert (x.Data = 2)
