@@ -17,4 +17,4 @@ let build (doc: Document) id =
     let source = Node (Uri(path).AbsolutePath)
     let target = Context.Current.Target source ".dds"
 
-    source.Path, Render.Texture(target.Path)
+    source.Path, Asset<Render.Texture>(target.Path)

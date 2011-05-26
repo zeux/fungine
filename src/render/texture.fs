@@ -2,47 +2,26 @@ namespace Render
 
 open SlimDX.Direct3D11
 
-// texture resource data
-[<AllowNullLiteral>]
-type private TextureData(path) =
-    // load texture from file
-    let resource = Texture2D.FromFile(Render.Device.get(), path,
-                    let image = ImageInformation.FromFile(path)
-                    let mutable info = ImageLoadInformation.FromDefaults()
-                    info.MipLevels <- image.Value.MipLevels
-                    info)
-    let view = new ShaderResourceView(Render.Device.get(), resource)
-
-    // texture resource
+// texture
+type Texture(resource: Texture2D, view: ShaderResourceView) =
+    // get texture resource
     member this.Resource = resource
 
-    // texture view
+    // get texture view
     member this.View = view
 
-// texture resource cache
-module private TextureCache =
-    let cache = Core.ConcurrentCache(fun path -> TextureData(path))
+// texture loader
+module TextureLoader =
+    let load device path =
+        // create load information for the entire mip chain
+        let image = ImageInformation.FromFile(path)
+        let mutable info = ImageLoadInformation.FromDefaults()
+        info.MipLevels <- image.Value.MipLevels
 
-// texture handle
-type Texture(path) =
-    // texture data
-    [<System.NonSerialized>]
-    let mutable data = null
+        // load texture
+        let resource = Texture2D.FromFile(device, path, info)
 
-    // lazy initializing data accessor ($$ replace with post-serialization callback)
-    member private this.Data =
-        if data = null then
-            data <- TextureCache.cache.Get path
-        data
+        // create default view
+        let view = new ShaderResourceView(device, resource)
 
-    // get texture path
-    member this.Path = path
-
-    // get texture resource
-    member this.Resource = this.Data.Resource
-
-    // get texture view
-    member this.View = this.Data.View
-
-    // convert to string
-    override this.ToString () = path
+        Texture(resource, view)
