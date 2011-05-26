@@ -25,6 +25,8 @@
     <Compile Include="math\types.fs" />
     <Compile Include="math\camera.fs" />
     <Compile Include="math\pack.fs" />
+    <Compile Include="assetdb\asset.fs" />
+    <Compile Include="assetdb\types.fs" />
     <Compile Include="render\device.fs" />
     <Compile Include="render\format.fs" />
     <Compile Include="render\vertexformat.fs" />
