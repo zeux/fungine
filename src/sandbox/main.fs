@@ -33,13 +33,6 @@ let dbg_fillmode = Core.DbgVar(FillMode.Solid, "render/fill mode")
 let dbg_texfilter = Core.DbgVar(Filter.Anisotropic, "render/texture/filter")
 let dbg_fov = Core.DbgVar(45.f, "camera/fov")
 
-let watcher = new FileSystemWatcher(".", IncludeSubdirectories = true, EnableRaisingEvents = true)
-
-type Reloadable<'T>(creator, path) =
-    let mutable data: 'T = creator path
-    do watcher.Changed.Add (fun args -> if FileInfo(args.FullPath).FullName = FileInfo(path).FullName then data <- creator path)
-    member this.Value = data
-
 type ObjectPool(creator) =
     let s = System.Collections.Concurrent.ConcurrentStack()
 
@@ -80,7 +73,11 @@ let desc = new SwapChainDescription(
             )
 
 let (_, device, swapChain) = Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.None, desc)
-Render.Device.set device
+
+// setup asset loaders
+AssetDB.addType "dds" (Render.TextureLoader.load device)
+AssetDB.addType "mesh" (fun path -> (Core.Serialization.Load.fromFileEx path device) :?> Render.Mesh)
+AssetDB.addType "hlsl" (fun path -> Effect(device, path))
 
 let factory = swapChain.GetParent<Factory>()
 factory.SetWindowAssociation(form.Handle, WindowAssociationFlags.IgnoreAll) |> ignore
@@ -91,10 +88,10 @@ let backBufferView = new RenderTargetView(device, backBuffer)
 let depthBuffer = new Texture2D(device, Texture2DDescription(Width = form.ClientSize.Width, Height = form.ClientSize.Height, Format = Format.D24_UNorm_S8_UInt, ArraySize = 1, MipLevels = 1, SampleDescription = SampleDescription(1, 0), BindFlags = BindFlags.DepthStencil))
 let depthBufferView = new DepthStencilView(device, depthBuffer)
 
-let basic_textured = Reloadable((fun path -> Effect(device, path)), "src/shaders/basic_textured.hlsl")
+let basic_textured = Asset<Effect>.Load "src/shaders/basic_textured.hlsl"
 
 let vertex_size = (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).size
-let layout = new InputLayout(device, basic_textured.Value.VertexSignature, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
+let layout = new InputLayout(device, basic_textured.Data.VertexSignature, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
 
 let constantBuffer0 = new Buffer(device, null, BufferDescription(16448, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
 let constantBuffer1 = new Buffer(device, null, BufferDescription(65536, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
@@ -117,8 +114,7 @@ let dummy_specular = createDummyTexture [|0uy; 0uy; 0uy; 0uy|]
 
 let camera_controller = Camera.CameraController()
 
-let meshes = Core.Cache(fun path -> (Core.Serialization.Load.fromFile path) :?> Render.Mesh)
-let scene = List<Render.Mesh * Matrix34>()
+let scene = List<Asset<Render.Mesh> * Matrix34>()
 
 module MJSON =
     module private Lexer =
@@ -215,10 +211,10 @@ module MJSON =
 
 let placeMesh path parent =
     try
-        let mesh = meshes.Get (".build/art/" + System.IO.Path.ChangeExtension(path, ".mesh"))
+        let mesh = Asset.LoadAsync (".build/art/" + System.IO.Path.ChangeExtension(path, ".mesh"))
         let fixup = Matrix34(Vector4.UnitX, Vector4.UnitZ, Vector4.UnitY)
         scene.Add((mesh, parent))
-    with e -> printfn "%A" e
+    with e -> printfn "%s" e.Message
 
 let placeFile path parent =
     let nodes =
@@ -282,14 +278,14 @@ let draw (context: DeviceContext) =
     context.InputAssembler.InputLayout <- layout
     context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
 
-    context.VertexShader.Set(basic_textured.Value.VertexShader)
-    context.PixelShader.Set(basic_textured.Value.PixelShader)
+    context.VertexShader.Set(basic_textured.Data.VertexShader)
+    context.PixelShader.Set(basic_textured.Data.PixelShader)
 
     context.VertexShader.SetConstantBuffer(constantBuffer0, 0)
     context.VertexShader.SetConstantBuffer(constantBuffer1, 1)
     context.PixelShader.SetSampler(SamplerState.FromDescription(device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbg_texfilter.Value, MaximumAnisotropy = 16, MaximumLod = infinityf)), 0)
 
-    for mesh, instances in scene |> Seq.groupBy (fun (mesh, transform) -> mesh) do
+    for mesh, instances in scene |> Seq.choose (fun (mesh, transform) -> if mesh.IsReady then Some (mesh.Data, transform) else None) |> Seq.groupBy (fun (mesh, transform) -> mesh) do
         let transforms = instances |> Seq.toArray |> Array.map (fun (mesh, transform) -> transform)
 
         let box = context.MapSubresource(constantBuffer1, 0, constantBuffer1.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
@@ -297,8 +293,8 @@ let draw (context: DeviceContext) =
         context.UnmapSubresource(constantBuffer1, 0)
 
         for fragment in mesh.fragments do
-            let setTexture (tex: Render.Texture option) dummy reg =
-                context.PixelShader.SetShaderResource(tex |> Option.fold (fun _ t -> t.View) dummy, reg)
+            let setTexture (tex: Asset<Render.Texture> option) dummy reg =
+                context.PixelShader.SetShaderResource((if tex.IsSome && tex.Value.IsReady then tex.Value.Data.View else dummy), reg)
 
             let material = fragment.material
 
