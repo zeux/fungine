@@ -72,5 +72,11 @@ type Context(root_path, build_path) =
         | Some e -> Output.echof "*** error %s" e.Message
         | None -> Output.echof "*** built %d targets in %.2f sec ***" tasks.Count timer.Elapsed.TotalSeconds
 
+    // run tasks for updated set of inputs
+    member this.RunUpdated inputs =
+        let count = scheduler.UpdateInputs inputs
+
+        if count > 0 then this.Run()
+
     // current context accessor
     static member Current = current.Value

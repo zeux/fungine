@@ -171,9 +171,6 @@ type private TaskScheduler(db: Database) =
 
     // run all tasks
     member this.Run () =
-        // reset status for all task (so that we can run build multiple times)
-        for task in tasks do task.Status <- TaskStatus.Created
-
         // use manual loop instead of foreach because we can add tasks during Run ()
         let rec loop i =
             if i < tasks.Count then
@@ -181,3 +178,19 @@ type private TaskScheduler(db: Database) =
                 loop (i + 1)
 
         loop 0
+
+    // process file updates so that the next run will build the dependent tasks
+    member this.UpdateInputs inputs =
+        let rec update (input: Node) =
+            match tasks_by_input.TryGetValue(input.Uid) with
+            | true, list ->
+                // update all tasks that depend on input
+                list |> Seq.sumBy (fun task ->
+                    if task.Status = TaskStatus.Created then 0
+                    else
+                        // mark task as not ready & recursively process outputs
+                        task.Status <- TaskStatus.Created
+                        1 + (task.Task.Targets |> Array.sumBy update))
+            | _ -> 0
+
+        inputs |> Array.sumBy update
