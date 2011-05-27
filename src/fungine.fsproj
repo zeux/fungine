@@ -11,6 +11,7 @@
     <Compile Include="core\cache.fs" />
     <Compile Include="core\compression.fs" />
     <Compile Include="core\dbgvar.fs" />
+    <Compile Include="core\fs\watcher.fs" />
     <Compile Include="core\serialization\util.fs" />
     <Compile Include="core\serialization\version.fs" />
     <Compile Include="core\serialization\save.fs" />
