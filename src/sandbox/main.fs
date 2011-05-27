@@ -26,23 +26,14 @@ Core.Test.run ()
 // build assets
 assets.context.Run()
 
+// start asset watcher
+assets.watcher.Force() |> ignore
+
 let dbg_wireframe = Core.DbgVar(false, "render/wireframe")
 let dbg_present_interval = Core.DbgVar(0, "vsync interval")
 let dbg_name = Core.DbgVar("foo", "name")
-let dbg_fillmode = Core.DbgVar(FillMode.Solid, "render/fill mode")
 let dbg_texfilter = Core.DbgVar(Filter.Anisotropic, "render/texture/filter")
 let dbg_fov = Core.DbgVar(45.f, "camera/fov")
-
-type ObjectPool(creator) =
-    let s = System.Collections.Concurrent.ConcurrentStack()
-
-    member this.get() =
-        match s.TryPop() with
-        | true, obj -> obj
-        | _ -> creator ()
-
-    member this.put(obj) =
-        s.Push(obj)
 
 type Effect(device, vscode, pscode) =
     let vs = new VertexShader(device, vscode)
@@ -95,8 +86,6 @@ let layout = new InputLayout(device, basic_textured.Data.VertexSignature, (Rende
 
 let constantBuffer0 = new Buffer(device, null, BufferDescription(16448, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
 let constantBuffer1 = new Buffer(device, null, BufferDescription(65536, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
-
-let contextHolder = new ObjectPool(fun _ -> new DeviceContext(device))
 
 let createDummyTexture color =
     let stream = new DataStream(4L, canRead = false, canWrite = true)
