@@ -41,22 +41,29 @@ let private load_processor =
 
         loop ())
 
+// normalize path
+let private normalize path = Path.GetFullPath(path).ToLowerInvariant()
+
 // load asset
-let private loadInternal path =
-    assets.GetOrAdd(path, fun path ->
-        let ext = Path.GetExtension(path)
-        match loaders.TryGetValue(ext) with
-        | true, l ->
-            let data = Data()
-            load_processor.Post(fun () ->
-                try
-                    data.Value <- l path
-                with
-                | e ->
-                    printfn "Error loading %s: %s" path e.Message
-                    data.Event.Set())
-            data
-        | _ -> failwithf "Unknown asset type %s" ext)
+let private loadInternal (data: Data) path =
+    let ext = Path.GetExtension(path)
+    match loaders.TryGetValue(ext) with
+    | true, l ->
+        load_processor.Post(fun () ->
+            try
+                data.Value <- l path
+            with
+            | e ->
+                printfn "Error loading %s: %s" path e.Message
+                data.Event.Set())
+    | _ -> failwithf "Unknown asset type %s" ext
+
+// load asset with cache
+let private loadInternalCached path =
+    assets.GetOrAdd(normalize path, fun path ->
+        let data = Data()
+        loadInternal data path
+        data)
 
 // asset
 type Asset<'T>(path: string) =
@@ -77,7 +84,7 @@ type Asset<'T>(path: string) =
 
     // fixup callback
     member private this.Fixup ctx =
-        if path <> null then data <- loadInternal path
+        if path <> null then data <- loadInternalCached path
 
     // load file
     static member LoadAsync path =
@@ -95,3 +102,9 @@ type Asset<'T>(path: string) =
 // register asset type
 let addType ext loader =
     loaders.Add("." + ext, fun path -> box (loader path))
+
+// try to reload asset
+let tryReload path =
+    match assets.TryGetValue(normalize path) with
+    | true, data -> loadInternal data path
+    | _ -> ()
