@@ -17,7 +17,7 @@ do()
 
 // initial setup
 System.Threading.Thread.CurrentThread.CurrentCulture <- System.Globalization.CultureInfo.InvariantCulture
-System.Environment.CurrentDirectory <- Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath) + "/../.."
+System.Environment.CurrentDirectory <- System.AppDomain.CurrentDomain.BaseDirectory + "/../.."
 System.Console.WindowWidth <- max System.Console.WindowWidth 140
 
 // run tests
@@ -253,7 +253,7 @@ let scene_name = "heaven"
 placeFile (sprintf "art/%s/%s.world" scene_name scene_name) Matrix34.Identity
 
 let draw (context: DeviceContext) =
-    let projection = Math.Camera.projectionPerspective (dbg_fov.Value / 180.f * float32 Math.PI) (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 0.01f 1000.f
+    let projection = Math.Camera.projectionPerspective (dbg_fov.Value / 180.f * float32 Math.PI) (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 0.1f 1000.f
     let view = camera_controller.ViewMatrix
     let view_projection = projection * Matrix44(view)
 
