@@ -7,6 +7,9 @@ type BasisConverter(transform: Matrix34) =
     // inverse transform for matrix conversion
     let transform_inv = Matrix34.Inverse(transform)
 
+    // build identity coverter
+    new () = BasisConverter(Matrix34.Identity)
+
     // build converter from document
     new (doc: Document, ?scale) =
         // convert units
