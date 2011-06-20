@@ -4,6 +4,10 @@ setlocal
 rem Checkout sources
 call svn checkout http://nvidia-texture-tools.googlecode.com/svn/trunk/ nvtt
 
+rem Apply patch:
+rem 1. Fix image component order when loading via stb_image
+patch -p0 -d nvtt <nvtt.diff
+
 rem Build solution
 for /f "usebackq tokens=3" %%i in (`reg query HKLM\Software\Microsoft\MSBuild\ToolsVersions\4.0 /v MSBuildToolsPath`) do set MSBUILDPATH=%%i
 %MSBUILDPATH%\msbuild nvtt.sln /nologo /verbosity:quiet /p:configuration=Release /p:platform=Win32 || exit %ERRORLEVEL%
