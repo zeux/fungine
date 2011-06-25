@@ -52,6 +52,7 @@ type Effect(device, vscode, pscode) =
     member this.VertexSignature = signature
 
 let form = new Form(Text = "fungine", Width = 1280, Height = 720)
+
 let desc = new SwapChainDescription(
             BufferCount = 1,
             ModeDescription = ModeDescription(form.ClientSize.Width, form.ClientSize.Height, Rational(0, 0), Format.R8G8B8A8_UNorm),
@@ -101,7 +102,9 @@ let dummy_albedo = createDummyTexture [|128uy; 128uy; 128uy; 255uy|]
 let dummy_normal = createDummyTexture [|128uy; 128uy; 255uy; 255uy|]
 let dummy_specular = createDummyTexture [|0uy; 0uy; 0uy; 0uy|]
 
-let camera_controller = Camera.CameraController()
+let mouse = Input.Mouse(form)
+let keyboard = Input.Keyboard(form)
+let camera_controller = Camera.CameraController(mouse, keyboard, Position = Vector3(-7.100705f, 47.303590f, 22.963710f), Yaw = -1.3f, Pitch = 0.15f)
 
 let scene = List<Asset<Render.Mesh> * Matrix34>()
 
@@ -314,8 +317,15 @@ form.KeyUp.Add(fun args ->
         w.KeyUp.Add (fun args -> if args.Key = System.Windows.Input.Key.Escape then w.Close())
         w.Show())
 
+let frame_timer = Diagnostics.Stopwatch.StartNew()
+
 MessagePump.Run(form, fun () ->
-    camera_controller.Update(1.f / 60.f)
+    let dt = float32 frame_timer.Elapsed.TotalSeconds
+    frame_timer.Restart()
+
+    mouse.Update()
+    keyboard.Update()
+    camera_controller.Update(dt)
 
     form.Text <- dbg_name.Value
     device.ImmediateContext.ClearRenderTargetView(backBufferView, SlimDX.Color4 Color.Gray)

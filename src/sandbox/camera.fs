@@ -1,53 +1,46 @@
 ﻿module Camera
 
-open System.Windows.Forms
-open SlimDX.RawInput
-open SlimDX.Multimedia
+open Input
 
 let dbg_yaw_speed = Core.DbgVar(0.01f, "camera/yaw speed")
 let dbg_pitch_speed = Core.DbgVar(0.01f, "camera/pitch speed")
-let dbg_movement_speed = Core.DbgVar(20.f, "camera/movement speed")
+let dbg_movement_speed = Core.DbgVar(5.f, "camera/movement speed")
 
-type CameraController() =
+type CameraController(mouse: Mouse, keyboard: Keyboard) =
     let mutable yaw = 0.f
     let mutable pitch = 0.f
-    let mutable active = false
 
     let mutable position = Vector3.Zero
 
-    let pressed = Array.create 256 false
-
-    do Device.RegisterDevice(UsagePage.Generic, UsageId.Mouse, DeviceFlags.None)
-    do Device.RegisterDevice(UsagePage.Generic, UsageId.Keyboard, DeviceFlags.None)
-
-    do Device.MouseInput.Add(fun args ->
-        if (args.ButtonFlags &&& MouseButtonFlags.LeftDown) <> MouseButtonFlags.None then
-            active <- true
-
-        if (args.ButtonFlags &&& MouseButtonFlags.LeftUp) <> MouseButtonFlags.None then
-            active <- false
-
-        if active then
-            yaw <- yaw + (float32 args.X) * dbg_yaw_speed.Value
-            pitch <- pitch + (float32 args.Y) * dbg_pitch_speed.Value)
-
-    do Device.KeyboardInput.Add(fun args ->
-        if int args.Key < pressed.Length && (args.State = KeyState.Pressed || args.State = KeyState.Released) then
-            pressed.[int args.Key] <- args.State = KeyState.Pressed)
-
     member this.Update dt =
+        if mouse.ButtonDown MouseButton.Left then
+            yaw <- yaw + (float32 mouse.AxisX) * dbg_yaw_speed.Value
+            pitch <- pitch + (float32 mouse.AxisY) * dbg_pitch_speed.Value
+
         let offsets = 
-            [| Keys.W, Vector3.UnitX
-               Keys.S, -Vector3.UnitX
-               Keys.A, -Vector3.UnitY
-               Keys.D, Vector3.UnitY |]
-            |> Array.choose (fun (key, offset) -> if pressed.[int key] then Some offset else None)
+            [| Key.W, Vector3.UnitX
+               Key.S, -Vector3.UnitX
+               Key.A, -Vector3.UnitY
+               Key.D, Vector3.UnitY |]
+            |> Array.choose (fun (key, offset) -> if keyboard.KeyDown key then Some offset else None)
 
         if offsets.Length > 0 then
             let transform = this.Transform
-            let speed = dbg_movement_speed.Value * (if pressed.[int Keys.ShiftKey] then 5.f else 1.f)
+            let speed = dbg_movement_speed.Value * (if keyboard.KeyDown Key.ShiftKey then 5.f else 1.f)
 
             position <- position + Matrix34.TransformDirection(transform, Array.sum offsets) * (speed * dt)
+
+    member this.Position
+        with get () = position
+        and set value = position <- value
+
+    member this.Yaw
+        with get () = yaw
+        and set value = yaw <- value
+
+    member this.Pitch
+        with get () = pitch
+        and set value = pitch <- value
 
     member this.Transform =
         Matrix34.Translation(position) *
