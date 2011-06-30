@@ -12,7 +12,7 @@ open Microsoft.FSharp.NativeInterop
 #nowarn "9" // Uses of this construct may result in the generation of unverifiable .NET IL code
 
 // a memory chunk-based reader
-type MemoryReader(buffer: nativeint) =
+type private MemoryReader(buffer: nativeint) =
     let mutable data = buffer
 
     // get current data pointer
@@ -74,7 +74,7 @@ let private emitNone gen = ()
 let private emitLoadValuePrimitive (gen: ILGenerator) objemitpre objemitpost (typ: Type) =
     objemitpre gen
     gen.Emit(OpCodes.Ldarg_1) // reader
-    gen.Emit(OpCodes.Call, typedefof<MemoryReader>.GetMethod("ReadValue").MakeGenericMethod([|typ|]))
+    gen.Emit(OpCodes.Call, typedefof<MemoryReader>.GetMethod("ReadValue", BindingFlags.Instance ||| BindingFlags.NonPublic).MakeGenericMethod([|typ|]))
     objemitpost gen
 
 // load an object
@@ -84,7 +84,7 @@ let private emitLoadObject (gen: ILGenerator) objemitpre objemitpost =
     // read id and fetch object from object table
     gen.Emit(OpCodes.Ldarg_0) // table
     gen.Emit(OpCodes.Ldarg_1) // reader
-    gen.Emit(OpCodes.Call, typedefof<MemoryReader>.GetMethod("ReadInt32"))
+    gen.Emit(OpCodes.Call, typedefof<MemoryReader>.GetMethod("ReadInt32", BindingFlags.Instance ||| BindingFlags.NonPublic))
     gen.Emit(OpCodes.Ldelem_Ref)
 
     objemitpost gen
@@ -186,7 +186,7 @@ let private emitLoadString (gen: ILGenerator) objemit =
     gen.Emit(OpCodes.Ldloc, char_local)
     objemit gen
     gen.Emit(OpCodes.Ldfld, typedefof<string>.GetField("m_stringLength", BindingFlags.Instance ||| BindingFlags.NonPublic))
-    gen.Emit(OpCodes.Call, typedefof<MemoryReader>.GetMethod("ReadStringData"))
+    gen.Emit(OpCodes.Call, typedefof<MemoryReader>.GetMethod("ReadStringData", BindingFlags.Instance ||| BindingFlags.NonPublic))
 
 // load a top-level type
 let private emitLoad (gen: ILGenerator) (typ: Type) =
