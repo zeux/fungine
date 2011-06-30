@@ -16,6 +16,9 @@ type private MouseState =
       buttons_down: bool array // mouse button state
     }
 
+    // clone
+    member this.Clone () = { new MouseState with axis_deltas = Array.copy this.axis_deltas and buttons_down = Array.copy this.buttons_down }
+
     // default ctor
     static member Default = { new MouseState with axis_deltas = Array.create 3 0 and buttons_down = Array.create 3 false }
 
@@ -29,7 +32,8 @@ type Mouse(control: Control) =
     do
         Device.RegisterDevice(UsagePage.Generic, UsageId.Mouse, DeviceFlags.None)
         Device.MouseInput.Add(fun args ->
-            [| args.X; args.Y; args.WheelDelta |] |> Array.iteri (fun i d -> current.axis_deltas.[i] <- current.axis_deltas.[i] + d))
+            if control.Focused then
+                [| args.X; args.Y; args.WheelDelta |] |> Array.iteri (fun i d -> current.axis_deltas.[i] <- current.axis_deltas.[i] + d))
     
     // grab mouse button data via WM_MOUSEDOWN and WM_MOUSEUP (WM_INPUT emits Down message on window drag/resize)
     do
@@ -42,9 +46,13 @@ type Mouse(control: Control) =
         control.MouseDown.Add(fun args -> for b in buttons args.Button do current.buttons_down.[int b] <- true)
         control.MouseUp.Add(fun args -> for b in buttons args.Button do current.buttons_down.[int b] <- false)
 
+    // reset data to default if focus is lost
+    do
+        control.LostFocus.Add(fun args -> current <- MouseState.Default)
+
     // update state
     member this.Update () =
-        updated <- current
+        updated <- current.Clone()
         current <- { current with axis_deltas = MouseState.Default.axis_deltas }
 
     // mouse axes

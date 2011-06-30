@@ -10,6 +10,9 @@ type private KeyboardState =
     { keys_down: bool array // key state
     }
 
+    // clone
+    member this.Clone () = { new KeyboardState with keys_down = Array.copy this.keys_down }
+
     // default ctor
     static member Default = { new KeyboardState with keys_down = Array.create 256 false }
 
@@ -24,9 +27,13 @@ type Keyboard(control: Control) =
         control.KeyDown.Add(fun args -> current.keys_down.[int args.KeyCode] <- true)
         control.KeyUp.Add(fun args -> current.keys_down.[int args.KeyCode] <- false)
 
+    // reset data to default if focus is lost
+    do
+        control.LostFocus.Add(fun args -> current <- KeyboardState.Default)
+
     // update state
     member this.Update () =
-        updated <- current
+        updated <- current.Clone()
 
     // key states
     member this.KeyDown (key: Key) = updated.keys_down.[int key]
