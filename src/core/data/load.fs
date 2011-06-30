@@ -33,13 +33,20 @@ let private fail (s: CharStream) fmt =
 
 // lexeme type
 type private Lexeme =
-| String of string
-| Token of char
-| End
+    | String of string
+    | Token of char
+    | End
+
+    // stringize for debugging
+    override this.ToString() =
+        match this with
+        | String s -> sprintf "%A" s
+        | Token c -> sprintf "%A" c
+        | End -> "end of input"
 
 // whether the character is a part of unquoted string value
 let private isValueChar c =
-    c = '-' || c = '.' || c = '_' || Char.IsLetterOrDigit(c)
+    c = '-' || c = '+' || c = '.' || c = '_' || Char.IsLetterOrDigit(c)
 
 // read the escape sequence inside quoted string (after \)
 let private readEscapeSequence (s: CharStream) =
@@ -96,39 +103,54 @@ let private addNode (locations: IDictionary<Node, Location>) loc node =
     locations.Add(node, loc)
     node
 
-// parse a list of fields into an Object, up to the specified termination lexeme
-let rec private parseFields s locs term =
-    let rec loop acc =
-        match readLexeme s with
-        | String id ->
-            let value =
-                match readLexeme s with
-                | Token '=' ->
-                    parseNode s locs (readLexeme s)
-                | l -> parseNode s locs l
-            loop ((id, value) :: acc)
+// parse a comma-separated list up to the specified termination lexeme; newline is treated as comma if necessary
+let private parseList (s: CharStream) term pred =
+    let rec loop acc l =
+        match l with
         | t when t = term -> acc
-        | l -> fail s "Expected '%A' or identifier, got '%A'" term s
-    Object (loop [] |> List.toArray |> Array.rev) |> addNode locs s.Location
+        | l ->
+            let n = pred l
+            let line = s.Location.Line
+
+            match readLexeme s with
+            | Token ',' -> loop (n :: acc) (readLexeme s)
+            | t when t = term -> n :: acc
+            | l ->
+                // simulate comma if there was a newline instead
+                if s.Location.Line > line then loop (n :: acc) l
+                else fail s "Expected ',' or %A, got %A" term l
+
+    // we accumulate results in a wrong order, so reverse before returning
+    readLexeme s |> loop [] |> List.toArray |> Array.rev
+
+// parse a list of fields into an Object, up to the specified termination lexeme
+let rec private parseFields (s: CharStream) locs term =
+    let start = s.Location
+
+    parseList s term (function
+        | String id ->
+            let nextl =
+                match readLexeme s with
+                | Token '=' -> readLexeme s
+                | l -> l
+
+            id, parseNode s locs nextl
+        | l -> fail s "Expected %A or value, got %A" term l)
+    |> Object
+    |> addNode locs start
 
 // parse a node
 and private parseNode s locs l =
     match l with
     | String c -> Value c |> addNode locs s.Location
     | Token '[' ->
-        let rec loop acc =
-            match readLexeme s with
-            | Token ']' -> acc
-            | l ->
-                let n = parseNode s locs l
-                match readLexeme s with
-                | Token ',' -> loop (n :: acc)
-                | Token ']' -> n :: acc
-                | l -> fail s "Expected ',' or ']', got '%A'" l
-        Array (loop [] |> List.toArray |> Array.rev) |> addNode locs s.Location
-    | Token '{' ->
-        parseFields s locs (Token '}')
-    | l -> fail s "Unexpected token '%A'" l
+        let start = s.Location
+
+        parseList s (Token ']') (parseNode s locs)
+        |> Array
+        |> addNode locs start
+    | Token '{' -> parseFields s locs (Token '}')
+    | l -> fail s "Expected '[', '{' or value, got %A" l
 
 // load document from stream
 let fromStream (stream: Stream) path =
