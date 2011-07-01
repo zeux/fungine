@@ -12,6 +12,9 @@ let watcher = lazy Core.FS.Watcher(".", fun path ->
     context.RunUpdated [| node |]
     AssetDB.tryReload node.Path)
 
+// texture settings
+Build.Texture.addSettings "art/texture.db"
+
 // mesh export
 let Mesh path =
     // export .dae file
