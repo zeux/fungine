@@ -25,6 +25,12 @@ type Document(root: Node, locations: IDictionary<Node, Location>) =
     // document root
     member this.Root = root
 
+    // document root elements
+    member this.Pairs =
+        match root with
+        | Object pairs -> pairs
+        | _ -> failwith "Document root is not an object"
+
     // get node location, if any
     member this.Location node =
         match locations.TryGetValue(node) with

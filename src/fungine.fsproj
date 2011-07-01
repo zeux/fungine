@@ -19,6 +19,7 @@
     <Compile Include="core\serialization\tests.fs" />
     <Compile Include="core\data\node.fs" />
     <Compile Include="core\data\load.fs" />
+    <Compile Include="core\data\read.fs" />
     <Compile Include="core\data\tests.fs" />
     <Compile Include="math\color4.fs" />
     <Compile Include="math\vector2.fs" />
