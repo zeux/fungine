@@ -1,128 +1,28 @@
 module Build.Texture
 
 open BuildSystem
+open Build.NvTextureTools
+open Core.Data
 
-open System
-open System.Runtime.InteropServices
+open System.Collections.Generic
+open System.Text.RegularExpressions
 
-// nvtt.dll binding module
-module private NvTextureTools =
-    type Format =
-        | RGB = 0
-        | RGBA = 0
-        | BC1 = 1
-        | BC1a = 2
-        | BC2 = 3
-        | BC3 = 4
-        | BC3n = 5 // R=1, G=y, B=0, A=x
-        | BC4 = 6
-        | BC5 = 7
-        | BC6 = 10
-        | BC7 = 11
-        | RGBE = 12
+open SlimDX.Direct3D11
 
-    type Quality =
-        | Fastest = 0
-        | Normal = 1
-        | Production = 2
-        | Highest = 3
+// texture compression profile
+type Profile =
+| Generic = 0
+| Color = 1
+| ColorAlpha = 2
+| Normal = 3
 
-    type WrapMode =
-        | Clamp = 0
-        | Repeat = 1
-        | Mirror = 2
-
-    type MipmapFilter =
-        | Box = 0
-        | Triangle = 1
-        | Kaiser = 2
-
-    type RoundMode =
-        | None = 0
-        | ToNextPowerOfTwo = 1
-        | ToNearestPowerOfTwo = 2
-        | ToPreviousPowerOfTwo = 3
-
-    type AlphaMode =
-        | None = 0
-        | Transparency = 1
-        | Premultiplied = 2
-
-    type NvttInputOptions = IntPtr
-    type NvttCompressionOptions = IntPtr
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern NvttInputOptions nvttCreateInputOptions()
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttDestroyInputOptions(NvttInputOptions)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetInputOptionsAlphaMode(NvttInputOptions, AlphaMode alphaMode)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetInputOptionsGamma(NvttInputOptions, float inputGamma, float outputGamma)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetInputOptionsWrapMode(NvttInputOptions, WrapMode mode)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetInputOptionsMipmapFilter(NvttInputOptions, MipmapFilter filter)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetInputOptionsMipmapGeneration(NvttInputOptions, bool enabled, int maxLevel)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetInputOptionsKaiserParameters(NvttInputOptions, float width, float alpha, float stretch)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetInputOptionsNormalMap(NvttInputOptions, bool b)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetInputOptionsConvertToNormalMap(NvttInputOptions, bool convert)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetInputOptionsHeightEvaluation(NvttInputOptions, float redScale, float greenScale, float blueScale, float alphaScale)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetInputOptionsNormalFilter(NvttInputOptions, float sm, float medium, float big, float large)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetInputOptionsNormalizeMipmaps(NvttInputOptions, bool b)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetInputOptionsMaxExtents(NvttInputOptions, int dim)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetInputOptionsRoundMode(NvttInputOptions, RoundMode mode);
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern NvttCompressionOptions nvttCreateCompressionOptions()
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttDestroyCompressionOptions(NvttCompressionOptions)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetCompressionOptionsFormat(NvttCompressionOptions, Format format)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetCompressionOptionsQuality(NvttCompressionOptions, Quality quality)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetCompressionOptionsColorWeights(NvttCompressionOptions, float red, float green, float blue, float alpha)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetCompressionOptionsPixelFormat(NvttCompressionOptions, uint32 bitcount, uint32 rmask, uint32 gmask, uint32 bmask, uint32 amask)
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern void nvttSetCompressionOptionsQuantization(NvttCompressionOptions, bool colorDithering, bool alphaDithering, bool binaryAlpha, int alphaThreshold)
-
-    type NvttErrorCallback = delegate of string -> unit
-
-    [<DllImport("nvtt", CallingConvention = CallingConvention.Cdecl)>]
-    extern bool nvttCompressFile(string source, string target, NvttInputOptions inputOptions, NvttCompressionOptions compressionOptions, NvttErrorCallback errorCallback)
-
-open NvTextureTools
+// texture compression settings
+type Settings =
+    { mutable profile: Profile option
+      mutable quality: Quality option
+      mutable format: Format option
+      mutable maxmip: int option
+    }
 
 // compress the texture with the specified options
 let private compressInternal source target input compress =
@@ -135,16 +35,84 @@ let private compressInternal source target input compress =
     if not result then failwith "exit code %d" result
 
 // convert the texture with default options
-let private build source target =
+let private build source target (settings: Settings) =
     let input = nvttCreateInputOptions()
     let compress = nvttCreateCompressionOptions()
 
-    nvttSetInputOptionsAlphaMode(input, AlphaMode.Transparency)
-    nvttSetCompressionOptionsFormat(compress, Format.BC1a)
-    nvttSetCompressionOptionsQuantization(compress, false, false, true, 128)
+    // initial settings
+    nvttSetInputOptionsGamma(input, 1.f, 1.f)
+
+    // process profile
+    match settings.profile.Value with
+    | Profile.Generic ->
+        nvttSetCompressionOptionsFormat(compress, Format.BC1)
+
+    | Profile.Color ->
+        nvttSetInputOptionsGamma(input, 2.2f, 2.2f)
+        nvttSetCompressionOptionsFormat(compress, Format.BC1)
+
+    | Profile.ColorAlpha ->
+        nvttSetInputOptionsGamma(input, 2.2f, 2.2f)
+        nvttSetCompressionOptionsFormat(compress, Format.BC3)
+
+    | Profile.Normal ->
+        nvttSetInputOptionsNormalMap(input, true)
+        nvttSetInputOptionsNormalizeMipmaps(input, true)
+        nvttSetCompressionOptionsFormat(compress, Format.BC5)
+
+    | _ -> failwithf "Unknown profile %A" settings.profile.Value
+
+    // setup quality and custom format
+    nvttSetCompressionOptionsQuality(compress, settings.quality.Value)
+    if settings.format.Value <> Format.Unknown then nvttSetCompressionOptionsFormat(compress, settings.format.Value)
+
+    // setup mipmap generation options
+    nvttSetInputOptionsMipmapGeneration(input, settings.maxmip.Value <> 0, settings.maxmip.Value)
 
     compressInternal source target input compress
 
+// texture setting database
+let private settings = List<Regex * Settings>()
+
+// add a file to texture settings db
+let addSettings path =
+    let doc = Core.Data.Load.fromFile path
+
+    for (key, value) in doc.Pairs do
+        for part in key.Split([|'|'|]) do
+            let pattern = part.Trim().ToLowerInvariant().Replace('\\', '/')
+            let r = Regex(sprintf "^%s$" (Regex.Escape(pattern).Replace(@"\*\*", ".*").Replace(@"\*", "[^/.]*")))
+            let s: Settings = Core.Data.Read.readNode doc value
+            settings.Add((r, s))
+
+// get settings from db for path
+let getSettings path =
+    let ss =
+        settings
+        |> Seq.choose (fun (pattern, s) ->
+            if pattern.IsMatch path then Some s
+            else None)
+
+    let select sel init =
+        ss
+        |> Seq.map sel
+        |> Seq.fold (fun acc v -> if Option.isSome v then v else acc) (Some init)
+
+    { new Settings
+        with profile = select (fun s -> s.profile) Profile.Generic
+        and quality = select (fun s -> s.quality) Quality.Normal
+        and format = select (fun s -> s.format) Format.Unknown
+        and maxmip = select (fun s -> s.maxmip) -1 }
+        
 // texture builder object
-let builder = ActionBuilder("Texture", fun task ->
-    build task.Sources.[0].Path task.Targets.[0].Path)
+let builder =
+    { new Builder("Texture") with
+        override this.Build task =
+            let settings = getSettings task.Sources.[0].Uid
+            build task.Sources.[0].Path task.Targets.[0].Path settings
+            None
+
+        override this.Version task =
+            let settings = getSettings task.Sources.[0].Uid
+            System.String.Format("{0}({1},{2},{3},{4})", base.Version task, settings.profile.Value, settings.quality.Value, settings.format.Value, settings.maxmip.Value)
+    }
