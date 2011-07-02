@@ -20,6 +20,7 @@
     <Compile Include="build\geometry\posttlanalyzer.fs" />
     <Compile Include="build\geometry\posttloptimizerd3dx.fs" />
     <Compile Include="build\geometry\posttloptimizerlinear.fs" />
+    <Compile Include="build\shader\shader.fs" />
     <Compile Include="build\texture\nvtt.fs" />
     <Compile Include="build\texture\texture.fs" />
     <Compile Include="build\dae\parse.fs" />
