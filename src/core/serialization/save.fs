@@ -181,5 +181,5 @@ let toStream stream obj =
 
 // save object to file
 let toFile path obj =
-    use stream = new FileStream(path, FileMode.Create)
+    use stream = File.OpenWrite(path)
     toStream stream obj
