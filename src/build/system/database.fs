@@ -23,9 +23,12 @@ type ContentSignature(size: int64, time: int64, csig: Signature) =
 
 // task signature; stores information about last successful task build
 [<Struct>]
-type TaskSignature(inputs: (string * Signature) array, version: string, result: obj option) =
+type TaskSignature(inputs: (string * Signature) array, implicits: (string * Signature) array, version: string, result: obj option) =
     // task inputs (sources and explicit dependencies)
     member this.Inputs = inputs
+
+    // task implicit dependencies
+    member this.Implicits = implicits
 
     // task version
     member this.Version = version
@@ -62,15 +65,20 @@ type Database(path) =
     member this.ContentSignature (node: Node) =
         let info = node.Info
 
-        // perform cache lookup & check metadata validity
-        match csigs.TryGetValue(node.Uid) with
-        | true, csig when csig.Size = info.Length && csig.Time = info.LastWriteTimeUtc.ToFileTimeUtc() ->
-            csig.Signature
-        | _ ->
-            // build new signature
-            let s = csigs.AddOrUpdate(node.Uid, (fun _ -> ContentSignature(info)), (fun _ _ -> ContentSignature(info)))
-            Output.debug Output.Options.DebugFileSignature (fun e -> e "%s -> %A" node.Uid s.Signature)
-            s.Signature
+        if info.Exists then
+            // perform cache lookup & check metadata validity
+            match csigs.TryGetValue(node.Uid) with
+            | true, csig when csig.Size = info.Length && csig.Time = info.LastWriteTimeUtc.ToFileTimeUtc() ->
+                csig.Signature
+            | _ ->
+                // build new signature
+                let s = csigs.AddOrUpdate(node.Uid, (fun _ -> ContentSignature(info)), (fun _ _ -> ContentSignature(info)))
+                Output.debug Output.Options.DebugFileSignature (fun e -> e "%s -> %A" node.Uid s.Signature)
+                s.Signature
+        else
+            // purge non-existing files from cache
+            csigs.TryRemove(node.Uid) |> ignore
+            Signature()
 
     // get/set task signature
     member this.TaskSignature

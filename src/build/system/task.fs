@@ -3,6 +3,7 @@ namespace BuildSystem
 // build task
 type Task(sources: Node array, targets: Node array, builder: Builder) =
     let uid = targets |> Array.map (fun n -> n.Uid) |> String.concat "|"
+    let mutable implicit: Node -> unit = fun n -> failwith "Implicit dependencies can only be added during task build"
 
     // build sources (also act as dependencies)
     member this.Sources = sources
@@ -15,6 +16,11 @@ type Task(sources: Node array, targets: Node array, builder: Builder) =
 
     // unique id
     member this.Uid = uid
+
+    // build implicit dependencies
+    member this.Implicit
+        with get () = implicit
+        and set value = implicit <- value
 
 // builder interface
 and [<AbstractClass>] Builder(name, ?version) =

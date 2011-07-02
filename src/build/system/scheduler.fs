@@ -51,12 +51,16 @@ type private TaskScheduler(db: Database) =
             }
 
         seq {
-            // diff inputs
-            yield! (diff lhs.Inputs rhs.Inputs fst
-                (fun (path, s) -> sprintf "%s is a new dependency" path)
-                (fun (path, s) -> sprintf "%s is no longer a dependency" path)
-                (fun (path0, s0) (path1, s1) -> sprintf "%s changed" path0)
-                (fun l r -> sprintf "dependency order changed (%A -> %A)" (l |> Array.map fst) (r |> Array.map fst)))
+            let diffdep l r =
+                diff l r fst
+                    (fun (path, s) -> sprintf "%s is a new dependency" path)
+                    (fun (path, s) -> sprintf "%s is no longer a dependency" path)
+                    (fun (path0, s0) (path1, s1) -> sprintf "%s changed" path0)
+                    (fun l r -> sprintf "dependency order changed (%A -> %A)" (l |> Array.map fst) (r |> Array.map fst))
+
+            // diff dependencies
+            yield! (diffdep lhs.Inputs rhs.Inputs)
+            yield! (diffdep lhs.Implicits rhs.Implicits)
 
             // diff versions
             if lhs.Version <> rhs.Version then yield (sprintf "version changed (%A -> %A)" lhs.Version rhs.Version)
@@ -70,11 +74,14 @@ type private TaskScheduler(db: Database) =
         else
             match db.TaskSignature task.Uid with
             | Some s ->
-                if tsig.Inputs = s.Inputs && tsig.Version = s.Version then
+                // get new signatures for old implicit deps
+                let tsigi = TaskSignature(tsig.Inputs, s.Implicits |> Array.map (fun (uid, _) -> uid, db.ContentSignature (Node uid)), tsig.Version, None)
+
+                if tsigi.Inputs = s.Inputs && tsigi.Implicits = s.Implicits && tsigi.Version = s.Version then
                     Some s
                 else
                     Output.debug Output.Options.DebugExplain (fun e ->
-                        let diffs = this.Diff(s, tsig) |> Seq.toArray
+                        let diffs = this.Diff(s, tsigi) |> Seq.toArray
                         let reason =
                             match diffs with
                             | [||] -> "for unknown reason"
@@ -99,6 +106,37 @@ type private TaskScheduler(db: Database) =
         | TaskStatus.Completed -> ()
         | _ -> failwithf "Unknown status %A for task %s" state.Status state.Task.Uid
 
+    // wait for node to be complete
+    member private this.Wait (node: Node) =
+        match task_by_output.TryGetValue(node.Uid) with
+        | true, dep -> this.Wait dep
+        | _ -> ()
+
+    // add state dependency
+    member private this.AddDependency (state, node: Node) =
+        match tasks_by_input.TryGetValue(node.Uid) with
+        | true, list ->
+            list.Add(state)
+        | _ ->
+            let list = new List<_>()
+            list.Add(state)
+            tasks_by_input.Add(node.Uid, list)
+
+    // run task with implicit dependency processing
+    member private this.RunTaskImplicitDeps (task: Task) =
+        let deps = Dictionary<string, string * Signature>()
+        let oldh = task.Implicit
+
+        // this is... ugly.
+        // a better solution would be to have a separate mutable taskstate,
+        // but it's not clear yet whether other parts of task should be mutable
+        try
+            task.Implicit <- fun node -> this.Wait(node); deps.[node.Uid] <- (node.Uid, db.ContentSignature node)
+            let result = task.Builder.Build task
+            result, Seq.toArray deps.Values
+        finally
+            task.Implicit <- oldh
+
     // run task
     member private this.Run (state: TaskState) =
         assert (state.Status = TaskStatus.Created)
@@ -108,22 +146,18 @@ type private TaskScheduler(db: Database) =
 
         // wait for all inputs
         let inputs = task.Sources
-
-        for input in inputs do
-            match task_by_output.TryGetValue(input.Uid) with
-            | true, dep -> this.Wait dep
-            | _ -> ()
+        for input in inputs do this.Wait input
 
         let builder = task.Builder
 
         try
             // compute current signature
-            let tsig = TaskSignature(inputs |> Array.map (fun n -> n.Uid, db.ContentSignature n), builder.Version task, None)
+            let tsig = TaskSignature(inputs |> Array.map (fun n -> n.Uid, db.ContentSignature n), [||], builder.Version task, None)
 
             // build task if necessary
-            let result =
+            let (result, implicits) =
                 match this.UpToDate(task, tsig) with
-                | Some s -> s.Result
+                | Some s -> s.Result, s.Implicits
                 | None ->
                     // output task description
                     let descr = builder.Description task
@@ -133,19 +167,23 @@ type private TaskScheduler(db: Database) =
                     for target in task.Targets do Directory.CreateDirectory(target.Info.DirectoryName) |> ignore
 
                     // build task
-                    let result = builder.Build task
+                    let result, implicits = this.RunTaskImplicitDeps task
 
                     // store signature with updated result
-                    db.TaskSignature task.Uid <- TaskSignature(tsig.Inputs, tsig.Version, result)
+                    db.TaskSignature task.Uid <- TaskSignature(tsig.Inputs, implicits, tsig.Version, result)
 
-                    result
+                    result, implicits
 
             // run post-build step if necessary
             match result with
             | Some result -> builder.PostBuild(task, result)
             | None -> ()
+
+            // add implicit dependencies to input -> task map
+            for (input, _) in implicits do
+                this.AddDependency(state, Node input)
         with
-        | e -> failwithf "%s: error: %s" task.Uid e.Message
+        | e -> failwithf "%s: failed to build target:\n%s" task.Uid e.Message
 
         state.Status <- TaskStatus.Completed
 
@@ -155,13 +193,7 @@ type private TaskScheduler(db: Database) =
 
         // add task to input -> task map
         for input in task.Sources do
-            match tasks_by_input.TryGetValue(input.Uid) with
-            | true, list ->
-                list.Add(state)
-            | _ ->
-                let list = new List<_>()
-                list.Add(state)
-                tasks_by_input.Add(input.Uid, list)
+            this.AddDependency(state, input)
 
         // add task to output -> task map
         for output in task.Targets do
