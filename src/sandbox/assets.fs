@@ -15,6 +15,11 @@ let watcher = lazy Core.FS.Watcher(".", fun path ->
 // texture settings
 Build.Texture.addSettings "art/texture.db"
 
+// shader export
+let Shader path =
+    let bin = context.Target path ".shader"
+    context.Task(Shader.builder, source = path, target = bin)
+
 // mesh export
 let Mesh path =
     // export .dae file
@@ -30,4 +35,9 @@ let buildMeshes path =
     let files = patterns |> Array.collect (fun p -> System.IO.Directory.GetFiles(path, p, System.IO.SearchOption.AllDirectories))
     files |> Array.iter (fun p -> Mesh (Node p))
 
+let buildShaders path =
+    let files = System.IO.Directory.GetFiles(path, "*.hlsl", System.IO.SearchOption.AllDirectories)
+    files |> Array.iter (fun p -> Shader (Node p))
+
 buildMeshes "art"
+buildShaders "src/shaders"

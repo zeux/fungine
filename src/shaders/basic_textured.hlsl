@@ -1,7 +1,10 @@
 cbuffer c0: register(cb0)
 {
     float4x4 view_projection;
+    float3 view_position;
+    float roughness;
     float3 position_offset;
+    float smoothness;
     float3 position_scale;
     float2 texcoord_offset;
     float2 texcoord_scale;
@@ -16,7 +19,7 @@ cbuffer c1: register(cb1)
 SamplerState default_sampler;
 
 Texture2D<float4> albedo_map: register(t0);
-Texture2D<float3> normal_map: register(t1);
+Texture2D<float2> normal_map: register(t1);
 Texture2D<float3> specular_map: register(t2);
 
 struct VS_IN
@@ -90,9 +93,17 @@ float4 gamma(float4 v)
     return float4(gamma(v.xyz), v.w);
 }
 
+float3 sample_normal(Texture2D<float2> map, float2 uv)
+{
+    float2 xy = map.Sample(default_sampler, uv) * 2 - 1;
+    xy *= 1 - smoothness;
+
+    return float3(xy, sqrt(1 - dot(xy, xy)));
+}
+
 float4 ps_main(PS_IN I): SV_Target
 {
-    float3 normal_ts = normal_map.Sample(default_sampler, I.uv0) * 2 - 1;
+    float3 normal_ts = sample_normal(normal_map, I.uv0);
     float3 normal = normalize(normal_ts.x * I.tangent + normal_ts.y * I.bitangent + normal_ts.z * I.normal);
 
     float4 albedo = degamma(albedo_map.Sample(default_sampler, I.uv0));
@@ -101,10 +112,19 @@ float4 ps_main(PS_IN I): SV_Target
 
     float3 spec = degamma(specular_map.Sample(default_sampler, I.uv0));
 
-    float3 light = normalize(float3(1, 0, 1));
-    float3 diffuse = lerp(degamma(float3(0, 0.5, 1)) * 0.04, degamma(float3(1, 0.9, 0.2)) * 2, saturate(dot(normal, light)));
+    float3 light = normalize(float3(0, 1, 0.2));
+    float diffuse = saturate(dot(normal, light));
 
-    float3 specular = spec * 0.0;
+    float3 view = normalize(view_position - I.pos_ws);
+    float3 hvec = normalize(light + view);
 
-	return float4(gamma(albedo.rgb * (diffuse + specular)), albedo.a);
+    float cosnh = saturate(dot(hvec, normal));
+
+    // Normalized Blinn-Phong
+    float specpower = pow(2, roughness * 10);
+    float3 specular = spec * pow(cosnh, specpower) * ((specpower + 8) / 8);
+
+    float3 ambient = 0.1;
+
+	return float4(gamma(albedo.rgb * (ambient + diffuse) + specular * diffuse), albedo.a);
 }
