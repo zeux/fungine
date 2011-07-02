@@ -50,7 +50,7 @@ let desc = new SwapChainDescription(
             Flags = SwapChainFlags.AllowModeSwitch
             )
 
-let (_, device, swapChain) = Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.Debug, desc)
+let (_, device, swapChain) = Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.None, desc)
 
 // setup asset loaders
 AssetDB.addType "dds" (Render.TextureLoader.load device)
