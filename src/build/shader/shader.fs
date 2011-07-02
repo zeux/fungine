@@ -12,7 +12,7 @@ let private getData (stream: DataStream) =
     stream.ReadRange<byte>(int stream.Length)
 
 // include handler
-type private IncludeHandler(root_file) =
+type private IncludeHandler(callback, root_file) =
     interface Include with
         // open included file
         override this.Open(typ, file, parent, stream) =
@@ -27,6 +27,7 @@ type private IncludeHandler(root_file) =
             let path = Path.Combine(Path.GetDirectoryName(parent_file), file)
 
             // open file
+            callback path
             stream <- try File.OpenRead(path) with e -> null
 
         // close included file
@@ -34,16 +35,16 @@ type private IncludeHandler(root_file) =
             stream.Dispose()
 
 // build single bytecode instance
-let private buildBytecode path entry profile =
+let private buildBytecode path entry profile includes =
     let flags = ShaderFlags.PackMatrixRowMajor ||| ShaderFlags.WarningsAreErrors
-    ShaderBytecode.CompileFromFile(path, entry, profile, flags, EffectFlags.None, [||], IncludeHandler(path))
+    ShaderBytecode.CompileFromFile(path, entry, profile, flags, EffectFlags.None, [||], IncludeHandler(includes, path))
 
 // build shader
-let private build source target version =
-    let vs = buildBytecode source "vs_main" ("vs_" + version)
+let private build source target version includes =
+    let vs = buildBytecode source "vs_main" ("vs_" + version) includes
     let vssig = ShaderSignature.GetInputSignature(vs)
 
-    let ps = buildBytecode source "ps_main" ("ps_" + version)
+    let ps = buildBytecode source "ps_main" ("ps_" + version) includes
 
     let shader =
         Render.Shader(
@@ -55,4 +56,4 @@ let private build source target version =
 
 // shader builder object
 let builder = ActionBuilder("Shader", fun task ->
-    build task.Sources.[0].Path task.Targets.[0].Path "5_0")
+    build task.Sources.[0].Path task.Targets.[0].Path "5_0" (fun path -> task.Implicit (Node path)))
