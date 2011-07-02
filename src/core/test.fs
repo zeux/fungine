@@ -25,25 +25,23 @@ let private runTest test =
 // run all tests in all loaded assemblies
 let private runTests () =
     let assemblies = System.AppDomain.CurrentDomain.GetAssemblies()
-    let types = assemblies |> Array.collect (fun a -> a.GetTypes()) 
+    let types = assemblies |> Array.collect (fun a -> a.GetTypes())
     let suites = types |> Array.filter (fun t -> t.Name.EndsWith("Tests"))
+    let methods = suites |> Array.collect (fun t ->t.GetMethods(System.Reflection.BindingFlags.Static ||| System.Reflection.BindingFlags.Public))
+    let tests = methods |> Array.filter (fun m -> m.GetParameters().Length = 0)
 
     let total = ref 0
     let passed = ref 0
 
-    for suite in suites do
-        let methods = suite.GetMethods(System.Reflection.BindingFlags.Static ||| System.Reflection.BindingFlags.Public)
-        let tests = methods |> Array.filter (fun m -> m.GetParameters().Length = 0)
+    for test in tests do
+        incr total
 
-        for test in tests do
-            incr total
-
-            match runTest test with
-            | None -> incr passed
-            | Some (AssertionException (file, line, name, msg)) ->
-                printfn "%s: test %s failed:\n\t%s:%d: assertion failed in %s\n\t%s" suite.FullName test.Name file line name msg
-            | Some e ->
-                printfn "%s: test %s failed:\n\t%A" suite.FullName test.Name e
+        match runTest test with
+        | None -> incr passed
+        | Some (AssertionException (file, line, name, msg)) ->
+            printfn "%s: test %s failed:\n\t%s(%d): assertion failed in %s\n\t%s" test.DeclaringType.FullName test.Name file line name msg
+        | Some e ->
+            printfn "%s: test %s failed:\n\t%A" test.DeclaringType.FullName test.Name e
 
     !passed, !total
 
@@ -74,9 +72,4 @@ let private runTestsWithAssertionHandler () =
 
 // run all tests
 let run () =
-    let passed, total = runTestsWithAssertionHandler ()
-
-    if passed = total then
-        printfn "Success: %d tests passed." passed
-    else
-        printfn "FAILURE: %d out of %d tests failed." (total - passed) total
+    runTestsWithAssertionHandler()

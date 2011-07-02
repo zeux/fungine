@@ -24,9 +24,6 @@ System.Threading.Thread.CurrentThread.CurrentCulture <- System.Globalization.Cul
 System.Environment.CurrentDirectory <- System.AppDomain.CurrentDomain.BaseDirectory + "/../.."
 System.Console.WindowWidth <- max System.Console.WindowWidth 140
 
-// run tests
-Core.Test.run ()
-
 // build assets
 assets.context.Run()
 

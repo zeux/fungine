@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Name>tests</Name>
+    <OutputType>Exe</OutputType>
+    <ProjectGuid>{93c88af0-4244-48d0-b1a3-c2a64f66ad41}</ProjectGuid>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+  </PropertyGroup>
+  <Import Project="fungine.targets" />
+  <ItemGroup>
+    <Compile Include="tests\runner.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\src\fungine.build.fsproj">
+      <Name>fungine.build</Name>
+      <Project>{ff03a2b1-9469-4131-aab7-46fc36b582d6}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\src\fungine.fsproj">
+      <Name>fungine</Name>
+      <Project>{1da9d6e3-6745-46c2-ade2-421f7039664c}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup>
+    <PostBuildEvent>$(TargetPath)</PostBuildEvent>
+  </PropertyGroup>
+</Project>
