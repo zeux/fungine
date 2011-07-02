@@ -2,12 +2,9 @@ module Build.Texture
 
 open BuildSystem
 open Build.NvTextureTools
-open Core.Data
 
 open System.Collections.Generic
 open System.Text.RegularExpressions
-
-open SlimDX.Direct3D11
 
 // texture compression profile
 type Profile =
