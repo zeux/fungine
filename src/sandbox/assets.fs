@@ -30,14 +30,11 @@ let Mesh path =
     let mesh = context.Target path ".mesh"
     context.Task(Dae.MeshBuilder.builder, source = dae, target = mesh)
 
-let buildMeshes path =
-    let patterns = [|"*.mb"; "*.ma"; "*.max"|]
-    let files = patterns |> Array.collect (fun p -> System.IO.Directory.GetFiles(path, p, System.IO.SearchOption.AllDirectories))
-    files |> Array.iter (fun p -> Mesh (Node p))
+// build shaders
+Node.Glob "src/shaders/**.hlsl"
+|> Array.iter Shader
 
-let buildShaders path =
-    let files = System.IO.Directory.GetFiles(path, "*.hlsl", System.IO.SearchOption.AllDirectories)
-    files |> Array.iter (fun p -> Shader (Node p))
-
-buildMeshes "art"
-buildShaders "src/shaders"
+// build meshes
+[|"mb"; "ma"; "max"|]
+|> Array.collect (fun ext -> Node.Glob (sprintf "art/**.%s" ext))
+|> Array.iter Mesh
