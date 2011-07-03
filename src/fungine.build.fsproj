@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="build\system\output.fs" />
     <Compile Include="build\system\signature.fs" />
+    <Compile Include="build\system\glob.fs" />
     <Compile Include="build\system\node.fs" />
     <Compile Include="build\system\database.fs" />
     <Compile Include="build\system\task.fs" />
