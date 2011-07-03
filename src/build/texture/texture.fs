@@ -4,7 +4,6 @@ open BuildSystem
 open Build.NvTextureTools
 
 open System.Collections.Generic
-open System.Text.RegularExpressions
 
 // texture compression profile
 type Profile =
@@ -73,7 +72,7 @@ let private build source target settings =
     if not result then failwith "compression failed"
 
 // texture setting database
-let private settings = List<Regex * Settings>()
+let private settings = List<(string -> bool) * Settings>()
 
 // add a file to texture settings db
 let addSettings path =
@@ -82,20 +81,15 @@ let addSettings path =
     for (key, value) in doc.Pairs do
         // pattern is a or-separated list
         for part in key.Split([|'|'|]) do
-            // normalize to match Node.Uid
-            let pattern = part.Trim().ToLowerInvariant().Replace('\\', '/')
-
-            // ** means "any part of path", * means "any part of name/extension"
-            let r = Regex(sprintf "^%s$" (Regex.Escape(pattern).Replace(@"\*\*", ".*").Replace(@"\*", "[^/.]*")))
-
             // add parsed elements to collection
+            let r = Glob.matches (part.Trim())
             let s: Settings = Core.Data.Read.readNode doc value
             settings.Add((r, s))
 
 // get settings from db for path
 let getSettings path =
     // get settings that match pattern
-    let ss = settings |> Seq.choose (fun (pattern, s) -> if pattern.IsMatch path then Some s else None)
+    let ss = settings |> Seq.choose (fun (pattern, s) -> if pattern path then Some s else None)
 
     // select the last Some value, or default
     let select sel init = ss |> Seq.map sel |> Seq.fold (fun acc v -> if Option.isSome v then v else acc) (Some init)
