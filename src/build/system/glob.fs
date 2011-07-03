@@ -29,18 +29,15 @@ let find (pattern: string) =
         let (a, b) = m.Groups.[1], m.Groups.[2]
         (if a.Success then a.Value + "*/" else "") + "**" + (if b.Success then "/*" + b.Value else ""))
 
-    // for each path entry, get a path walker
-    let entries = canonical.Split([|'/'; '\\'|])
-    let walkers =
-        entries
-        |> Array.mapi (fun i e ->
-            match i + 1 < entries.Length, e with
-            | true, "**" -> fun path -> Array.append [| path |] (Directory.GetDirectories(path, "*", SearchOption.AllDirectories))
-            | false, "**" -> fun path -> Directory.GetFiles(path, "*", SearchOption.AllDirectories)
-            | true, e -> fun path -> Directory.GetDirectories(path, e)
-            | false, e -> fun path -> Directory.GetFiles(path, e))
+    // for each path entry, get a path walker and apply them sequentially to perform search
+    let rec loop acc entries =
+        match entries with
+        | ["**"] -> acc >> Array.collect (fun path -> Directory.GetFiles(path, "*", SearchOption.AllDirectories))
+        | ["**"; e] -> acc >> Array.collect (fun path -> Directory.GetFiles(path, e, SearchOption.AllDirectories))
+        | "**" :: rest -> loop (acc >> Array.collect (fun path -> Array.append [| path |] (Directory.GetDirectories(path, "*", SearchOption.AllDirectories)))) rest
+        | [""] -> acc
+        | [e] -> acc >> Array.collect (fun path -> Directory.GetFiles(path, e))
+        | e :: rest -> loop (acc >> Array.collect (fun path -> Directory.GetDirectories(path, e))) rest
+        | [] -> acc
 
-    // apply all walkers sequentially to perform search
-    fun (path: string) ->
-        walkers
-        |> Array.fold (fun acc w -> Array.collect w acc) [| path |]
+    loop (fun path -> [| path |]) (canonical.Split([|'/'; '\\'|]) |> List.ofArray)
