@@ -41,3 +41,7 @@ type Node private(path: string, uid: string) =
     static member Root
         with get () = root
         and set value = root <- normalize value + "/"
+
+    // node glob utility
+    static member Glob pattern =
+        Glob.find pattern root |> Array.map (fun p -> Node p)
