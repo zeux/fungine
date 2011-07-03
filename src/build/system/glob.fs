@@ -33,7 +33,7 @@ let find (pattern: string) =
     let rec loop acc entries =
         match entries with
         | ["**"] -> acc >> Array.collect (fun path -> Directory.GetFiles(path, "*", SearchOption.AllDirectories))
-        | ["**"; e] -> acc >> Array.collect (fun path -> Directory.GetFiles(path, e, SearchOption.AllDirectories))
+        | ["**"; e] when e <> "" -> acc >> Array.collect (fun path -> Directory.GetFiles(path, e, SearchOption.AllDirectories))
         | "**" :: rest -> loop (acc >> Array.collect (fun path -> Array.append [| path |] (Directory.GetDirectories(path, "*", SearchOption.AllDirectories)))) rest
         | [""] -> acc
         | [e] -> acc >> Array.collect (fun path -> Directory.GetFiles(path, e))
