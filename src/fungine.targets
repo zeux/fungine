@@ -2,7 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <AssemblyName>$(Name)</AssemblyName>
-    <IntermediateOutputPath>../.build</IntermediateOutputPath>
+    <IntermediateOutputPath>../.build/code</IntermediateOutputPath>
     <OutputPath>../bin</OutputPath>
     <RootNamespace>fungine</RootNamespace>
     <WarningLevel>4</WarningLevel>
