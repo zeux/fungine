@@ -16,11 +16,17 @@ let private getRegistryValue (reg: RegistryKey) (path: string) key =
 let private getRegistryValueVariant variants path name =
     let keys = [for hive in [RegistryHive.CurrentUser; RegistryHive.LocalMachine] do for view in [RegistryView.Registry64; RegistryView.Registry32] -> RegistryKey.OpenBaseKey(hive, view)]
     let variations = [for key in keys do for var in variants -> key, var]
-    List.pick (fun (key, var) -> getRegistryValue key (path var) name) variations
+    List.tryPick (fun (key, var) -> getRegistryValue key (path var) name) variations
+
+// get the product installation path
+let private getProductPath name versions path key =
+    match getRegistryValueVariant versions path key with
+    | Some path -> path
+    | None -> failwithf "Can't find any installed %s version (out of %A) in the registry" name versions
 
 // get the highest version of installed Maya, consider both 64 and 32 bit versions
 let private getMayaPath versions =
-    getRegistryValueVariant versions (sprintf @"SOFTWARE\Autodesk\Maya\%s\Setup\InstallPath") "MAYA_INSTALL_LOCATION"
+    getProductPath "Maya" versions (sprintf @"SOFTWARE\Autodesk\Maya\%s\Setup\InstallPath") "MAYA_INSTALL_LOCATION"
 
 // highest installed Maya version
 let private mayaPath = lazy (getMayaPath ["2011"; "2010"; "2009"; "2008"])
@@ -134,10 +140,10 @@ let private buildMayaBatcher source target =
 
 // get the highest version of installed Max, consider both 64 and 32 bit versions
 let private getMaxPath versions =
-    getRegistryValueVariant versions (sprintf @"SOFTWARE\Autodesk\3dsmax\%s\MAX-1:409") "Installdir"
+    getProductPath "3dsmax" versions (sprintf @"SOFTWARE\Autodesk\3dsmax\%s\MAX-1:409") "Installdir"
 
 // highest installed Max version
-let private maxPath = lazy (getMaxPath ["12.0"; "11.0"; "10.0"; "9.0"])
+let private maxPath = lazy (getMaxPath ["13.0"; "12.0"; "11.0"; "10.0"; "9.0"])
 
 // build .dae file via standalone 3dsmax
 let private buildMax source target =
