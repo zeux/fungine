@@ -78,15 +78,15 @@ module private TextureLoaderDDS =
     // additional header for DX10
     [<Struct; StructLayout(LayoutKind.Sequential, Pack = 4)>]
     type HeaderDX10 =
-        val dxgiFormat: Format
-        val resourceDimension: ResourceDimension
-        val miscFlag: ResourceOptionFlags
+        val format: Format
+        val dimension: ResourceDimension
+        val flags: ResourceOptionFlags
         val arraySize: int
         val reserved: int
 
         // ctor
-        new (dxgiFormat, resourceDimension, miscFlag, arraySize) =
-            { dxgiFormat = dxgiFormat; resourceDimension = resourceDimension; miscFlag = miscFlag; arraySize = arraySize; reserved = 0 }
+        new (format, dimension, flags, arraySize) =
+            { format = format; dimension = dimension; flags = flags; arraySize = arraySize; reserved = 0 }
 
     // miscellaneous flags
     let DDSCAPS2_CUBEMAP = 0x200
@@ -131,7 +131,7 @@ module private TextureLoaderDDS =
 
     // get mip size
     let getMipSize size mip =
-        if size >>> mip = 0 then 1 else size >>> mip
+        max (size >>> mip) 1
 
     // get row pitch
     let getRowPitch format width =
@@ -144,36 +144,34 @@ module private TextureLoaderDDS =
 
     // get slice pitch
     let getSlicePitch format width height =
-        if Formats.isBlockCompressed format then
-            getRowPitch format width * ((height + 3) / 4)
-        else
-            getRowPitch format width * height
+        getRowPitch format width * (if Formats.isBlockCompressed format then (height + 3) / 4 else height)
 
     // get texture subresource layout
     let getLayout format width height depth miplevels arraysize conv =
-        let row_pitches = Array.init miplevels (fun mip -> getRowPitch format (getMipSize width mip))
-        let slice_pitches = Array.init miplevels (fun mip -> getSlicePitch format (getMipSize width mip) (getMipSize height mip))
-        let level_sizes = slice_pitches |> Array.mapi (fun mip pitch -> pitch * getMipSize depth mip)
-        let image_size = Array.sum level_sizes
-        let sizes = [|0..arraysize-1|] |> Array.collect (fun i -> level_sizes)
-        let offsets = Array.scan (+) 0 sizes
-        Array.init sizes.Length (fun i -> conv row_pitches.[i % miplevels] slice_pitches.[i % miplevels] sizes.[i] offsets.[i])
+        let offset = ref 0
+        Array.init (arraysize * miplevels) (fun idx ->
+            let mip = idx % miplevels
+            let row_pitch = getRowPitch format (getMipSize width mip)
+            let slice_pitch = getSlicePitch format (getMipSize width mip) (getMipSize height mip)
+            let size = slice_pitch * getMipSize depth mip
+            offset := !offset + size
+            conv row_pitch slice_pitch size (!offset - size))
 
     // create texture
     let createTexture device (header: Header) (header10: HeaderDX10) streamc =
         let miplevels = max header.miplevels 1
 
-        match header10.resourceDimension with
+        match header10.dimension with
         | ResourceDimension.Texture2D ->
-            let asmult = if header10.miscFlag.HasFlag(ResourceOptionFlags.TextureCube) then 6 else 1
+            let asmult = if header10.flags.HasFlag(ResourceOptionFlags.TextureCube) then 6 else 1
             let desc = Texture2DDescription(Width = header.width, Height = header.height, MipLevels = miplevels, ArraySize = header10.arraySize * asmult,
-                        Format = header10.dxgiFormat, SampleDescription = DXGI.SampleDescription(1, 0), Usage = ResourceUsage.Immutable, BindFlags = BindFlags.ShaderResource,
-                        OptionFlags = header10.miscFlag)
+                        Format = header10.format, SampleDescription = DXGI.SampleDescription(1, 0), Usage = ResourceUsage.Immutable, BindFlags = BindFlags.ShaderResource,
+                        OptionFlags = header10.flags)
             let conv row_pitch slice_pitch size offset = DataRectangle(row_pitch, streamc offset size)
             new Texture2D(device, desc, getLayout desc.Format desc.Width desc.Height 1 desc.MipLevels desc.ArraySize conv) :> Resource
         | ResourceDimension.Texture3D ->
             let desc = Texture3DDescription(Width = header.width, Height = header.height, Depth = header.depth, MipLevels = miplevels,
-                        Format = header10.dxgiFormat, Usage = ResourceUsage.Immutable, BindFlags = BindFlags.ShaderResource)
+                        Format = header10.format, Usage = ResourceUsage.Immutable, BindFlags = BindFlags.ShaderResource)
             let conv row_pitch slice_pitch size offset = DataBox(row_pitch, slice_pitch, streamc offset size)
             new Texture3D(device, desc, getLayout desc.Format desc.Width desc.Height desc.Depth desc.MipLevels 1 conv) :> Resource
         | d -> failwithf "Unknown resource dimension %A" d
