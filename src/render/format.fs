@@ -71,3 +71,14 @@ module Formats =
         | Format.D16_UNorm
             -> true
         | _ -> false
+
+    // is the format a block compressed one
+    let isBlockCompressed format =
+        match format with
+        | Format.BC1_Typeless | Format.BC1_UNorm | Format.BC1_UNorm_SRGB
+        | Format.BC2_Typeless | Format.BC2_UNorm | Format.BC2_UNorm_SRGB | Format.BC3_Typeless | Format.BC3_UNorm | Format.BC3_UNorm_SRGB
+        | Format.BC4_Typeless | Format.BC4_UNorm | Format.BC4_SNorm
+        | Format.BC5_Typeless | Format.BC5_UNorm | Format.BC5_SNorm
+        | Format.BC6_Typeless | Format.BC6_UFloat16 | Format.BC6_SFloat16 | Format.BC7_Typeless | Format.BC7_UNorm | Format.BC7_UNorm_SRGB
+            -> true
+        | _ -> false
