@@ -38,46 +38,23 @@ let dbg_texfilter = Core.DbgVar(Filter.Anisotropic, "render/texture/filter")
 let dbg_fov = Core.DbgVar(45.f, "camera/fov")
 
 let form = new Form(Text = "fungine", Width = 1280, Height = 720)
-
-let desc = new SwapChainDescription(
-            BufferCount = 1,
-            ModeDescription = ModeDescription(form.ClientSize.Width, form.ClientSize.Height, Rational(0, 0), Format.R8G8B8A8_UNorm),
-            IsWindowed = true,
-            OutputHandle = form.Handle,
-            SampleDescription = SampleDescription(1, 0),
-            SwapEffect = SwapEffect.Discard,
-            Usage = Usage.RenderTargetOutput,
-            Flags = SwapChainFlags.AllowModeSwitch
-            )
-
-let (_, device, swapChain) = Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.None, desc)
+let device = Render.Device(form)
 
 // setup asset loaders
-AssetDB.addType "dds" (Render.TextureLoader.load device)
-AssetDB.addType "mesh" (fun path -> (Core.Serialization.Load.fromFileEx path device) :?> Render.Mesh)
-AssetDB.addType "shader" (fun path -> (Core.Serialization.Load.fromFileEx path device) :?> Render.Shader)
+AssetDB.addType "dds" (Render.TextureLoader.load device.Device)
+AssetDB.addType "mesh" (fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Mesh)
+AssetDB.addType "shader" (fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Shader)
 
-let factory = swapChain.GetParent<Factory>()
-factory.SetWindowAssociation(form.Handle, WindowAssociationFlags.IgnoreAll) |> ignore
-
-let backBuffer = Texture2D.FromSwapChain<Texture2D>(swapChain, 0)
-let backBufferView = new RenderTargetView(device, backBuffer)
-
-let sample = SampleDescription(8, 0)
-
-let colorBuffer = new Texture2D(device, Texture2DDescription(Width = form.ClientSize.Width, Height = form.ClientSize.Height, Format = Format.R8G8B8A8_UNorm, ArraySize = 1, MipLevels = 1, SampleDescription = sample, BindFlags = BindFlags.RenderTarget))
-let colorBufferView = new RenderTargetView(device, colorBuffer)
-
-let depthBuffer = new Texture2D(device, Texture2DDescription(Width = form.ClientSize.Width, Height = form.ClientSize.Height, Format = Format.D24_UNorm_S8_UInt, ArraySize = 1, MipLevels = 1, SampleDescription = sample, BindFlags = BindFlags.DepthStencil))
-let depthBufferView = new DepthStencilView(device, depthBuffer)
+let rtpool = Render.RenderTargetPool(device.Device)
 
 let basic_textured = Asset<Render.Shader>.Load ".build/src/shaders/basic_textured.shader"
+let fxaa = Asset<Render.Shader>.Load ".build/src/shaders/postfx/fxaa.shader"
 
 let vertex_size = (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).size
-let layout = new InputLayout(device, basic_textured.Data.VertexSignature.Resource, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
+let layout = new InputLayout(device.Device, basic_textured.Data.VertexSignature.Resource, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
 
-let constantBuffer0 = new Buffer(device, null, BufferDescription(16448, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
-let constantBuffer1 = new Buffer(device, null, BufferDescription(65536, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
+let constantBuffer0 = new Buffer(device.Device, null, BufferDescription(16448, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
+let constantBuffer1 = new Buffer(device.Device, null, BufferDescription(65536, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
 
 let createDummyTexture color =
     let stream = new DataStream(4L, canRead = false, canWrite = true)
@@ -85,9 +62,9 @@ let createDummyTexture color =
     stream.Position <- 0L
 
     let desc = Texture2DDescription(Width = 1, Height = 1, Format = Format.R8G8B8A8_UNorm, ArraySize = 1, MipLevels = 1, SampleDescription = SampleDescription(1, 0), BindFlags = BindFlags.ShaderResource)
-    let texture = new Texture2D(device, desc, DataRectangle(4, stream))
+    let texture = new Texture2D(device.Device, desc, DataRectangle(4, stream))
 
-    new ShaderResourceView(device, texture)
+    new ShaderResourceView(device.Device, texture)
 
 let dummy_albedo = createDummyTexture [|128uy; 128uy; 128uy; 255uy|]
 let dummy_normal = createDummyTexture [|128uy; 128uy; 255uy; 255uy|]
@@ -157,24 +134,41 @@ placeMesh "heaven/meshes/buildings/lab_gears.mesh" Matrix34.Identity
 
 let rng = System.Random()
 
-for x = -10 to 10 do
-    for y = -10 to 10 do
+let size = 50
+for x = -size to size do
+    for y = -size to size do
         placeMesh (sprintf "floor/floor%02d.mesh" (rng.Next(1, 15))) (Matrix34.Translation(float32 x * 2.f, float32 y * 2.f, 0.f))
 
 let dbg_smoothness = Core.DbgVar(0.f, "lighting/smoothness")
-let dbg_roughness = Core.DbgVar(0.5f, "lighting/roughness")
+let dbg_roughness = Core.DbgVar(0.f, "lighting/roughness")
 
-let draw (context: DeviceContext) =
+module Seq =
+    let groupByRef sel items =
+        let dict = Dictionary<_, List<_>>(HashIdentity.Reference)
+
+        for i in items do
+            let key = sel i
+            let mutable l = null
+            match dict.TryGetValue(key, &l) with
+            | true -> l.Add(i)
+            | _ ->
+                let l = List<_>()
+                l.Add(i)
+                dict.Add(key, l)
+
+        dict |> Seq.map (fun p -> p.Key, p.Value.ToArray())
+
+let draw (context: DeviceContext) (colorBuffer: Render.RenderTarget) (depthBuffer: Render.RenderTarget) =
     let projection = Math.Camera.projectionPerspective (dbg_fov.Value / 180.f * float32 Math.PI) (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 0.1f 1000.f
     let view = camera_controller.ViewMatrix
     let view_projection = projection * Matrix44(view)
 
     context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
-    context.OutputMerger.SetTargets(depthBufferView, colorBufferView)
-    context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.Less))
+    context.OutputMerger.SetTargets(depthBuffer.DepthView, colorBuffer.ColorView)
+    context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.Less))
 
     let fill_mode = if dbg_wireframe.Value then FillMode.Wireframe else FillMode.Solid
-    context.Rasterizer.State <- RasterizerState.FromDescription(device, RasterizerStateDescription(CullMode = CullMode.Back, FillMode = fill_mode, IsFrontCounterclockwise = true))
+    context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.Back, FillMode = fill_mode, IsFrontCounterclockwise = true))
 
     context.InputAssembler.InputLayout <- layout
     context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
@@ -184,10 +178,10 @@ let draw (context: DeviceContext) =
     context.VertexShader.SetConstantBuffer(constantBuffer0, 0)
     context.VertexShader.SetConstantBuffer(constantBuffer1, 1)
     context.PixelShader.SetConstantBuffer(constantBuffer0, 0)
-    context.PixelShader.SetSampler(SamplerState.FromDescription(device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbg_texfilter.Value, MaximumAnisotropy = 16, MaximumLod = infinityf)), 0)
+    context.PixelShader.SetSampler(SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbg_texfilter.Value, MaximumAnisotropy = 16, MaximumLod = infinityf)), 0)
 
-    for mesh, instances in scene |> Seq.choose (fun (mesh, transform) -> if mesh.IsReady then Some (mesh.Data, transform) else None) |> Seq.groupBy (fun (mesh, transform) -> mesh) do
-        let transforms = instances |> Seq.toArray |> Array.map (fun (mesh, transform) -> transform)
+    for mesh, instances in scene |> Seq.choose (fun (mesh, transform) -> if mesh.IsReady then Some (mesh.Data, transform) else None) |> Seq.groupByRef (fun (mesh, transform) -> mesh) do
+        let transforms = instances |> Array.map (fun (mesh, transform) -> transform)
 
         if dbg_nulldraw.Value then () else
         let box = context.MapSubresource(constantBuffer1, 0, constantBuffer1.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
@@ -240,16 +234,31 @@ MessagePump.Run(form, fun () ->
     keyboard.Update()
     camera_controller.Update(dt)
 
-    device.ImmediateContext.ClearRenderTargetView(colorBufferView, SlimDX.Color4 Color.Gray)
-    device.ImmediateContext.ClearDepthStencilView(depthBufferView, DepthStencilClearFlags.Depth, 1.f, 0uy)
+    let context = device.Device.ImmediateContext
 
-    draw device.ImmediateContext
+    use colorBuffer = rtpool.Acquire("scene color", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
+    use depthBuffer = rtpool.Acquire("scene depth", form.ClientSize.Width, form.ClientSize.Height, Format.D24_UNorm_S8_UInt)
 
-    device.ImmediateContext.ResolveSubresource(colorBuffer, 0, backBuffer, 0, Format.R8G8B8A8_UNorm)
+    context.ClearRenderTargetView(colorBuffer.ColorView, SlimDX.Color4 Color.Gray)
+    context.ClearDepthStencilView(depthBuffer.DepthView, DepthStencilClearFlags.Depth, 1.f, 0uy)
 
-    swapChain.Present(dbg_present_interval.Value, PresentFlags.None) |> ignore
+    draw context colorBuffer depthBuffer
+
+    context.OutputMerger.SetTargets(device.BackBuffer.ColorView)
+    context.InputAssembler.InputLayout <- null
+    context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
+    context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
+    context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
+
+    fxaa.Data.Set(context)
+    context.PixelShader.SetSampler(SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear)), 0)
+    context.PixelShader.SetShaderResource(colorBuffer.View, 0)
+
+    context.Draw(3, 0)
+
+    device.SwapChain.Present(dbg_present_interval.Value, PresentFlags.None) |> ignore
 
     firsttime.Force() |> ignore)
 
-device.ImmediateContext.ClearState()
-device.ImmediateContext.Flush()
+device.Device.ImmediateContext.ClearState()
+device.Device.ImmediateContext.Flush()
