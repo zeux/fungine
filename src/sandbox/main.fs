@@ -38,14 +38,18 @@ let dbg_texfilter = Core.DbgVar(Filter.Anisotropic, "render/texture/filter")
 let dbg_fov = Core.DbgVar(45.f, "camera/fov")
 
 let form = new Form(Text = "fungine", Width = 1280, Height = 720)
-let device = Render.Device(form)
+let device = Render.Device(form.Handle)
+let rtpool = Render.RenderTargetPool(device.Device)
+
+// setup onsize handler
+form.SizeChanged.Add(fun args ->
+    device.OnSizeChanged ()
+    rtpool.ReleaseUnused())
 
 // setup asset loaders
 AssetDB.addType "dds" (Render.TextureLoader.load device.Device)
 AssetDB.addType "mesh" (fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Mesh)
 AssetDB.addType "shader" (fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Shader)
-
-let rtpool = Render.RenderTargetPool(device.Device)
 
 let basic_textured = Asset<Render.Shader>.Load ".build/src/shaders/basic_textured.shader"
 let fxaa = Asset<Render.Shader>.Load ".build/src/shaders/postfx/fxaa.shader"
