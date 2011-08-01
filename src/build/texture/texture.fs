@@ -89,7 +89,7 @@ let addSettings path =
 // get settings from db for path
 let getSettings path =
     // get settings that match pattern
-    let ss = settings |> Seq.choose (fun (pattern, s) -> if pattern path then Some s else None)
+    let ss = settings |> Seq.choose (fun (pattern, s) -> if pattern path then Some s else None) |> Seq.cache
 
     // select the last Some value, or default
     let select sel init = ss |> Seq.map sel |> Seq.fold (fun acc v -> if Option.isSome v then v else acc) (Some init)
