@@ -7,14 +7,14 @@ open SlimDX.DXGI
 open SlimDX.Direct3D11
 
 // device
-type Device(control: Control) =
+type Device(output: nativeint) =
     // create swap chain description
     let desc =
         new SwapChainDescription(
             BufferCount = 1,
-            ModeDescription = ModeDescription(control.ClientSize.Width, control.ClientSize.Height, Rational(0, 0), Format.R8G8B8A8_UNorm),
+            ModeDescription = ModeDescription(0, 0, Rational(0, 0), Format.R8G8B8A8_UNorm),
             IsWindowed = true,
-            OutputHandle = control.Handle,
+            OutputHandle = output,
             SampleDescription = SampleDescription(1, 0),
             SwapEffect = SwapEffect.Discard,
             Usage = Usage.RenderTargetOutput,
@@ -24,7 +24,7 @@ type Device(control: Control) =
     let (_, device, swapchain) = Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.None, desc)
 
     // disable Alt+Enter handling
-    do swapchain.GetParent<Factory>().SetWindowAssociation(control.Handle, WindowAssociationFlags.IgnoreAll) |> ignore
+    do swapchain.GetParent<Factory>().SetWindowAssociation(output, WindowAssociationFlags.IgnoreAltEnter) |> ignore
 
     // get back buffer
     let getBackBuffer () =
@@ -34,17 +34,6 @@ type Device(control: Control) =
     // back buffer
     let mutable backbuffer = getBackBuffer ()
 
-    // attach onsize handler
-    do control.SizeChanged.Add(fun args ->
-        // release old backbuffer (otherwise ResizeBuffers will fail)
-        (backbuffer :> System.IDisposable).Dispose()
-
-        // resize back/front buffers to the client area of the control
-        swapchain.ResizeBuffers(1, 0, 0, swapchain.Description.ModeDescription.Format, swapchain.Description.Flags) |> ignore
-
-        // recreate backbuffer
-        backbuffer <- getBackBuffer ())
-
     // get device
     member this.Device = device
 
@@ -53,3 +42,14 @@ type Device(control: Control) =
     
     // get backbuffer
     member this.BackBuffer = backbuffer
+
+    // resize handler
+    member this.OnSizeChanged () =
+        // release old backbuffer (otherwise ResizeBuffers will fail)
+        (backbuffer :> System.IDisposable).Dispose()
+
+        // resize back/front buffers to the client area of the control
+        swapchain.ResizeBuffers(1, 0, 0, swapchain.Description.ModeDescription.Format, swapchain.Description.Flags) |> ignore
+
+        // recreate backbuffer
+        backbuffer <- getBackBuffer ()
