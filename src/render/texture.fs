@@ -174,7 +174,7 @@ module private TextureLoaderDDS =
                         Format = header10.format, Usage = ResourceUsage.Immutable, BindFlags = BindFlags.ShaderResource)
             let conv row_pitch slice_pitch size offset = DataBox(row_pitch, slice_pitch, streamc offset size)
             new Texture3D(device, desc, getLayout desc.Format desc.Width desc.Height desc.Depth desc.MipLevels 1 conv) :> Resource
-        | d -> failwithf "Unknown resource dimension %A" d
+        | d -> failwithf "Unsupported image dimension %A" d
 
     // load texture from file
     let load device path =
