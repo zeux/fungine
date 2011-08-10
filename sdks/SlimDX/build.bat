@@ -2,7 +2,9 @@
 setlocal
 
 rem Checkout sources
-call svn checkout http://slimdx.googlecode.com/svn/trunk/ slimdx
+call svn checkout http://slimdx.googlecode.com/svn/trunk/build/ slimdx/build
+call svn checkout http://slimdx.googlecode.com/svn/trunk/external/Effects11 slimdx/external/Effects11
+call svn checkout http://slimdx.googlecode.com/svn/trunk/source slimdx/source
 
 rem Apply patch:
 rem 1. All components except D3D11-related ones and RawInput are stripped
