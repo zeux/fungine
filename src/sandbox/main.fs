@@ -289,7 +289,7 @@ MessagePump.Run(form, fun () ->
         context.Draw(3, 0)
 
         // add some spot lights!
-        let blendon = BlendStateDescription()
+        let mutable blendon = BlendStateDescription()
         Array.fill blendon.RenderTargets 0 8 (RenderTargetBlendDescription(BlendEnable = true, SourceBlend = BlendOption.One, DestinationBlend = BlendOption.One, BlendOperation = BlendOperation.Add, SourceBlendAlpha = BlendOption.One, DestinationBlendAlpha = BlendOption.Zero, BlendOperationAlpha = BlendOperation.Add, RenderTargetWriteMask = ColorWriteMaskFlags.All))
 
         context.OutputMerger.BlendState <- BlendState.FromDescription(device.Device, blendon)
