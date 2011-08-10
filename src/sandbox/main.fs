@@ -54,6 +54,7 @@ AssetDB.addType "shader" (fun path -> (Core.Serialization.Load.fromFileEx path d
 let gbuffer_fill = Asset<Render.Shader>.Load ".build/src/shaders/gbuffer_fill_default.shader"
 let basic_textured = Asset<Render.Shader>.Load ".build/src/shaders/basic_textured.shader"
 let light_directional = Asset<Render.Shader>.Load ".build/src/shaders/lighting/directional.shader"
+let light_spot = Asset<Render.Shader>.Load ".build/src/shaders/lighting/spot.shader"
 let postfx_tonemap = Asset<Render.Shader>.Load ".build/src/shaders/postfx/tonemap.shader"
 let postfx_fxaa = Asset<Render.Shader>.Load ".build/src/shaders/postfx/fxaa.shader"
 
@@ -62,6 +63,7 @@ let layout = new InputLayout(device.Device, gbuffer_fill.Data.VertexSignature.Re
 
 let constantBuffer0 = new Buffer(device.Device, null, BufferDescription(16512, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
 let constantBuffer1 = new Buffer(device.Device, null, BufferDescription(65536, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
+let constantBuffer2 = new Buffer(device.Device, null, BufferDescription(64, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
 
 let createDummyTexture color =
     let stream = new DataStream(4L, canRead = false, canWrite = true)
@@ -237,6 +239,13 @@ form.KeyUp.Add(fun args ->
 
 let frame_timer = Diagnostics.Stopwatch.StartNew()
 
+let dbg_spot_offset = Core.DbgVar(10.f, "spot/offset")
+let dbg_spot_height = Core.DbgVar(20.f, "spot/height")
+let dbg_spot_innercone = Core.DbgVar(15.f, "spot/inner cone")
+let dbg_spot_outercone = Core.DbgVar(20.f, "spot/outer cone")
+let dbg_spot_radius = Core.DbgVar(40.f, "spot/radius")
+let dbg_seed = Core.DbgVar(1, "spot/seed")
+
 MessagePump.Run(form, fun () ->
     let dt = float32 frame_timer.Elapsed.TotalSeconds
     frame_timer.Restart()
@@ -278,6 +287,44 @@ MessagePump.Run(form, fun () ->
         context.PixelShader.SetShaderResource(depthBuffer.View, 3)
 
         context.Draw(3, 0)
+
+        // add some spot lights!
+        let blendon = BlendStateDescription()
+        Array.fill blendon.RenderTargets 0 8 (RenderTargetBlendDescription(BlendEnable = true, SourceBlend = BlendOption.One, DestinationBlend = BlendOption.One, BlendOperation = BlendOperation.Add, SourceBlendAlpha = BlendOption.One, DestinationBlendAlpha = BlendOption.Zero, BlendOperationAlpha = BlendOperation.Add, RenderTargetWriteMask = ColorWriteMaskFlags.All))
+
+        context.OutputMerger.BlendState <- BlendState.FromDescription(device.Device, blendon)
+
+        context.PixelShader.SetConstantBuffer(constantBuffer2, 1)
+
+        light_spot.Data.Set(context)
+
+        let deg2rad = float32 System.Math.PI / 180.f
+
+        let colors = [|
+            Vector3(1.f, 0.f, 0.f)
+            Vector3(0.f, 1.f, 0.f)
+            Vector3(0.f, 0.f, 1.f)
+            Vector3(1.f, 0.f, 1.f)
+            Vector3(1.f, 1.f, 0.f)
+            Vector3(0.f, 1.f, 1.f)
+            Vector3(1.f, 1.f, 1.f) |]
+
+        let rng = System.Random(dbg_seed.Value)
+
+        for x in 0..3 do
+            for y in 0..3 do
+                let box = context.MapSubresource(constantBuffer2, 0, constantBuffer2.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
+                box.Data.Write(Vector3(dbg_spot_offset.Value * float32 x, dbg_spot_offset.Value * float32 y, dbg_spot_height.Value))
+                box.Data.Write(cos (deg2rad * dbg_spot_outercone.Value))
+                box.Data.Write(Vector3.Normalize(Vector3(float32 (rng.NextDouble()), float32 (rng.NextDouble()), -2.f)))
+                box.Data.Write(cos (deg2rad * dbg_spot_innercone.Value))
+                box.Data.Write(colors.[(x * 4 + y) % colors.Length] * 8.f)
+                box.Data.Write(dbg_spot_radius.Value)
+                context.UnmapSubresource(constantBuffer2, 0)
+
+                context.Draw(3, 0)
+
+        context.OutputMerger.BlendState <- null
     else
         use dummyBuffer0 = rtpool.Acquire("gbuffer/dummy", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
         use dummyBuffer1 = rtpool.Acquire("gbuffer/dummy", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
