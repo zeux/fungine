@@ -37,11 +37,17 @@ struct PS_IN
 {
 	float4 pos: SV_POSITION;
 
-    float3 pos_ws: WORLDPOS;
     float3 tangent: TANGENT;
     float3 bitangent: BITANGENT;
     float3 normal: NORMAL;
 	float2 uv0: TEXCOORD0;
+};
+
+struct PS_OUT
+{
+    float4 albedo: SV_Target0;
+    float4 specular: SV_Target1;
+    float4 normal: SV_Target2;
 };
 
 PS_IN vs_main(VS_IN I, uint instance: SV_InstanceId)
@@ -62,36 +68,12 @@ PS_IN vs_main(VS_IN I, uint instance: SV_InstanceId)
     float3 pos_ws = mul(offsets[instance], float4(pos_ls, 1));
 
 	O.pos = mul(view_projection, float4(pos_ws, 1));
-
-    O.pos_ws = pos_ws;
     O.normal = normalize(mul((float3x3)offsets[instance], mul((float3x3)transform, I.normal * 2 - 1)));
     O.tangent = normalize(mul((float3x3)offsets[instance], mul((float3x3)transform, I.tangent.xyz * 2 - 1)));
     O.bitangent = cross(O.normal, O.tangent) * (I.tangent.w * 2 - 1);
     O.uv0 = I.uv0 * texcoord_scale + texcoord_offset;
 	
 	return O;
-}
-
-static const float GAMMA = 2.2;
-
-float3 degamma(float3 v)
-{
-    return pow(saturate(v), GAMMA);
-}
-
-float4 degamma(float4 v)
-{
-    return float4(degamma(v.xyz), v.w);
-}
-
-float3 gamma(float3 v)
-{
-    return pow(saturate(v), 1 / GAMMA);
-}
-
-float4 gamma(float4 v)
-{
-    return float4(gamma(v.xyz), v.w);
 }
 
 float3 sample_normal(Texture2D<float2> map, float2 uv)
@@ -102,30 +84,21 @@ float3 sample_normal(Texture2D<float2> map, float2 uv)
     return float3(xy, sqrt(1 - dot(xy, xy)));
 }
 
-float4 ps_main(PS_IN I): SV_Target
+PS_OUT ps_main(PS_IN I)
 {
     float3 normal_ts = sample_normal(normal_map, I.uv0);
     float3 normal = normalize(normal_ts.x * I.tangent + normal_ts.y * I.bitangent + normal_ts.z * I.normal);
 
-    float4 albedo = degamma(albedo_map.Sample(default_sampler, I.uv0));
+    float4 albedo = albedo_map.Sample(default_sampler, I.uv0);
 
     if (albedo.a < 0.5) discard;
 
-    float3 spec = degamma(specular_map.Sample(default_sampler, I.uv0));
+    float3 spec = specular_map.Sample(default_sampler, I.uv0);
 
-    float3 light = normalize(float3(0, 1, 0.2));
-    float diffuse = saturate(dot(normal, light));
+    PS_OUT O;
+    O.albedo = albedo;
+    O.specular = float4(spec, roughness);
+    O.normal = float4(normal * 0.5 + 0.5, 0);
 
-    float3 view = normalize(view_position - I.pos_ws);
-    float3 hvec = normalize(light + view);
-
-    float cosnh = saturate(dot(hvec, normal));
-
-    // Normalized Blinn-Phong
-    float specpower = pow(2, roughness * 10);
-    float3 specular = spec * pow(cosnh, specpower) * ((specpower + 8) / 8);
-
-    float3 ambient = 0.1;
-
-	return float4(albedo.rgb * (ambient + diffuse) + specular * diffuse, albedo.a);
+	return O;
 }
