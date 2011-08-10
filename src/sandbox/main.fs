@@ -196,7 +196,7 @@ let fillGBuffer (context: DeviceContext) (albedoBuffer: Render.RenderTarget) (sp
         let transforms = instances |> Array.map (fun (mesh, transform) -> transform)
 
         if dbg_nulldraw.Value then () else
-        let box = context.MapSubresource(constantBuffer1, 0, constantBuffer1.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
+        let box = context.MapSubresource(constantBuffer1, MapMode.WriteDiscard, MapFlags.None)
         box.Data.WriteRange(transforms)
         context.UnmapSubresource(constantBuffer1, 0)
 
@@ -212,7 +212,7 @@ let fillGBuffer (context: DeviceContext) (albedoBuffer: Render.RenderTarget) (sp
 
             let compression_info = fragment.compression_info
 
-            let box = context.MapSubresource(constantBuffer0, 0, constantBuffer0.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
+            let box = context.MapSubresource(constantBuffer0, MapMode.WriteDiscard, MapFlags.None)
             box.Data.Write(view_projection)
             box.Data.Write(view_projection_inv)
             box.Data.Write(camera_controller.Position)
@@ -313,7 +313,7 @@ MessagePump.Run(form, fun () ->
 
         for x in 0..3 do
             for y in 0..3 do
-                let box = context.MapSubresource(constantBuffer2, 0, constantBuffer2.Description.SizeInBytes, MapMode.WriteDiscard, MapFlags.None)
+                let box = context.MapSubresource(constantBuffer2, MapMode.WriteDiscard, MapFlags.None)
                 box.Data.Write(Vector3(dbg_spot_offset.Value * float32 x, dbg_spot_offset.Value * float32 y, dbg_spot_height.Value))
                 box.Data.Write(cos (deg2rad * dbg_spot_outercone.Value))
                 box.Data.Write(Vector3.Normalize(Vector3(float32 (rng.NextDouble()), float32 (rng.NextDouble()), -2.f)))
