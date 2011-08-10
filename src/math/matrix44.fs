@@ -76,6 +76,73 @@ type Matrix44 =
     // string representation
     override this.ToString() = sprintf "%A\n%A\n%A\n%A" this.row0 this.row1 this.row2 this.row3
 
+    // determinant
+    member this.Determinant =
+        // get determinants of 2x2 submatrices
+        let a0 = this.row0.x * this.row1.y - this.row0.y * this.row1.x
+        let a1 = this.row0.x * this.row1.z - this.row0.z * this.row1.x
+        let a2 = this.row0.x * this.row1.w - this.row0.w * this.row1.x
+        let a3 = this.row0.y * this.row1.z - this.row0.z * this.row1.y
+        let a4 = this.row0.y * this.row1.w - this.row0.w * this.row1.y
+        let a5 = this.row0.z * this.row1.w - this.row0.w * this.row1.z
+        let b0 = this.row2.x * this.row3.y - this.row2.y * this.row3.x
+        let b1 = this.row2.x * this.row3.z - this.row2.z * this.row3.x
+        let b2 = this.row2.x * this.row3.w - this.row2.w * this.row3.x
+        let b3 = this.row2.y * this.row3.z - this.row2.z * this.row3.y
+        let b4 = this.row2.y * this.row3.w - this.row2.w * this.row3.y
+        let b5 = this.row2.z * this.row3.w - this.row2.w * this.row3.z
+
+        a0 * b5 - a1 * b4 + a2 * b3 + a3 * b2 - a4 * b1 + a5 * b0
+
     // constants
     static member Zero = Matrix44()
     static member Identity = Matrix44(Vector4.UnitX, Vector4.UnitY, Vector4.UnitZ, Vector4.UnitW)
+
+    // transpose
+    static member Transpose (m: Matrix44) =
+        Matrix44(m.row0.x, m.row1.x, m.row2.x, m.row3.x,
+                 m.row0.y, m.row1.y, m.row2.y, m.row3.y,
+                 m.row0.z, m.row1.z, m.row2.z, m.row3.z,
+                 m.row0.w, m.row1.w, m.row2.w, m.row3.w)
+
+    // general inverse
+    static member Inverse (m: Matrix44) =
+        // get determinants of 2x2 submatrices
+        let a0 = m.row0.x * m.row1.y - m.row0.y * m.row1.x
+        let a1 = m.row0.x * m.row1.z - m.row0.z * m.row1.x
+        let a2 = m.row0.x * m.row1.w - m.row0.w * m.row1.x
+        let a3 = m.row0.y * m.row1.z - m.row0.z * m.row1.y
+        let a4 = m.row0.y * m.row1.w - m.row0.w * m.row1.y
+        let a5 = m.row0.z * m.row1.w - m.row0.w * m.row1.z
+        let b0 = m.row2.x * m.row3.y - m.row2.y * m.row3.x
+        let b1 = m.row2.x * m.row3.z - m.row2.z * m.row3.x
+        let b2 = m.row2.x * m.row3.w - m.row2.w * m.row3.x
+        let b3 = m.row2.y * m.row3.z - m.row2.z * m.row3.y
+        let b4 = m.row2.y * m.row3.w - m.row2.w * m.row3.y
+        let b5 = m.row2.z * m.row3.w - m.row2.w * m.row3.z
+
+        // get reciprocal determinant
+        let det = a0 * b5 - a1 * b4 + a2 * b3 + a3 * b2 - a4 * b1 + a5 * b0
+        let s = 1.f / det
+        
+        // get final matrix
+        Matrix44(
+            (+ m.row1.y * b5 - m.row1.z * b4 + m.row1.w * b3) * s,
+            (- m.row0.y * b5 + m.row0.z * b4 - m.row0.w * b3) * s,
+            (+ m.row3.y * a5 - m.row3.z * a4 + m.row3.w * a3) * s,
+            (- m.row2.y * a5 + m.row2.z * a4 - m.row2.w * a3) * s,
+
+            (- m.row1.x * b5 + m.row1.z * b2 - m.row1.w * b1) * s,
+            (+ m.row0.x * b5 - m.row0.z * b2 + m.row0.w * b1) * s,
+            (- m.row3.x * a5 + m.row3.z * a2 - m.row3.w * a1) * s,
+            (+ m.row2.x * a5 - m.row2.z * a2 + m.row2.w * a1) * s,
+
+            (+ m.row1.x * b4 - m.row1.y * b2 + m.row1.w * b0) * s,
+            (- m.row0.x * b4 + m.row0.y * b2 - m.row0.w * b0) * s,
+            (+ m.row3.x * a4 - m.row3.y * a2 + m.row3.w * a0) * s,
+            (- m.row2.x * a4 + m.row2.y * a2 - m.row2.w * a0) * s,
+
+            (- m.row1.x * b3 + m.row1.y * b1 - m.row1.z * b0) * s,
+            (+ m.row0.x * b3 - m.row0.y * b1 + m.row0.z * b0) * s,
+            (- m.row3.x * a3 + m.row3.y * a1 - m.row3.z * a0) * s,
+            (+ m.row2.x * a3 - m.row2.y * a1 + m.row2.z * a0) * s)
