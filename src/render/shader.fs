@@ -1,7 +1,36 @@
 namespace Render
 
+open System.Collections.Generic
+
 open SlimDX
 open SlimDX.Direct3D11
+
+// shader parameter binding
+type ShaderParameterBinding =
+    | ConstantBuffer = 0
+    | ShaderResource = 1
+    | Sampler = 2
+
+// shader parameter
+[<Struct>]
+type ShaderParameter(name: string, binding: ShaderParameterBinding, register: int) =
+    // name -> id mapping
+    static let registry = Dictionary<string, int>()
+
+    // parameter slot id
+    [<DefaultValue>] val mutable private slot: int
+
+    // accessors
+    member this.Slot = this.slot
+    member this.Name = name
+    member this.Binding = binding
+    member this.Register = register
+
+    // fixup callback
+    member internal this.Fixup () =
+        // get existing unique slot for name or add new one
+        let name = this.Name
+        this.slot <- lock registry (fun () -> Core.CacheUtil.update registry name (fun _ -> registry.Count))
 
 // shader signature
 type ShaderSignature(contents: byte array) =
@@ -18,19 +47,26 @@ type ShaderSignature(contents: byte array) =
     member this.Resource = data
 
 // shader object
-type ShaderObject<'T when 'T: null>(bytecode: byte array) =
+type ShaderObject<'T when 'T: null>(bytecode: byte array, parameters: ShaderParameter array) =
     // shader object
     [<System.NonSerialized>]
     let mutable data = null
 
     // fixup callback
     member private this.Fixup device =
+        // create shader object
         use stream = new DataStream(bytecode, canRead = true, canWrite = false)
         use bcobj = new SlimDX.D3DCompiler.ShaderBytecode(stream)
         data <- System.Activator.CreateInstance(typedefof<'T>, [|device; box bcobj|]) :?> 'T
 
+        // fixup parameters
+        parameters |> Array.iteri (fun i _ -> parameters.[i].Fixup())
+
     // resource accessor
     member this.Resource = data
+
+    // parameter table accessor
+    member this.Parameters = parameters
 
 // shader
 type Shader(vertex_signature: ShaderSignature, vertex: ShaderObject<VertexShader>, pixel: ShaderObject<PixelShader>) =

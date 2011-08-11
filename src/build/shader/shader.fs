@@ -39,6 +39,23 @@ let private buildBytecode path entry profile includes =
     let flags = ShaderFlags.PackMatrixRowMajor ||| ShaderFlags.WarningsAreErrors
     ShaderBytecode.CompileFromFile(path, entry, profile, flags, EffectFlags.None, [||], IncludeHandler(includes, path))
 
+// get shader parameters from bytecode
+let private getParameters (code: ShaderBytecode) =
+    use refl = new ShaderReflection(code)
+
+    Array.init refl.Description.BoundResources (fun i ->
+        let desc = refl.GetResourceBindingDescription(i)
+
+        if desc.BindCount <> 1 then failwithf "Parameter %s occupies %d slots, array parameters are not supported" desc.Name desc.BindCount
+
+        let binding =
+            match desc.Type with
+            | ShaderInputType.ConstantBuffer -> Render.ShaderParameterBinding.ConstantBuffer
+            | ShaderInputType.Sampler -> Render.ShaderParameterBinding.Sampler
+            | _ -> Render.ShaderParameterBinding.ShaderResource
+
+        Render.ShaderParameter(desc.Name, binding, desc.BindPoint))
+
 // build shader
 let private build source target version includes =
     let vs = buildBytecode source "vs_main" ("vs_" + version) includes
@@ -49,8 +66,8 @@ let private build source target version includes =
     let shader =
         Render.Shader(
             vertex_signature = Render.ShaderSignature(getData vssig.Data),
-            vertex = Render.ShaderObject(getData vs.Data),
-            pixel = Render.ShaderObject(getData ps.Data))
+            vertex = Render.ShaderObject(getData vs.Data, getParameters vs),
+            pixel = Render.ShaderObject(getData ps.Data, getParameters ps))
 
     Core.Serialization.Save.toFile target shader
 
