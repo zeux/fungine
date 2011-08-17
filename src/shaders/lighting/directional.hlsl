@@ -1,3 +1,5 @@
+#include "../common/gbuffer.h"
+
 cbuffer c0: register(cb0)
 {
     float4x4 view_projection;
@@ -11,13 +13,6 @@ cbuffer c0: register(cb0)
     float2 texcoord_scale;
     float3x4 bones[2];
 }
-
-SamplerState default_sampler;
-
-Texture2D<float4> albedo_buffer: register(t0);
-Texture2D<float4> specular_buffer: register(t1);
-Texture2D<float4> normal_buffer: register(t2);
-Texture2D<float4> depth_buffer: register(t3);
 
 struct PS_IN
 {
@@ -37,35 +32,26 @@ PS_IN vs_main(uint id: SV_VertexID)
     return O;
 }
 
-float4 gamma(float4 color)
-{
-    return float4(pow(saturate(color.rgb), 2.2), color.a);
-}
-
 float4 ps_main(PS_IN I): SV_Target
 {
-    float3 albedo = gamma(albedo_buffer.Sample(default_sampler, I.uv)).rgb;
-    float4 spec = gamma(specular_buffer.Sample(default_sampler, I.uv));
-    float roughness = spec.a;
-    float3 normal = normal_buffer.Sample(default_sampler, I.uv).rgb * 2 - 1;
-    float depth = depth_buffer.Sample(default_sampler, I.uv).r;
+    Surface S = gbufSampleSurface(I.uv);
 
-    float4 pos_ws_h = mul(view_projection_inv, float4(I.uv * float2(2, -2) + float2(-1, 1), depth, 1));
+    float4 pos_ws_h = mul(view_projection_inv, float4(I.uv * float2(2, -2) + float2(-1, 1), S.depth, 1));
     float3 pos_ws = pos_ws_h.xyz / pos_ws_h.w;
 
     float3 light = normalize(float3(0, 1, 0.2));
-    float diffuse = saturate(dot(normal, light));
+    float diffuse = saturate(dot(S.normal, light));
 
     float3 view = normalize(view_position - pos_ws);
     float3 hvec = normalize(light + view);
 
-    float cosnh = saturate(dot(hvec, normal));
+    float cosnh = saturate(dot(hvec, S.normal));
 
     // Normalized Blinn-Phong
-    float specpower = pow(2, roughness * 10);
-    float3 specular = spec.rgb * pow(cosnh, specpower) * ((specpower + 8) / 8);
+    float specpower = pow(2, S.roughness * 10);
+    float3 specular = S.specular * pow(cosnh, specpower) * ((specpower + 8) / 8);
 
     float3 ambient = 0.1;
 
-	return float4(albedo.rgb * (ambient + diffuse) + specular * diffuse, 1);
+	return float4(S.albedo * (ambient + diffuse) + specular * diffuse, 1);
 }
