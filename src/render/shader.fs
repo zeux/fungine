@@ -11,12 +11,17 @@ type ShaderParameterBinding =
     | ShaderResource = 1
     | Sampler = 2
 
+// shader parameter registry
+module ShaderParameterRegistry =
+    let private slots = Dictionary<string, int>()
+
+    // get existing unique slot for name or add new one
+    let getSlot name =
+       lock slots (fun () -> Core.CacheUtil.update slots name (fun _ -> slots.Count))
+
 // shader parameter
 [<Struct>]
 type ShaderParameter(name: string, binding: ShaderParameterBinding, register: int) =
-    // name -> id mapping
-    static let registry = Dictionary<string, int>()
-
     // parameter slot id
     [<DefaultValue>] val mutable private slot: int
 
@@ -28,9 +33,7 @@ type ShaderParameter(name: string, binding: ShaderParameterBinding, register: in
 
     // fixup callback
     member internal this.Fixup () =
-        // get existing unique slot for name or add new one
-        let name = this.Name
-        this.slot <- lock registry (fun () -> Core.CacheUtil.update registry name (fun _ -> registry.Count))
+        this.slot <- ShaderParameterRegistry.getSlot name
 
 // shader signature
 type ShaderSignature(contents: byte array) =
