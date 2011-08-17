@@ -22,8 +22,11 @@ PS_IN vs_main(uint id: SV_VertexID)
 
 float4 ps_main(PS_IN I): SV_Target
 {
-    float4 color = color_map.Sample(default_sampler, I.uv);
-    float3 srgb = pow(saturate(color.rgb), 1 / 2.2);
+    float3 color = color_map.Sample(default_sampler, I.uv).rgb;
+    
+    // filmic tonemapping, approximation by J. Heil & R. Burgess-Dawson
+    float3 x = max(0, color - 0.004);
+    float3 srgb = (x*(6.2*x+.5))/(x*(6.2*x+1.7)+0.06);
 
     // store luma in alpha for fxaa
     return float4(srgb, dot(srgb, float3(0.299, 0.587, 0.114)));
