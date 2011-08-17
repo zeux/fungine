@@ -52,7 +52,6 @@ AssetDB.addType "mesh" (fun path -> (Core.Serialization.Load.fromFileEx path dev
 AssetDB.addType "shader" (fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Shader)
 
 let gbuffer_fill = Asset<Render.Shader>.Load ".build/src/shaders/gbuffer_fill_default.shader"
-let basic_textured = Asset<Render.Shader>.Load ".build/src/shaders/basic_textured.shader"
 let light_directional = Asset<Render.Shader>.Load ".build/src/shaders/lighting/directional.shader"
 let light_spot = Asset<Render.Shader>.Load ".build/src/shaders/lighting/spot.shader"
 let postfx_tonemap = Asset<Render.Shader>.Load ".build/src/shaders/postfx/tonemap.shader"
@@ -167,8 +166,6 @@ module Seq =
 
         dict |> Seq.map (fun p -> p.Key, p.Value.ToArray())
 
-let dbg_deferred = Core.DbgVar(true, "deferred")
-
 let fillGBuffer (context: DeviceContext) (albedoBuffer: Render.RenderTarget) (specBuffer: Render.RenderTarget) (normalBuffer: Render.RenderTarget) (depthBuffer: Render.RenderTarget) =
     let projection = Math.Camera.projectionPerspective (dbg_fov.Value / 180.f * float32 Math.PI) (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 0.1f 1000.f
     let view = camera_controller.ViewMatrix
@@ -185,7 +182,7 @@ let fillGBuffer (context: DeviceContext) (albedoBuffer: Render.RenderTarget) (sp
     context.InputAssembler.InputLayout <- layout
     context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
 
-    (if dbg_deferred.Value then gbuffer_fill else basic_textured).Data.Set(context)
+    gbuffer_fill.Data.Set(context)
 
     context.VertexShader.SetConstantBuffer(constantBuffer0, 0)
     context.VertexShader.SetConstantBuffer(constantBuffer1, 1)
@@ -259,80 +256,71 @@ MessagePump.Run(form, fun () ->
     use colorBuffer = rtpool.Acquire("scene/hdr", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_Float)
     use depthBuffer = rtpool.Acquire("gbuffer/depth", form.ClientSize.Width, form.ClientSize.Height, Format.D24_UNorm_S8_UInt)
 
-    if dbg_deferred.Value then
-        // fill gbuffer
-        use albedoBuffer = rtpool.Acquire("gbuffer/albedo", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
-        use specularBuffer = rtpool.Acquire("gbuffer/specular", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
-        use normalBuffer = rtpool.Acquire("gbuffer/normal", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_UNorm)
+    // fill gbuffer
+    use albedoBuffer = rtpool.Acquire("gbuffer/albedo", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
+    use specularBuffer = rtpool.Acquire("gbuffer/specular", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
+    use normalBuffer = rtpool.Acquire("gbuffer/normal", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_UNorm)
 
-        context.ClearRenderTargetView(albedoBuffer.ColorView, SlimDX.Color4 Color.Gray)
-        context.ClearRenderTargetView(specularBuffer.ColorView, SlimDX.Color4 Color.Black)
-        context.ClearRenderTargetView(normalBuffer.ColorView, SlimDX.Color4 Color.Black)
-        context.ClearDepthStencilView(depthBuffer.DepthView, DepthStencilClearFlags.Depth, 1.f, 0uy)
+    context.ClearRenderTargetView(albedoBuffer.ColorView, SlimDX.Color4 Color.Gray)
+    context.ClearRenderTargetView(specularBuffer.ColorView, SlimDX.Color4 Color.Black)
+    context.ClearRenderTargetView(normalBuffer.ColorView, SlimDX.Color4 Color.Black)
+    context.ClearDepthStencilView(depthBuffer.DepthView, DepthStencilClearFlags.Depth, 1.f, 0uy)
 
-        fillGBuffer context albedoBuffer specularBuffer normalBuffer depthBuffer
+    fillGBuffer context albedoBuffer specularBuffer normalBuffer depthBuffer
 
-        // light & shade
-        context.OutputMerger.SetTargets(colorBuffer.ColorView)
-        context.InputAssembler.InputLayout <- null
-        context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
-        context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
-        context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
+    // light & shade
+    context.OutputMerger.SetTargets(colorBuffer.ColorView)
+    context.InputAssembler.InputLayout <- null
+    context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
+    context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
+    context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
 
-        light_directional.Data.Set(context)
-        context.PixelShader.SetSampler(SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear)), 0)
-        context.PixelShader.SetShaderResource(albedoBuffer.View, 0)
-        context.PixelShader.SetShaderResource(specularBuffer.View, 1)
-        context.PixelShader.SetShaderResource(normalBuffer.View, 2)
-        context.PixelShader.SetShaderResource(depthBuffer.View, 3)
+    light_directional.Data.Set(context)
+    context.PixelShader.SetSampler(SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear)), 0)
+    context.PixelShader.SetShaderResource(albedoBuffer.View, 0)
+    context.PixelShader.SetShaderResource(specularBuffer.View, 1)
+    context.PixelShader.SetShaderResource(normalBuffer.View, 2)
+    context.PixelShader.SetShaderResource(depthBuffer.View, 3)
 
-        context.Draw(3, 0)
+    context.Draw(3, 0)
 
-        // add some spot lights!
-        let mutable blendon = BlendStateDescription()
-        Array.fill blendon.RenderTargets 0 8 (RenderTargetBlendDescription(BlendEnable = true, SourceBlend = BlendOption.One, DestinationBlend = BlendOption.One, BlendOperation = BlendOperation.Add, SourceBlendAlpha = BlendOption.One, DestinationBlendAlpha = BlendOption.Zero, BlendOperationAlpha = BlendOperation.Add, RenderTargetWriteMask = ColorWriteMaskFlags.All))
+    // add some spot lights!
+    let mutable blendon = BlendStateDescription()
+    Array.fill blendon.RenderTargets 0 8 (RenderTargetBlendDescription(BlendEnable = true, SourceBlend = BlendOption.One, DestinationBlend = BlendOption.One, BlendOperation = BlendOperation.Add, SourceBlendAlpha = BlendOption.One, DestinationBlendAlpha = BlendOption.Zero, BlendOperationAlpha = BlendOperation.Add, RenderTargetWriteMask = ColorWriteMaskFlags.All))
 
-        context.OutputMerger.BlendState <- BlendState.FromDescription(device.Device, blendon)
+    context.OutputMerger.BlendState <- BlendState.FromDescription(device.Device, blendon)
 
-        context.PixelShader.SetConstantBuffer(constantBuffer2, 1)
+    context.PixelShader.SetConstantBuffer(constantBuffer2, 1)
 
-        light_spot.Data.Set(context)
+    light_spot.Data.Set(context)
 
-        let deg2rad = float32 System.Math.PI / 180.f
+    let deg2rad = float32 System.Math.PI / 180.f
 
-        let colors = [|
-            Vector3(1.f, 0.f, 0.f)
-            Vector3(0.f, 1.f, 0.f)
-            Vector3(0.f, 0.f, 1.f)
-            Vector3(1.f, 0.f, 1.f)
-            Vector3(1.f, 1.f, 0.f)
-            Vector3(0.f, 1.f, 1.f)
-            Vector3(1.f, 1.f, 1.f) |]
+    let colors = [|
+        Vector3(1.f, 0.f, 0.f)
+        Vector3(0.f, 1.f, 0.f)
+        Vector3(0.f, 0.f, 1.f)
+        Vector3(1.f, 0.f, 1.f)
+        Vector3(1.f, 1.f, 0.f)
+        Vector3(0.f, 1.f, 1.f)
+        Vector3(1.f, 1.f, 1.f) |]
 
-        let rng = System.Random(dbg_seed.Value)
+    let rng = System.Random(dbg_seed.Value)
 
-        for x in 0..3 do
-            for y in 0..3 do
-                let box = context.MapSubresource(constantBuffer2, MapMode.WriteDiscard, MapFlags.None)
-                box.Data.Write(Vector3(dbg_spot_offset.Value * float32 x, dbg_spot_offset.Value * float32 y, dbg_spot_height.Value))
-                box.Data.Write(cos (deg2rad * dbg_spot_outercone.Value))
-                box.Data.Write(Vector3.Normalize(Vector3(float32 (rng.NextDouble()), float32 (rng.NextDouble()), -2.f)))
-                box.Data.Write(cos (deg2rad * dbg_spot_innercone.Value))
-                box.Data.Write(colors.[(x * 4 + y) % colors.Length] * 8.f)
-                box.Data.Write(dbg_spot_radius.Value)
-                context.UnmapSubresource(constantBuffer2, 0)
+    for x in 0..3 do
+        for y in 0..3 do
+            let box = context.MapSubresource(constantBuffer2, MapMode.WriteDiscard, MapFlags.None)
+            box.Data.Write(Vector3(dbg_spot_offset.Value * float32 x, dbg_spot_offset.Value * float32 y, dbg_spot_height.Value))
+            box.Data.Write(cos (deg2rad * dbg_spot_outercone.Value))
+            box.Data.Write(Vector3.Normalize(Vector3(float32 (rng.NextDouble()), float32 (rng.NextDouble()), -2.f)))
+            box.Data.Write(cos (deg2rad * dbg_spot_innercone.Value))
+            box.Data.Write(colors.[(x * 4 + y) % colors.Length] * 8.f)
+            box.Data.Write(dbg_spot_radius.Value)
+            context.UnmapSubresource(constantBuffer2, 0)
 
-                context.Draw(3, 0)
+            context.Draw(3, 0)
 
-        context.OutputMerger.BlendState <- null
-    else
-        use dummyBuffer0 = rtpool.Acquire("gbuffer/dummy", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
-        use dummyBuffer1 = rtpool.Acquire("gbuffer/dummy", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
-
-        context.ClearRenderTargetView(colorBuffer.ColorView, SlimDX.Color4 Color.Gray)
-        context.ClearDepthStencilView(depthBuffer.DepthView, DepthStencilClearFlags.Depth, 1.f, 0uy)
-
-        fillGBuffer context colorBuffer dummyBuffer0 dummyBuffer1 depthBuffer
+    context.OutputMerger.BlendState <- null
 
     // tonemap
     use ldrBuffer = rtpool.Acquire("scene/ldr", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
