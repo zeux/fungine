@@ -66,6 +66,11 @@ type private TaskScheduler(db: Database) =
             if lhs.Version <> rhs.Version then yield (sprintf "version changed (%A -> %A)" lhs.Version rhs.Version)
         }
 
+    // get up-to-date content signature for node
+    member private this.ContentSignature (node: Node) =
+        this.Wait(node)
+        db.ContentSignature(node)
+
     // is task current or does it need to be built?
     member private this.UpToDate (task: Task, tsig: TaskSignature) =
         if not (task.Targets |> Array.forall (fun p -> p.Info.Exists)) then
@@ -75,7 +80,7 @@ type private TaskScheduler(db: Database) =
             match db.TaskSignature task.Uid with
             | Some s ->
                 // get new signatures for old implicit deps
-                let tsigi = TaskSignature(tsig.Inputs, s.Implicits |> Array.map (fun (uid, _) -> uid, db.ContentSignature (Node uid)), tsig.Version, None)
+                let tsigi = TaskSignature(tsig.Inputs, s.Implicits |> Array.map (fun (uid, _) -> uid, this.ContentSignature(Node uid)), tsig.Version, None)
 
                 if tsigi.Inputs = s.Inputs && tsigi.Implicits = s.Implicits && tsigi.Version = s.Version then
                     Some s
@@ -143,16 +148,11 @@ type private TaskScheduler(db: Database) =
         state.Status <- TaskStatus.Running
 
         let task = state.Task
-
-        // wait for all inputs
-        let inputs = task.Sources
-        for input in inputs do this.Wait input
-
         let builder = task.Builder
 
         try
             // compute current signature
-            let tsig = TaskSignature(inputs |> Array.map (fun n -> n.Uid, db.ContentSignature n), [||], builder.Version task, None)
+            let tsig = TaskSignature(task.Sources |> Array.map (fun n -> n.Uid, this.ContentSignature n), [||], builder.Version task, None)
 
             // build task if necessary
             let (result, implicits) =
