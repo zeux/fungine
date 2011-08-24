@@ -36,6 +36,7 @@
     <Compile Include="render\vertexformat.fs" />
     <Compile Include="render\buffer.fs" />
     <Compile Include="render\shader.fs" />
+    <Compile Include="render\shaderstruct.fs" />
     <Compile Include="render\texture.fs" />
     <Compile Include="render\rendertarget.fs" />
     <Compile Include="render\device.fs" />
