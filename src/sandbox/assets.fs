@@ -16,9 +16,11 @@ let watcher = lazy Core.FS.Watcher(".", fun path ->
 Build.Texture.addSettings "art/texture.db"
 
 // shader export
+let shader_builder = Shader.Builder([|"src/shaders"; context.BuildPath + "/shaderstruct"|])
+
 let Shader path =
     let bin = context.Target path ".shader"
-    context.Task(Shader.builder, source = path, target = bin)
+    context.Task(shader_builder, source = path, target = bin)
 
 // mesh export
 let Mesh path =

@@ -12,7 +12,7 @@ let private getData (stream: DataStream) =
     stream.ReadRange<byte>(int stream.Length)
 
 // include handler
-type private IncludeHandler(callback, root_file) =
+type private IncludeHandler(include_paths, callback, root_file) =
     interface Include with
         // open included file
         override this.Open(typ, file, parent, stream) =
@@ -23,21 +23,32 @@ type private IncludeHandler(callback, root_file) =
                 | :? FileStream as f -> f.Name
                 | _ -> failwithf "Internal error: unknown stream %A" parent
 
-            // make full file name
-            let path = Path.Combine(Path.GetDirectoryName(parent_file), file)
+            // look for file in the path list
+            let paths =
+                match typ with
+                | IncludeType.Local -> Array.append [| Path.GetDirectoryName(parent_file) |] include_paths
+                | IncludeType.System -> include_paths
+                | _ -> failwithf "Internal error: unknown include type %A" typ
 
-            // open file
-            callback path
-            stream <- try File.OpenRead(path) with e -> null
+            // get a stream for the first file found; leave dependencies on all files so that we correctly rebuild if files get added
+            stream <-
+                paths |> Array.pick (fun p ->
+                    let path = Path.Combine(p, file)
+                    callback path
+                    try
+                        // additional exists check to avoid exceptions under normal circumstances
+                        if File.Exists(path) then Some (File.OpenRead(path))
+                        else None
+                    with e -> None)
 
         // close included file
         override this.Close(stream) =
-            stream.Dispose()
+            stream.Close()
 
 // build single bytecode instance
-let private buildBytecode path entry profile includes =
+let private buildBytecode path entry profile include_paths include_callback =
     let flags = ShaderFlags.PackMatrixRowMajor ||| ShaderFlags.WarningsAreErrors
-    ShaderBytecode.CompileFromFile(path, entry, profile, flags, EffectFlags.None, [||], IncludeHandler(includes, path))
+    ShaderBytecode.CompileFromFile(path, entry, profile, flags, EffectFlags.None, [||], IncludeHandler(include_paths, include_callback, path))
 
 // get shader parameters from bytecode
 let private getParameters (code: ShaderBytecode) =
@@ -57,11 +68,11 @@ let private getParameters (code: ShaderBytecode) =
         Render.ShaderParameter(desc.Name, binding, desc.BindPoint))
 
 // build shader
-let private build source target version includes =
-    let vs = buildBytecode source "vs_main" ("vs_" + version) includes
+let private build source target version include_paths include_callback =
+    let vs = buildBytecode source "vs_main" ("vs_" + version) include_paths include_callback
     let vssig = ShaderSignature.GetInputSignature(vs)
 
-    let ps = buildBytecode source "ps_main" ("ps_" + version) includes
+    let ps = buildBytecode source "ps_main" ("ps_" + version) include_paths include_callback
 
     let shader =
         Render.Shader(
@@ -72,5 +83,10 @@ let private build source target version includes =
     Core.Serialization.Save.toFile target shader
 
 // shader builder object
-let builder = ActionBuilder("Shader", fun task ->
-    build task.Sources.[0].Path task.Targets.[0].Path "5_0" (fun path -> task.Implicit (Node path)))
+type Builder(include_paths) =
+    inherit BuildSystem.Builder("Shader", version = sprintf "I=%A" include_paths)
+
+    // build shader
+    override this.Build task =
+        build task.Sources.[0].Path task.Targets.[0].Path "5_0" include_paths (fun path -> task.Implicit (Node path))
+        None
