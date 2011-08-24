@@ -91,7 +91,7 @@ module ShaderStruct =
         // check buffer size
         gen.Emit(OpCodes.Ldarg_2)
         gen.Emit(OpCodes.Ldc_I4, size)
-        gen.Emit(OpCodes.Sub_Ovf)
+        gen.Emit(OpCodes.Sub_Ovf_Un)
         gen.Emit(OpCodes.Pop)
 
         // cast to proper type
