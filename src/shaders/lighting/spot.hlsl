@@ -1,28 +1,10 @@
-#include "../common/gbuffer.h"
+#include <common/gbuffer.h>
 
-cbuffer c0: register(cb0)
-{
-    float4x4 view_projection;
-    float4x4 view_projection_inv;
-    float3 view_position;
-    float roughness;
-    float3 position_offset;
-    float smoothness;
-    float3 position_scale;
-    float2 texcoord_offset;
-    float2 texcoord_scale;
-    float3x4 bones[2];
-}
+#include <auto_Camera.h>
+#include <auto_SpotLight.h>
 
-cbuffer c1: register(cb1)
-{
-    float3 spot_position;
-    float spot_outer;
-    float3 spot_direction;
-    float spot_inner;
-    float3 spot_color;
-    float spot_radius;
-}
+cbuffer camera { Camera camera; };
+cbuffer light { SpotLight light; };
 
 struct PS_IN
 {
@@ -46,18 +28,18 @@ float4 ps_main(PS_IN I): SV_Target
 {
     Surface S = gbufSampleSurface(I.uv);
 
-    float4 pos_ws_h = mul(view_projection_inv, float4(I.uv * float2(2, -2) + float2(-1, 1), S.depth, 1));
+    float4 pos_ws_h = mul(camera.view_projection_inverse, float4(I.uv * float2(2, -2) + float2(-1, 1), S.depth, 1));
     float3 pos_ws = pos_ws_h.xyz / pos_ws_h.w;
 
-    float3 light_un = spot_position - pos_ws;
-    float3 light = normalize(light_un);
-    float atten_dist = saturate(1 - length(light_un) / spot_radius);
-    float atten_cone = pow(saturate((dot(-light, spot_direction) - spot_outer) / (spot_inner - spot_outer)), 4);
+    float3 light_un = light.position - pos_ws;
+    float3 L = normalize(light_un);
+    float atten_dist = saturate(1 - length(light_un) / light.radius);
+    float atten_cone = pow(saturate((dot(-L, light.direction) - light.outer_angle) / (light.inner_angle - light.outer_angle)), 4);
 
-    float diffuse = saturate(dot(S.normal, light)) * atten_dist * atten_cone;
+    float diffuse = saturate(dot(S.normal, L)) * atten_dist * atten_cone;
 
-    float3 view = normalize(view_position - pos_ws);
-    float3 hvec = normalize(light + view);
+    float3 view = normalize(camera.eye_position - pos_ws);
+    float3 hvec = normalize(L + view);
 
     float cosnh = saturate(dot(hvec, S.normal));
 
@@ -65,5 +47,5 @@ float4 ps_main(PS_IN I): SV_Target
     float specpower = pow(2, S.roughness * 10);
     float3 specular = S.specular * pow(cosnh, specpower) * ((specpower + 8) / 8);
 
-	return float4(spot_color * (S.albedo * diffuse + specular * diffuse), 1);
+	return float4(light.color * (S.albedo * diffuse + specular * diffuse), 1);
 }

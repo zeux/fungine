@@ -1,8 +1,9 @@
-cbuffer c0: register(cb0)
+#include <auto_Camera.h>
+
+cbuffer camera { Camera camera; };
+
+cbuffer mesh
 {
-    float4x4 view_projection;
-    float4x4 view_projection_inv;
-    float3 view_position;
     float roughness;
     float3 position_offset;
     float smoothness;
@@ -12,16 +13,16 @@ cbuffer c0: register(cb0)
     float3x4 bones[2];
 }
 
-cbuffer c1: register(cb1)
+cbuffer transforms
 {
     float3x4 offsets[2];
 }
 
 SamplerState default_sampler;
 
-Texture2D<float4> albedo_map: register(t0);
-Texture2D<float2> normal_map: register(t1);
-Texture2D<float3> specular_map: register(t2);
+Texture2D<float4> albedo_map;
+Texture2D<float2> normal_map;
+Texture2D<float3> specular_map;
 
 struct VS_IN
 {
@@ -67,7 +68,7 @@ PS_IN vs_main(VS_IN I, uint instance: SV_InstanceId)
     float3 pos_ls = mul(transform, I.pos);
     float3 pos_ws = mul(offsets[instance], float4(pos_ls, 1));
 
-	O.pos = mul(view_projection, float4(pos_ws, 1));
+	O.pos = mul(camera.view_projection, float4(pos_ws, 1));
     O.normal = normalize(mul((float3x3)offsets[instance], mul((float3x3)transform, I.normal * 2 - 1)));
     O.tangent = normalize(mul((float3x3)offsets[instance], mul((float3x3)transform, I.tangent.xyz * 2 - 1)));
     O.bitangent = cross(O.normal, O.tangent) * (I.tangent.w * 2 - 1);

@@ -13,12 +13,12 @@ struct Surface
     float depth;
 };
 
-SamplerState gbuf_sampler: register(s0);
+SamplerState gbuf_sampler;
 
-Texture2D gbuf_albedo: register(t0);
-Texture2D gbuf_specular: register(t1);
-Texture2D gbuf_normal: register(t2);
-Texture2D gbuf_depth: register(t3);
+Texture2D gbuf_albedo;
+Texture2D gbuf_specular;
+Texture2D gbuf_normal;
+Texture2D gbuf_depth;
 
 Surface gbufSampleSurface(float2 uv)
 {

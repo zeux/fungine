@@ -1,6 +1,6 @@
 SamplerState default_sampler;
 
-Texture2D<float4> color_map: register(t0);
+Texture2D<float4> color_map;
 
 struct PS_IN
 {
