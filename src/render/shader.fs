@@ -7,9 +7,10 @@ open SlimDX.Direct3D11
 
 // shader parameter binding
 type ShaderParameterBinding =
-    | ConstantBuffer = 0
-    | ShaderResource = 1
-    | Sampler = 2
+    | None = 0
+    | ConstantBuffer = 1
+    | ShaderResource = 2
+    | Sampler = 3
 
 // shader parameter registry
 module ShaderParameterRegistry =
@@ -73,6 +74,12 @@ type ShaderObject<'T when 'T: null>(bytecode: byte array, parameters: ShaderPara
 
 // shader
 type Shader(vertex_signature: ShaderSignature, vertex: ShaderObject<VertexShader>, pixel: ShaderObject<PixelShader>) =
+    // get vertex shader
+    member this.VertexShader = vertex
+
+    // get pixel shader
+    member this.PixelShader = pixel
+
     // get input vertex signature
     member this.VertexSignature = vertex_signature
 
