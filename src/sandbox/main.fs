@@ -4,12 +4,10 @@ open System
 open System.Collections.Generic
 open System.Drawing
 open System.IO
-open System.Text
 open System.Windows.Forms
 open SlimDX
 open SlimDX.DXGI
 open SlimDX.Windows
-open SlimDX.D3DCompiler
 open SlimDX.Direct3D11
 
 open Core.Data
@@ -202,21 +200,16 @@ type ShaderContext(context: DeviceContext) =
             pixel_params.Add(Render.ShaderParameter())
 
     member private this.ValidateSlot(slot) =
-        let value = values.[slot]
+        let inline bind (p: Render.ShaderParameter) (value: obj) (stage: ^T) =
+            match p.Binding with
+            | Render.ShaderParameterBinding.None -> ()
+            | Render.ShaderParameterBinding.ConstantBuffer -> (^T: (member SetConstantBuffer: _ -> _ -> _) (stage, value :?> Buffer, p.Register))
+            | Render.ShaderParameterBinding.ShaderResource -> (^T: (member SetShaderResource: _ -> _ -> _) (stage, value :?> ShaderResourceView, p.Register))
+            | Render.ShaderParameterBinding.Sampler -> (^T: (member SetSampler: _ -> _ -> _) (stage, value :?> SamplerState, p.Register))
+            | x -> failwithf "Unexpected binding value %A" x
 
-        match vertex_params.[slot].Binding with
-        | Render.ShaderParameterBinding.None -> ()
-        | Render.ShaderParameterBinding.ConstantBuffer -> context.VertexShader.SetConstantBuffer(value :?> Buffer, vertex_params.[slot].Register)
-        | Render.ShaderParameterBinding.ShaderResource -> context.VertexShader.SetShaderResource(value :?> ShaderResourceView, vertex_params.[slot].Register)
-        | Render.ShaderParameterBinding.Sampler -> context.VertexShader.SetSampler(value :?> SamplerState, vertex_params.[slot].Register)
-        | x -> failwithf "Unexpected binding value %A" x
-
-        match pixel_params.[slot].Binding with
-        | Render.ShaderParameterBinding.None -> ()
-        | Render.ShaderParameterBinding.ConstantBuffer -> context.PixelShader.SetConstantBuffer(value :?> Buffer, pixel_params.[slot].Register)
-        | Render.ShaderParameterBinding.ShaderResource -> context.PixelShader.SetShaderResource(value :?> ShaderResourceView, pixel_params.[slot].Register)
-        | Render.ShaderParameterBinding.Sampler -> context.PixelShader.SetSampler(value :?> SamplerState, pixel_params.[slot].Register)
-        | x -> failwithf "Unexpected binding value %A" x
+        bind vertex_params.[slot] values.[slot] context.VertexShader
+        bind pixel_params.[slot] values.[slot] context.PixelShader
 
     member private this.UpdateSlot(slot, value) =
         this.EnsureSlot(slot)
