@@ -5,6 +5,10 @@
 
 cbuffer camera { Camera camera; };
 cbuffer light { SpotLight light; };
+cbuffer light_camera { Camera light_camera; };
+
+Texture2D<float> shadow_map;
+SamplerComparisonState shadow_sampler;
 
 struct PS_IN
 {
@@ -22,6 +26,19 @@ PS_IN vs_main(uint id: SV_VertexID)
     O.uv = pos.xy;
 
     return O;
+}
+
+float SampleShadow(float2 uv, float depth)
+{
+    float result = 0;
+    
+    [unroll] for (int x = -1; x <= 1; ++x)
+        [unroll] for (int y = -1; y <= 1; ++y)
+        {
+            result += shadow_map.SampleCmpLevelZero(shadow_sampler, uv, depth, int2(x, y));
+        }
+
+    return result / 9;
 }
 
 float4 ps_main(PS_IN I): SV_Target
@@ -47,5 +64,10 @@ float4 ps_main(PS_IN I): SV_Target
     float specpower = pow(2, S.roughness * 10);
     float3 specular = S.specular * pow(cosnh, specpower) * ((specpower + 8) / 8);
 
-	return float4(light.color * (S.albedo * diffuse + specular * diffuse), 1);
+    // Shadow
+    float4 pos_ls_h = mul(light_camera.view_projection, float4(pos_ws, 1));
+    float3 pos_ls = pos_ls_h.xyz / pos_ls_h.w;
+    float shadow = SampleShadow(pos_ls.xy * float2(0.5, -0.5) + 0.5,  pos_ls.z - 1e-5);
+
+	return float4(shadow * light.color * (S.albedo * diffuse + specular * diffuse), 1);
 }

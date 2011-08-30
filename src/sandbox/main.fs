@@ -261,11 +261,7 @@ type ShaderContext(context: DeviceContext) =
     static member (?<-) (this: ShaderContext, name: string, value: obj) =
         this.SetConstant(Render.ShaderParameterRegistry.getSlot name, value)
 
-let fillGBuffer (context: DeviceContext) (shader_context: ShaderContext) (albedoBuffer: Render.RenderTarget) (specBuffer: Render.RenderTarget) (normalBuffer: Render.RenderTarget) (depthBuffer: Render.RenderTarget) =
-    let camera = Camera(camera_controller.ViewMatrix, Math.Camera.projectionPerspective (dbg_fov.Value / 180.f * float32 Math.PI) (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 0.1f 1000.f)
-
-    context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
-    context.OutputMerger.SetTargets(depthBuffer.DepthView, [|albedoBuffer; specBuffer; normalBuffer|] |> Array.map (fun rt -> rt.ColorView))
+let renderScene (context: DeviceContext) (shader_context: ShaderContext) (camera: Camera) =
     context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.Less))
 
     let fill_mode = if dbg_wireframe.Value then FillMode.Wireframe else FillMode.Solid
@@ -315,6 +311,28 @@ let fillGBuffer (context: DeviceContext) (shader_context: ShaderContext) (albedo
             context.InputAssembler.SetIndexBuffer(mesh.indices.Resource, fragment.index_format, fragment.index_offset)
             context.DrawIndexedInstanced(fragment.index_count, transforms.Length, 0, 0, 0)
 
+let fillGBuffer (context: DeviceContext) (shader_context: ShaderContext) (camera: Camera) (albedoBuffer: Render.RenderTarget) (specBuffer: Render.RenderTarget) (normalBuffer: Render.RenderTarget) (depthBuffer: Render.RenderTarget) =
+    context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
+    context.OutputMerger.SetTargets(depthBuffer.DepthView, [|albedoBuffer; specBuffer; normalBuffer|] |> Array.map (fun rt -> rt.ColorView))
+
+    Performance.BeginEvent(Color4(), "gbuffer") |> ignore
+    renderScene context shader_context camera
+    Performance.EndEvent() |> ignore
+
+let fillShadowBuffer (context: DeviceContext) (shader_context: ShaderContext) (camera: Camera) (shadowBuffer: Render.RenderTarget) =
+    let texture = shadowBuffer.Resource :?> Texture2D
+    context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 texture.Description.Width, float32 texture.Description.Height))
+
+    use dummyBuffer = rtpool.Acquire("dummy", texture.Description.Width, texture.Description.Height, Format.R8G8B8A8_UNorm)
+
+    context.ClearRenderTargetView(dummyBuffer.ColorView, Color4())
+
+    context.OutputMerger.SetTargets(shadowBuffer.DepthView, dummyBuffer.ColorView)
+
+    Performance.BeginEvent(Color4(), "shadowbuffer") |> ignore
+    renderScene context shader_context camera
+    Performance.EndEvent() |> ignore
+
 form.KeyUp.Add(fun args ->
     if args.Alt && args.KeyCode = System.Windows.Forms.Keys.Oemcomma then
         let w = WinUI.PropertyGrid.create (Core.DbgVars.getVariables() |> Array.map (fun (name, v) -> name, box v))
@@ -324,13 +342,14 @@ form.KeyUp.Add(fun args ->
 
 let frame_timer = Diagnostics.Stopwatch.StartNew()
 
-let dbg_spot_offset = Core.DbgVar(10.f, "spot/offset")
-let dbg_spot_height = Core.DbgVar(20.f, "spot/height")
-let dbg_spot_innercone = Core.DbgVar(15.f, "spot/inner cone")
+let dbg_spot_offset = Core.DbgVar(30.f, "spot/offset")
+let dbg_spot_height = Core.DbgVar(30.f, "spot/height")
+let dbg_spot_innercone = Core.DbgVar(19.f, "spot/inner cone")
 let dbg_spot_outercone = Core.DbgVar(20.f, "spot/outer cone")
-let dbg_spot_radius = Core.DbgVar(40.f, "spot/radius")
+let dbg_spot_radius = Core.DbgVar(100.f, "spot/radius")
 let dbg_spot_intensity = Core.DbgVar(8.f, "spot/intensity")
 let dbg_spot_seed = Core.DbgVar(1, "spot/seed")
+let dbg_spot_count = Core.DbgVar(3, "spot/count")
 
 MessagePump.Run(form, fun () ->
     let dt = float32 frame_timer.Elapsed.TotalSeconds
@@ -346,6 +365,9 @@ MessagePump.Run(form, fun () ->
     use colorBuffer = rtpool.Acquire("scene/hdr", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_Float)
     use depthBuffer = rtpool.Acquire("gbuffer/depth", form.ClientSize.Width, form.ClientSize.Height, Format.D24_UNorm_S8_UInt)
 
+    // main camera
+    let camera = Camera(camera_controller.ViewMatrix, Math.Camera.projectionPerspective (dbg_fov.Value / 180.f * float32 Math.PI) (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 0.1f 1000.f)
+
     // fill gbuffer
     use albedoBuffer = rtpool.Acquire("gbuffer/albedo", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
     use specularBuffer = rtpool.Acquire("gbuffer/specular", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
@@ -356,7 +378,7 @@ MessagePump.Run(form, fun () ->
     context.ClearRenderTargetView(normalBuffer.ColorView, SlimDX.Color4 Color.Black)
     context.ClearDepthStencilView(depthBuffer.DepthView, DepthStencilClearFlags.Depth, 1.f, 0uy)
 
-    fillGBuffer context shader_context albedoBuffer specularBuffer normalBuffer depthBuffer
+    fillGBuffer context shader_context camera albedoBuffer specularBuffer normalBuffer depthBuffer
 
     context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
 
@@ -381,10 +403,6 @@ MessagePump.Run(form, fun () ->
     let mutable blendon = BlendStateDescription()
     Array.fill blendon.RenderTargets 0 8 (RenderTargetBlendDescription(BlendEnable = true, SourceBlend = BlendOption.One, DestinationBlend = BlendOption.One, BlendOperation = BlendOperation.Add, SourceBlendAlpha = BlendOption.One, DestinationBlendAlpha = BlendOption.Zero, BlendOperationAlpha = BlendOperation.Add, RenderTargetWriteMask = ColorWriteMaskFlags.All))
 
-    context.OutputMerger.BlendState <- BlendState.FromDescription(device.Device, blendon)
-
-    shader_context.Shader <- light_spot.Data
-
     let deg2rad = float32 System.Math.PI / 180.f
 
     let colors = [|
@@ -398,20 +416,51 @@ MessagePump.Run(form, fun () ->
 
     let rng = System.Random(dbg_spot_seed.Value)
 
-    for x in 0..3 do
-        for y in 0..3 do
-            shader_context?light <-
-                SpotLight(
-                    Vector3(dbg_spot_offset.Value * float32 x, dbg_spot_offset.Value * float32 y, dbg_spot_height.Value),
-                    Vector3.Normalize(Vector3(float32 (rng.NextDouble()), float32 (rng.NextDouble()), -2.f)),
-                    cos (deg2rad * dbg_spot_outercone.Value),
-                    cos (deg2rad * dbg_spot_innercone.Value),
-                    dbg_spot_radius.Value,
-                    colors.[(x * 4 + y) % colors.Length] * dbg_spot_intensity.Value)
+    use shadowBuffer = rtpool.Acquire("lighting/shadow buffer", 1024, 1024, Format.D24_UNorm_S8_UInt)
 
-            context.Draw(3, 0)
+    for i in 0 .. dbg_spot_count.Value - 1 do
+        // generate procedural spot light
+        let angle = deg2rad * 360.f * (float32 i / float32 dbg_spot_count.Value)
+        let position = Vector3(dbg_spot_offset.Value * sin angle, dbg_spot_offset.Value * cos angle, dbg_spot_height.Value)
+        let light =
+            SpotLight(
+                position,
+                Vector3.Normalize(-position),
+                cos (deg2rad * dbg_spot_outercone.Value),
+                cos (deg2rad * dbg_spot_innercone.Value),
+                dbg_spot_radius.Value,
+                colors.[i % colors.Length] * dbg_spot_intensity.Value)
 
-    context.OutputMerger.BlendState <- null
+        // render shadow map
+        let light_camera =
+            Camera(
+                Math.Camera.lookAt light.Position (light.Position + light.Direction) (if abs light.Direction.x < 0.7f then Vector3.UnitX else Vector3.UnitY),
+                Math.Camera.projectionPerspective (deg2rad * dbg_spot_outercone.Value * 2.f) 1.f 0.1f light.Radius)
+
+        context.ClearDepthStencilView(shadowBuffer.DepthView, DepthStencilClearFlags.Depth, 1.f, 0uy)
+
+        fillShadowBuffer context shader_context light_camera shadowBuffer
+
+        // draw spot light
+        shader_context?camera <- camera
+
+        context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
+        context.OutputMerger.SetTargets(colorBuffer.ColorView)
+        context.InputAssembler.InputLayout <- null
+        context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
+        context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
+        context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
+        context.OutputMerger.BlendState <- BlendState.FromDescription(device.Device, blendon)
+
+        shader_context.Shader <- light_spot.Data
+        shader_context?light <- light
+        shader_context?light_camera <- light_camera
+        shader_context?shadow_map <- shadowBuffer.View
+        shader_context?shadow_sampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.ComparisonMinMagMipLinear, ComparisonFunction = Comparison.Less))
+
+        context.Draw(3, 0)
+
+        context.OutputMerger.BlendState <- null
 
     // tonemap
     use ldrBuffer = rtpool.Acquire("scene/ldr", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
