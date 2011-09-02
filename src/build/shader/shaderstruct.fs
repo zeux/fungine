@@ -15,14 +15,14 @@ let private getShaderName (name: string) =
 // convert type to shader type name
 let private getShaderType (typ: Type) =
     if typ.IsClass then typ.Name
-    else if typ = typedefof<float32> then "float"
-    else if typ = typedefof<int> then "int"
-    else if typ = typedefof<bool> then "bool"
-    else if typ = typedefof<Vector2> then "float2"
-    else if typ = typedefof<Vector3> then "float3"
-    else if typ = typedefof<Vector4> then "float4"
-    else if typ = typedefof<Matrix34> then "float3x4"
-    else if typ = typedefof<Matrix44> then "float4x4"
+    else if typ = typeof<float32> then "float"
+    else if typ = typeof<int> then "int"
+    else if typ = typeof<bool> then "bool"
+    else if typ = typeof<Vector2> then "float2"
+    else if typ = typeof<Vector3> then "float3"
+    else if typ = typeof<Vector4> then "float4"
+    else if typ = typeof<Matrix34> then "float3x4"
+    else if typ = typeof<Matrix44> then "float4x4"
     else failwithf "Type %A is not supported in shader code" typ
 
 // get shader struct contents for type

@@ -9,7 +9,7 @@ type private TestDelegate = delegate of unit -> unit
 // invoke the test method, maybe return test exception
 let private runTest test =
     // create a typed delegate to avoid exception handling in Delegate.DynamicInvoke / MethodInfo.Invoke
-    let d = System.Delegate.CreateDelegate(typedefof<TestDelegate>, test) :?> TestDelegate
+    let d = System.Delegate.CreateDelegate(typeof<TestDelegate>, test) :?> TestDelegate
 
     // avoid exception handling when a debugger is attached so that we can see the exception at the point of failure
     if System.Diagnostics.Debugger.IsAttached then

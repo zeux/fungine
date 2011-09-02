@@ -74,7 +74,7 @@ let private emitNone gen = ()
 let private emitLoadValuePrimitive (gen: ILGenerator) objemitpre objemitpost (typ: Type) =
     objemitpre gen
     gen.Emit(OpCodes.Ldarg_1) // reader
-    gen.Emit(OpCodes.Call, typedefof<MemoryReader>.GetMethod("ReadValue", BindingFlags.Instance ||| BindingFlags.NonPublic).MakeGenericMethod([|typ|]))
+    gen.Emit(OpCodes.Call, typeof<MemoryReader>.GetMethod("ReadValue", BindingFlags.Instance ||| BindingFlags.NonPublic).MakeGenericMethod([|typ|]))
     objemitpost gen
 
 // load an object
@@ -84,7 +84,7 @@ let private emitLoadObject (gen: ILGenerator) objemitpre objemitpost =
     // read id and fetch object from object table
     gen.Emit(OpCodes.Ldarg_0) // table
     gen.Emit(OpCodes.Ldarg_1) // reader
-    gen.Emit(OpCodes.Call, typedefof<MemoryReader>.GetMethod("ReadInt32", BindingFlags.Instance ||| BindingFlags.NonPublic))
+    gen.Emit(OpCodes.Call, typeof<MemoryReader>.GetMethod("ReadInt32", BindingFlags.Instance ||| BindingFlags.NonPublic))
     gen.Emit(OpCodes.Ldelem_Ref)
 
     objemitpost gen
@@ -118,8 +118,8 @@ and private emitLoadFields (gen: ILGenerator) objemit (typ: Type) =
 
 // load an array of primitive type (fast path)
 let private emitLoadPrimitiveArray (gen: ILGenerator) objemit (typ: Type) =
-    let data_field = typedefof<MemoryReader>.GetField("data", BindingFlags.Instance ||| BindingFlags.NonPublic)
-    let size_local = gen.DeclareLocal(typedefof<int>)
+    let data_field = typeof<MemoryReader>.GetField("data", BindingFlags.Instance ||| BindingFlags.NonPublic)
+    let size_local = gen.DeclareLocal(typeof<int>)
     let skip_label = gen.DefineLabel()
 
     // calculate array size in bytes
@@ -173,20 +173,20 @@ let private emitLoadArray (gen: ILGenerator) objemit (typ: Type) =
 
 // load string
 let private emitLoadString (gen: ILGenerator) objemit =
-    let data_field = typedefof<MemoryReader>.GetField("data", BindingFlags.Instance ||| BindingFlags.NonPublic)
-    let char_local = gen.DeclareLocal(typedefof<nativeint>, pinned = true)
+    let data_field = typeof<MemoryReader>.GetField("data", BindingFlags.Instance ||| BindingFlags.NonPublic)
+    let char_local = gen.DeclareLocal(typeof<nativeint>, pinned = true)
 
     // get pointer to string data
     objemit gen
-    gen.Emit(OpCodes.Ldflda, typedefof<string>.GetField("m_firstChar", BindingFlags.Instance ||| BindingFlags.NonPublic))
+    gen.Emit(OpCodes.Ldflda, typeof<string>.GetField("m_firstChar", BindingFlags.Instance ||| BindingFlags.NonPublic))
     gen.Emit(OpCodes.Stloc, char_local)
 
     // load string data
     gen.Emit(OpCodes.Ldarg_1) // reader
     gen.Emit(OpCodes.Ldloc, char_local)
     objemit gen
-    gen.Emit(OpCodes.Ldfld, typedefof<string>.GetField("m_stringLength", BindingFlags.Instance ||| BindingFlags.NonPublic))
-    gen.Emit(OpCodes.Call, typedefof<MemoryReader>.GetMethod("ReadStringData", BindingFlags.Instance ||| BindingFlags.NonPublic))
+    gen.Emit(OpCodes.Ldfld, typeof<string>.GetField("m_stringLength", BindingFlags.Instance ||| BindingFlags.NonPublic))
+    gen.Emit(OpCodes.Call, typeof<MemoryReader>.GetMethod("ReadStringData", BindingFlags.Instance ||| BindingFlags.NonPublic))
 
 // load a top-level type
 let private emitLoad (gen: ILGenerator) (typ: Type) =
@@ -195,7 +195,7 @@ let private emitLoad (gen: ILGenerator) (typ: Type) =
 
     if typ.IsValueType then
         emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Unbox, typ)) (fun gen -> gen.Emit(OpCodes.Stobj, typ)) typ
-    else if typ = typedefof<string> then
+    else if typ = typeof<string> then
         emitLoadString gen objemit
     else if typ.IsArray then
         assert (typ.GetArrayRank() = 1)
@@ -207,19 +207,19 @@ let private emitLoad (gen: ILGenerator) (typ: Type) =
 
 // create a load delegate for a given type
 let private buildLoadDelegate (typ: Type) =
-    let dm = DynamicMethod("load " + typ.ToString(), null, [|typedefof<ObjectTable>; typedefof<MemoryReader>; typedefof<obj>|], typedefof<LoadMethodHost>, skipVisibility = true)
+    let dm = DynamicMethod("load " + typ.ToString(), null, [|typeof<ObjectTable>; typeof<MemoryReader>; typeof<obj>|], typeof<LoadMethodHost>, skipVisibility = true)
     let gen = dm.GetILGenerator()
 
     emitLoad gen typ
 
-    dm.CreateDelegate(typedefof<LoadDelegate>) :?> LoadDelegate
+    dm.CreateDelegate(typeof<LoadDelegate>) :?> LoadDelegate
 
 // a cache for load delegates (one delegate per type)
 let private loadDelegateCache = Core.ConcurrentCache(buildLoadDelegate)
 
 // create a create delegate for a given type
 let private buildCreateDelegate (typ: Type) =
-    let dm = DynamicMethod("create " + typ.ToString(), typedefof<obj>, [|typedefof<int>|], typedefof<LoadMethodHost>, skipVisibility = true)
+    let dm = DynamicMethod("create " + typ.ToString(), typeof<obj>, [|typeof<int>|], typeof<LoadMethodHost>, skipVisibility = true)
     let gen = dm.GetILGenerator()
 
     if typ.IsArray then
@@ -227,17 +227,17 @@ let private buildCreateDelegate (typ: Type) =
 
         gen.Emit(OpCodes.Ldarg_0)
         gen.Emit(OpCodes.Newarr, typ.GetElementType())
-    else if typ = typedefof<string> then
+    else if typ = typeof<string> then
         gen.Emit(OpCodes.Ldarg_0)
         gen.Emit(OpCodes.Call, typ.GetMethod("FastAllocateString", BindingFlags.Static ||| BindingFlags.NonPublic))
     else
         gen.Emit(OpCodes.Ldtoken, typ)
-        gen.Emit(OpCodes.Call, typedefof<Type>.GetMethod("GetTypeFromHandle"))
-        gen.Emit(OpCodes.Call, typedefof<System.Runtime.Serialization.FormatterServices>.GetMethod("GetUninitializedObject"))
+        gen.Emit(OpCodes.Call, typeof<Type>.GetMethod("GetTypeFromHandle"))
+        gen.Emit(OpCodes.Call, typeof<System.Runtime.Serialization.FormatterServices>.GetMethod("GetUninitializedObject"))
 
     gen.Emit(OpCodes.Ret)
 
-    dm.CreateDelegate(typedefof<CreateDelegate>) :?> CreateDelegate
+    dm.CreateDelegate(typeof<CreateDelegate>) :?> CreateDelegate
 
 // a cache for create delegates (one delegate per type)
 let private createDelegateCache = Core.ConcurrentCache(buildCreateDelegate)
@@ -251,15 +251,15 @@ let private buildFixupDelegate (typ: Type) =
     | null -> dummyFixupDelegate
     | mi ->
         // get closed method info
-        let cmi = if mi.IsGenericMethodDefinition then mi.MakeGenericMethod([|typedefof<obj>|]) else mi
+        let cmi = if mi.IsGenericMethodDefinition then mi.MakeGenericMethod([|typeof<obj>|]) else mi
 
         // check arguments & return type
         match cmi.GetParameters() with
-        | [| p |] when not p.ParameterType.IsValueType -> if cmi.ReturnType <> typedefof<Void> then failwithf "%A: %A: fixup method should have unit return type" typ mi
+        | [| p |] when not p.ParameterType.IsValueType -> if cmi.ReturnType <> typeof<Void> then failwithf "%A: %A: fixup method should have unit return type" typ mi
         | _ -> failwithf "%A: %A: fixup method should have exactly one non-value argument" typ mi
 
         // build calling method
-        let dm = DynamicMethod("fixup " + typ.ToString(), null, [|typedefof<obj>; typedefof<obj>|], typedefof<LoadMethodHost>, skipVisibility = true)
+        let dm = DynamicMethod("fixup " + typ.ToString(), null, [|typeof<obj>; typeof<obj>|], typeof<LoadMethodHost>, skipVisibility = true)
         let gen = dm.GetILGenerator()
         gen.Emit(OpCodes.Ldarg_1)
         gen.Emit(OpCodes.Ldarg_0)
@@ -267,7 +267,7 @@ let private buildFixupDelegate (typ: Type) =
         gen.Emit(OpCodes.Ret)
 
         // build delegate
-        dm.CreateDelegate(typedefof<FixupDelegate>) :?> FixupDelegate
+        dm.CreateDelegate(typeof<FixupDelegate>) :?> FixupDelegate
 
 // a cache for fixup delegates (one delegate per type)
 let private fixupDelegateCache = Core.ConcurrentCache(buildFixupDelegate)
@@ -301,7 +301,7 @@ let fromMemoryEx data size context =
     let creators = types |> Array.map createDelegateCache.Get
     let loaders = types |> Array.map loadDelegateCache.Get
     let fixupers = types |> Array.map fixupDelegateCache.Get
-    let needs_array = types |> Array.map (fun typ -> typ.IsArray || typ = typedefof<string>)
+    let needs_array = types |> Array.map (fun typ -> typ.IsArray || typ = typeof<string>)
 
     // read object table
     let object_types = Array.init (reader.ReadInt32()) (fun _ -> reader.ReadInt32())

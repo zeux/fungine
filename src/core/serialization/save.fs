@@ -38,7 +38,7 @@ let private emitSaveValuePrimitive (gen: ILGenerator) objemit typ =
     objemit gen
 
     // special handling for chars since BinaryWriter saves them as UTF-8
-    gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [| (if typ = typedefof<char> then typedefof<int16> else typ) |]))
+    gen.Emit(OpCodes.Call, typeof<BinaryWriter>.GetMethod("Write", [| (if typ = typeof<char> then typeof<int16> else typ) |]))
 
 // save an object
 let private emitSaveObject (gen: ILGenerator) objemit =
@@ -47,10 +47,10 @@ let private emitSaveObject (gen: ILGenerator) objemit =
     // push object id
     gen.Emit(OpCodes.Ldarg_0) // table
     objemit gen
-    gen.Emit(OpCodes.Call, typedefof<ObjectTable>.GetMethod("Object", BindingFlags.Instance ||| BindingFlags.NonPublic))
+    gen.Emit(OpCodes.Call, typeof<ObjectTable>.GetMethod("Object", BindingFlags.Instance ||| BindingFlags.NonPublic))
 
     // write object id
-    gen.Emit(OpCodes.Call, typedefof<BinaryWriter>.GetMethod("Write", [|typedefof<int>|]))
+    gen.Emit(OpCodes.Call, typeof<BinaryWriter>.GetMethod("Write", [|typeof<int>|]))
 
 // save any value (dispatcher function)
 let rec private emitSaveValue (gen: ILGenerator) objemit (typ: Type) =
@@ -95,7 +95,7 @@ let private emitSave (gen: ILGenerator) (typ: Type) =
 
     if typ.IsValueType then
         emitSaveValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Unbox_Any, typ)) typ
-    else if typ = typedefof<string> || typ = typedefof<byte array> then
+    else if typ = typeof<string> || typ = typeof<byte array> then
         emitSaveValuePrimitive gen objemit typ
     else if typ.IsArray then
         assert (typ.GetArrayRank() = 1)
@@ -107,12 +107,12 @@ let private emitSave (gen: ILGenerator) (typ: Type) =
 
 // create a save delegate for a given type
 let private buildSaveDelegate (typ: Type) =
-    let dm = DynamicMethod(typ.ToString(), null, [|typedefof<ObjectTable>; typedefof<BinaryWriter>; typedefof<obj>|], typedefof<SaveMethodHost>, skipVisibility = true)
+    let dm = DynamicMethod(typ.ToString(), null, [|typeof<ObjectTable>; typeof<BinaryWriter>; typeof<obj>|], typeof<SaveMethodHost>, skipVisibility = true)
     let gen = dm.GetILGenerator()
 
     emitSave gen typ
 
-    dm.CreateDelegate(typedefof<SaveDelegate>) :?> SaveDelegate
+    dm.CreateDelegate(typeof<SaveDelegate>) :?> SaveDelegate
 
 // a cache for save delegates (one delegate per type)
 let private saveDelegateCache = Core.ConcurrentCache(buildSaveDelegate)
@@ -171,7 +171,7 @@ let toStream stream obj =
         let typ = p.Key.GetType()
         if typ.IsArray then
             Some (p.Key :?> System.Array).Length
-        else if typ = typedefof<string> then
+        else if typ = typeof<string> then
             Some (p.Key :?> string).Length
         else
             None) |> Array.iter writer.Write

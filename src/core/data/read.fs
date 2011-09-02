@@ -21,7 +21,7 @@ let private readEnum (typ: Type) node =
 // read primitive type from node
 let private readPrimitive (typ: Type) node =
     let v = readString node
-    let m = typ.GetMethod("Parse", [| typedefof<string> |])
+    let m = typ.GetMethod("Parse", [| typeof<string> |])
     m.Invoke(null, [|v|])
 
 // get value parser for a type
@@ -30,7 +30,7 @@ let private getValueParser (typ: Type) =
         Some (readEnum typ)
     else if typ.IsPrimitive then
         Some (readPrimitive typ)
-    else if typ = typedefof<string> then
+    else if typ = typeof<string> then
         Some (readString >> box)
     else
         None
@@ -66,7 +66,7 @@ let private valueSetters = Core.ConcurrentCache(getValueSetters)
 // read data from node into an object
 let readNode<'T> (doc: Document) node =
     // construct an empty object
-    let typ = typedefof<'T>
+    let typ = typeof<'T>
     let obj = FormatterServices.GetUninitializedObject(typ)
 
     // read all fields

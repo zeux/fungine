@@ -44,7 +44,7 @@ Node.Glob "src/shaders/**.hlsl"
 // build code for all shader struct types
 System.AppDomain.CurrentDomain.GetAssemblies()
 |> Array.collect (fun a -> a.GetTypes())
-|> Array.filter (fun t -> t.IsDefined(typedefof<Render.ShaderStructAttribute>, false))
+|> Array.filter (fun t -> t.IsDefined(typeof<Render.ShaderStructAttribute>, false))
 |> Array.iter (fun t ->
     let path = context.Target (Node ("shaderstruct/auto_" + t.Name)) ".h"
     context.Task(ShaderStruct.builder, source = Node (t.FullName + ", " + t.Assembly.GetName().Name), target = path))

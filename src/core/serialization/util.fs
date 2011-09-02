@@ -24,10 +24,10 @@ let getSerializableFields (typ: Type) =
 // emit a loop that iterates through all array elements (leaving array index in loc0)
 let emitArrayLoop (gen: ILGenerator) objemit bodyemit =
     // declare local variables for length and for loop counter
-    let idx_local = gen.DeclareLocal(typedefof<int>)
+    let idx_local = gen.DeclareLocal(typeof<int>)
     assert (idx_local.LocalIndex = 0)
 
-    let cnt_local = gen.DeclareLocal(typedefof<int>)
+    let cnt_local = gen.DeclareLocal(typeof<int>)
     assert (cnt_local.LocalIndex = 1)
 
     // store size to local

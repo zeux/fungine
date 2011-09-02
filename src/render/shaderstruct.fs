@@ -11,7 +11,7 @@ type ShaderStructAttribute() = class end
 module ShaderStruct =
     // primitive types
     let private primitive_types =
-        [|typedefof<float32>; typedefof<int>; typedefof<bool>; typedefof<Vector2>; typedefof<Vector3>; typedefof<Vector4>; typedefof<Matrix34>; typedefof<Matrix44>|]
+        [|typeof<float32>; typeof<int>; typeof<bool>; typeof<Vector2>; typeof<Vector3>; typeof<Vector4>; typeof<Matrix34>; typeof<Matrix44>|]
         |> Array.map (fun t -> t, Marshal.SizeOf(t))
         |> dict
 
@@ -20,7 +20,7 @@ module ShaderStruct =
         typ.GetProperties(BindingFlags.Instance ||| BindingFlags.Public)
         |> Array.filter (fun p ->
             let pt = p.PropertyType
-            p.CanRead && (primitive_types.ContainsKey(pt) || pt.IsDefined(typedefof<ShaderStructAttribute>, false)))
+            p.CanRead && (primitive_types.ContainsKey(pt) || pt.IsDefined(typeof<ShaderStructAttribute>, false)))
 
     // get offsets for all reflected properties and the total structure size
     let rec private getPropertyOffsets (typ: Type) =
@@ -66,7 +66,7 @@ module ShaderStruct =
         gen.Emit(OpCodes.Sub)
 
         // call upload method
-        gen.Emit(OpCodes.Call, typedefof<UploadMethodHost>.GetMethod("upload " + p.PropertyType.Name))
+        gen.Emit(OpCodes.Call, typeof<UploadMethodHost>.GetMethod("upload " + p.PropertyType.Name))
 
     // upload value to memory
     let private emitUploadValue (gen: ILGenerator) (p: PropertyInfo) (offset: int) =
@@ -112,12 +112,12 @@ module ShaderStruct =
 
     // create an upload delegate for a given type
     let private buildUploadDelegate (typ: Type) =
-        let dm = DynamicMethod("upload " + typ.ToString(), null, [|typedefof<obj>; typedefof<nativeint>; typedefof<int>|], typedefof<UploadMethodHost>, skipVisibility = true)
+        let dm = DynamicMethod("upload " + typ.ToString(), null, [|typeof<obj>; typeof<nativeint>; typeof<int>|], typeof<UploadMethodHost>, skipVisibility = true)
         let gen = dm.GetILGenerator()
 
         let size = emitUpload gen typ
 
-        size, dm.CreateDelegate(typedefof<UploadDelegate>) :?> UploadDelegate
+        size, dm.CreateDelegate(typeof<UploadDelegate>) :?> UploadDelegate
 
     // a cache for upload delegates (one delegate per type)
     let private uploadDelegateCache = Core.ConcurrentCache<Type, _>(buildUploadDelegate)
