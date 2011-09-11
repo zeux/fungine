@@ -112,6 +112,8 @@ module ShaderStruct =
 
     // create an upload delegate for a given type
     let private buildUploadDelegate (typ: Type) =
+        if not (typ.IsDefined(typeof<ShaderStructAttribute>, false)) then failwithf "Type %A does not have ShaderStruct attribute" typ
+
         let dm = DynamicMethod("upload " + typ.ToString(), null, [|typeof<obj>; typeof<nativeint>; typeof<int>|], typeof<UploadMethodHost>, skipVisibility = true)
         let gen = dm.GetILGenerator()
 
