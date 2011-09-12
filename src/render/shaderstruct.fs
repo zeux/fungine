@@ -6,6 +6,7 @@ open System.Reflection.Emit
 open System.Runtime.InteropServices
 
 // attribute for types that should be mapped to shader structs
+[<AttributeUsage(AttributeTargets.Class ||| AttributeTargets.Struct)>]
 type ShaderStructAttribute() = class end
 
 module ShaderStruct =
