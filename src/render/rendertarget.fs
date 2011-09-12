@@ -30,7 +30,7 @@ type private RenderTargetSlot =
         | None -> desc
 
 // render target
-and RenderTarget(resource: Resource, view: ShaderResourceView, color_view: RenderTargetView, depth_view: DepthStencilView, ?pool: RenderTargetPool) =
+and RenderTarget(resource: Resource, view: ShaderResourceView, colorView: RenderTargetView, depthView: DepthStencilView, ?pool: RenderTargetPool) =
     // release target to the pool via dispose, if it's bound to a pool; dispose of resources otherwise
     interface IDisposable with
         member this.Dispose() =
@@ -40,8 +40,8 @@ and RenderTarget(resource: Resource, view: ShaderResourceView, color_view: Rende
                 // this is a hack - ideally we should have a separate type for pool-bound RT
                 resource.Dispose()
                 if view <> null then view.Dispose()
-                if color_view <> null then color_view.Dispose()
-                if depth_view <> null then depth_view.Dispose()
+                if colorView <> null then colorView.Dispose()
+                if depthView <> null then depthView.Dispose()
 
     // get texture resource
     member this.Resource = resource
@@ -50,10 +50,10 @@ and RenderTarget(resource: Resource, view: ShaderResourceView, color_view: Rende
     member this.View = view
 
     // get color target view
-    member this.ColorView = color_view
+    member this.ColorView = colorView
 
     // get depth target view
-    member this.DepthView = depth_view
+    member this.DepthView = depthView
 
 // render target pool
 and RenderTargetPool(device) =
@@ -67,15 +67,15 @@ and RenderTargetPool(device) =
 
         // create views
         let view = new ShaderResourceView(device, resource)
-        let color_view = new RenderTargetView(device, resource)
+        let colorView = new RenderTargetView(device, resource)
 
         // create target object
-        new RenderTarget(resource, view, color_view, null, this)
+        new RenderTarget(resource, view, colorView, null, this)
 
     // create depth render target by description
     member private this.CreateDepth (desc: Texture2DDescription) =
         // get typeless and shader versions of the format
-        let (resource_format, shader_format) =
+        let (resourceFormat, shaderFormat) =
             match desc.Format with
             | Format.D32_Float_S8X24_UInt -> Format.R32G8X24_Typeless, Format.R32_Float_X8X24_Typeless
             | Format.D32_Float -> Format.R32_Typeless, Format.R32_Float
@@ -84,7 +84,7 @@ and RenderTargetPool(device) =
             | _ -> failwithf "Unknown depth format %A" desc.Format
 
         // get resource dimensions
-        let (shader_dimension, depth_dimension) =
+        let (shaderDimension, depthDimension) =
             if desc.SampleDescription.Count = 1 then
                 ShaderResourceViewDimension.Texture2D, DepthStencilViewDimension.Texture2D
              else
@@ -92,16 +92,16 @@ and RenderTargetPool(device) =
 
         // create resource
         let mutable rdesc = desc
-        rdesc.Format <- resource_format
+        rdesc.Format <- resourceFormat
 
         let resource = new Texture2D(device, rdesc)
 
         // create views
-        let view = new ShaderResourceView(device, resource, ShaderResourceViewDescription(Format = shader_format, MipLevels = desc.MipLevels, Dimension = shader_dimension))
-        let depth_view = new DepthStencilView(device, resource, DepthStencilViewDescription(Format = desc.Format, Dimension = depth_dimension))
+        let view = new ShaderResourceView(device, resource, ShaderResourceViewDescription(Format = shaderFormat, MipLevels = desc.MipLevels, Dimension = shaderDimension))
+        let depthView = new DepthStencilView(device, resource, DepthStencilViewDescription(Format = desc.Format, Dimension = depthDimension))
 
         // create target object
-        new RenderTarget(resource, view, null, depth_view, this)
+        new RenderTarget(resource, view, null, depthView, this)
 
     // acquire target by description
     member this.Acquire (owner, desc) =
@@ -122,9 +122,9 @@ and RenderTargetPool(device) =
 
     // simplified acquire interface
     member this.Acquire (owner, width, height, format, ?miplevels, ?samples) =
-        let bind_flags = BindFlags.ShaderResource ||| (if Formats.isDepth format then BindFlags.DepthStencil else BindFlags.RenderTarget)
+        let bindFlags = BindFlags.ShaderResource ||| (if Formats.isDepth format then BindFlags.DepthStencil else BindFlags.RenderTarget)
         let desc = Texture2DDescription(Width = width, Height = height, MipLevels = defaultArg miplevels 1, ArraySize = 1, Format = format,
-                    SampleDescription = DXGI.SampleDescription(int (defaultArg samples MSAA.None), 0), Usage = ResourceUsage.Default, BindFlags = bind_flags)
+                    SampleDescription = DXGI.SampleDescription(int (defaultArg samples MSAA.None), 0), Usage = ResourceUsage.Default, BindFlags = bindFlags)
         this.Acquire(owner, desc)
 
     // release target

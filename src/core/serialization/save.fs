@@ -8,14 +8,14 @@ open System.Reflection.Emit
 
 // a table that holds all objects in a current graph
 type private ObjectTable() =
-    let object_queue = Queue<obj>()
-    let object_ids = Dictionary<obj, int>(HashIdentity.Reference)
+    let objectQueue = Queue<obj>()
+    let objectIds = Dictionary<obj, int>(HashIdentity.Reference)
 
     // get the list of objects to be serialized
-    member this.PendingObjects = seq { while object_queue.Count > 0 do yield object_queue.Dequeue() }
+    member this.PendingObjects = seq { while objectQueue.Count > 0 do yield objectQueue.Dequeue() }
 
     // get the list of all objects
-    member this.Objects = object_ids |> Array.ofSeq
+    member this.Objects = objectIds |> Array.ofSeq
 
     // get a serialized id of the object
     member this.Object (obj: obj) =
@@ -24,7 +24,7 @@ type private ObjectTable() =
             0
         else
             // non-null objects are encoded with 1-based object index in the object table
-            1 + Core.CacheUtil.update object_ids obj (fun obj -> object_queue.Enqueue(obj); object_ids.Count)
+            1 + Core.CacheUtil.update objectIds obj (fun obj -> objectQueue.Enqueue(obj); objectIds.Count)
 
 // a delegate for saving objects; there is an instance of one for each type
 type private SaveDelegate = delegate of ObjectTable * BinaryWriter * obj -> unit
@@ -58,10 +58,10 @@ let rec private emitSaveValue (gen: ILGenerator) objemit (typ: Type) =
     if typ.IsPrimitive then
         emitSaveValuePrimitive gen objemit typ
     // save enums as integer values
-    else if typ.IsEnum then
+    elif typ.IsEnum then
         emitSaveValuePrimitive gen objemit (typ.GetEnumUnderlyingType())
     // save structs as embedded field lists
-    else if typ.IsValueType then
+    elif typ.IsValueType then
         emitSaveFields gen objemit typ
     // save objects as object ids (defer actual saving)
     else
@@ -95,9 +95,9 @@ let private emitSave (gen: ILGenerator) (typ: Type) =
 
     if typ.IsValueType then
         emitSaveValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Unbox_Any, typ)) typ
-    else if typ = typeof<string> || typ = typeof<byte array> then
+    elif typ = typeof<string> || typ = typeof<byte array> then
         emitSaveValuePrimitive gen objemit typ
-    else if typ.IsArray then
+    elif typ.IsArray then
         assert (typ.GetArrayRank() = 1)
         emitSaveArray gen objemit typ
     else
@@ -143,7 +143,7 @@ let toStream stream obj =
     // build type table and object -> type id mapping
     let types = Dictionary<Type, int>()
 
-    let object_types = table.Objects |> Array.map (fun p ->
+    let objectTypes = table.Objects |> Array.map (fun p ->
         let typ = p.Key.GetType()
 
         Core.CacheUtil.update types typ (fun _ -> types.Count))
@@ -156,22 +156,22 @@ let toStream stream obj =
     // save type table
     writer.Write(types.Count)
 
-    let type_table = types |> Array.ofSeq |> Array.sortBy (fun p -> p.Value) |> Array.map (fun p -> p.Key)
+    let typeTable = types |> Array.ofSeq |> Array.sortBy (fun p -> p.Value) |> Array.map (fun p -> p.Key)
 
-    type_table |> Array.iter (fun typ -> writer.Write(typ.AssemblyQualifiedName))
-    type_table |> Array.iter (fun typ -> writer.Write(Version.get typ))
+    typeTable |> Array.iter (fun typ -> writer.Write(typ.AssemblyQualifiedName))
+    typeTable |> Array.iter (fun typ -> writer.Write(Version.get typ))
 
     // save object table
-    writer.Write(object_types.Length)
+    writer.Write(objectTypes.Length)
 
-    object_types |> Array.iter writer.Write
+    objectTypes |> Array.iter writer.Write
 
     // save array size table
     table.Objects |> Array.choose (fun p ->
         let typ = p.Key.GetType()
         if typ.IsArray then
             Some (p.Key :?> System.Array).Length
-        else if typ = typeof<string> then
+        elif typ = typeof<string> then
             Some (p.Key :?> string).Length
         else
             None) |> Array.iter writer.Write

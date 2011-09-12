@@ -1,4 +1,4 @@
-﻿namespace Build.Dae
+namespace Build.Dae
 
 open System.Xml
 open System.Collections.Generic
@@ -7,7 +7,7 @@ open Build.Dae.Parse
 // build-time skeleton type
 type Skeleton =
     { data: Render.SkeletonInstance
-      node_map: IDictionary<XmlNode, int> }
+      nodeMap: IDictionary<XmlNode, int> }
 
 module SkeletonBuilder =
     // convert 4 consecutive floats into Vector4
@@ -45,7 +45,7 @@ module SkeletonBuilder =
         let nodes = doc.Root.Select "/COLLADA/library_visual_scenes//node"
 
         // build node -> index map
-        let node_map = nodes |> Array.mapi (fun index node -> node, index) |> dict
+        let nodeMap = nodes |> Array.mapi (fun index node -> node, index) |> dict
 
         // get local transform matrices
         let transforms = nodes |> Array.map getNodeTransformLocal |> Array.map conv.Matrix
@@ -54,7 +54,7 @@ module SkeletonBuilder =
         let parents = nodes |> Array.map (fun node ->
             let parent = node.ParentNode
             if parent.Name = "node" then
-                node_map.[parent]
+                nodeMap.[parent]
             else
                 -1)
 
@@ -62,4 +62,4 @@ module SkeletonBuilder =
         let names = nodes |> Array.map (fun node -> node.Attributes.["name"]) |> Array.map (fun attr -> if attr <> null then attr.Value else null)
 
         // build skeleton object
-        { new Skeleton with data = Render.SkeletonInstance(Render.Skeleton(parents, names), transforms) and node_map = node_map }
+        { new Skeleton with data = Render.SkeletonInstance(Render.Skeleton(parents, names), transforms) and nodeMap = nodeMap }

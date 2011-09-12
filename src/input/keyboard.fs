@@ -7,14 +7,14 @@ type Key = Keys
 
 // keyboard state
 type private KeyboardState =
-    { keys_down: bool array // key state
+    { keysDown: bool array // key state
     }
 
     // clone
-    member this.Clone () = { new KeyboardState with keys_down = Array.copy this.keys_down }
+    member this.Clone () = { new KeyboardState with keysDown = Array.copy this.keysDown }
 
     // default ctor
-    static member Default = { new KeyboardState with keys_down = Array.create 256 false }
+    static member Default = { new KeyboardState with keysDown = Array.create 256 false }
 
 // keyboard input device
 type Keyboard(control: Control) =
@@ -24,8 +24,8 @@ type Keyboard(control: Control) =
 
     // grab key data via WM_KEYDOWN and WM_KEYUP
     do
-        control.KeyDown.Add(fun args -> current.keys_down.[int args.KeyCode] <- true)
-        control.KeyUp.Add(fun args -> current.keys_down.[int args.KeyCode] <- false)
+        control.KeyDown.Add(fun args -> current.keysDown.[int args.KeyCode] <- true)
+        control.KeyUp.Add(fun args -> current.keysDown.[int args.KeyCode] <- false)
 
     // reset data to default if focus is lost
     do
@@ -36,4 +36,4 @@ type Keyboard(control: Control) =
         updated <- current.Clone()
 
     // key states
-    member this.KeyDown (key: Key) = updated.keys_down.[int key]
+    member this.KeyDown (key: Key) = updated.keysDown.[int key]

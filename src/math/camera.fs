@@ -1,8 +1,8 @@
 module Math.Camera
 
 // get a perspective projection matrix
-let projectionPerspective fov_y aspect znear zfar =
-    let ys = 1.f / tan (fov_y / 2.f)
+let projectionPerspective fovY aspect znear zfar =
+    let ys = 1.f / tan (fovY / 2.f)
     let xs = ys / aspect
     let zs = zfar / (zfar - znear)
 
@@ -12,9 +12,9 @@ let projectionPerspective fov_y aspect znear zfar =
              0.f, 0.f, 1.f, 0.f)
 
 // get a look-at matrix
-let lookAt eye at desired_up =
+let lookAt eye at desiredUp =
     let view = Vector3.Normalize(at - eye)
-    let side = Vector3.Normalize(Vector3.Cross(desired_up, view))
+    let side = Vector3.Normalize(Vector3.Cross(desiredUp, view))
     let up = Vector3.Cross(view, side)
 
     Matrix34(Vector4(side, -Vector3.Dot(eye, side)),

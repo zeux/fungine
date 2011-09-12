@@ -10,7 +10,7 @@ type ShaderStructAttribute() = class end
 
 module ShaderStruct =
     // primitive types
-    let private primitive_types =
+    let private primitiveTypes =
         [|typeof<float32>; typeof<int>; typeof<bool>; typeof<Vector2>; typeof<Vector3>; typeof<Vector4>; typeof<Matrix34>; typeof<Matrix44>|]
         |> Array.map (fun t -> t, Marshal.SizeOf(t))
         |> dict
@@ -20,7 +20,7 @@ module ShaderStruct =
         typ.GetProperties(BindingFlags.Instance ||| BindingFlags.Public)
         |> Array.filter (fun p ->
             let pt = p.PropertyType
-            p.CanRead && (primitive_types.ContainsKey(pt) || pt.IsDefined(typeof<ShaderStructAttribute>, false)))
+            p.CanRead && (primitiveTypes.ContainsKey(pt) || pt.IsDefined(typeof<ShaderStructAttribute>, false)))
 
     // get offsets for all reflected properties and the total structure size
     let rec private getPropertyOffsets (typ: Type) =
@@ -29,7 +29,7 @@ module ShaderStruct =
 
         // get all reflected properties & their sizes
         let props = getProperties typ
-        let sizes = props |> Array.map (fun p -> let pt = p.PropertyType in if pt.IsClass then snd (getPropertyOffsets pt) else primitive_types.[pt])
+        let sizes = props |> Array.map (fun p -> let pt = p.PropertyType in if pt.IsClass then snd (getPropertyOffsets pt) else primitiveTypes.[pt])
 
         // for each property, get the property *end* offset by applying HLSL packing rules
         let offsets =

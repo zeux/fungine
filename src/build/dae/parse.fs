@@ -1,4 +1,4 @@
-﻿module Build.Dae.Parse
+module Build.Dae.Parse
 
 open System.Xml
 open System.Collections.Generic
@@ -144,24 +144,24 @@ let getFloatArray (doc: Document) id stride =
 
     // get accessor (we ignore the accessor attributes)
     let accessor = source.SelectSingleNode("technique_common/accessor")
-    let source_stride = int (accessor.Attribute "stride")
-    assert (source_stride >= stride)
+    let sourceStride = int (accessor.Attribute "stride")
+    assert (sourceStride >= stride)
 
     // get the <float_array> node
     let array = doc.Node (accessor.Attribute "source")
 
-    let element_count = int (array.Attribute "count")
-    let group_count = int (accessor.Attribute "count")
-    assert (element_count = source_stride * group_count)
+    let elementCount = int (array.Attribute "count")
+    let groupCount = int (accessor.Attribute "count")
+    assert (elementCount = sourceStride * groupCount)
 
     // parse whitespace-delimited string
-    let result = parseFloatArray array.InnerText element_count
+    let result = parseFloatArray array.InnerText elementCount
 
     // convert strides if necessary
-    if stride = source_stride then
+    if stride = sourceStride then
         result
     else
-        [| 0..group_count-1 |] |> Array.collect (fun i -> Array.sub result (i * source_stride) stride)
+        [| 0..groupCount-1 |] |> Array.collect (fun i -> Array.sub result (i * sourceStride) stride)
 
 // parse node contents as an integer array
 let getIntArray (node: XmlNode) =

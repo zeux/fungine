@@ -10,7 +10,7 @@ struct PS_IN
     float2 uv: TEXCOORD;
 };
 
-PS_IN vs_main(uint id: SV_VertexID)
+PS_IN vsMain(uint id: SV_VertexID)
 {
     // form a full-screen triangle
     float2 pos = float2(id == 1 ? 2 : 0, id == 2 ? 2 : 0);
@@ -22,17 +22,17 @@ PS_IN vs_main(uint id: SV_VertexID)
     return O;
 }
 
-float4 ps_main(PS_IN I): SV_Target
+float4 psMain(PS_IN I): SV_Target
 {
     Surface S = gbufSampleSurface(I.uv);
 
-    float4 pos_ws_h = mul(camera.view_projection_inverse, float4(I.uv * float2(2, -2) + float2(-1, 1), S.depth, 1));
-    float3 pos_ws = pos_ws_h.xyz / pos_ws_h.w;
+    float4 posWsH = mul(camera.viewProjectionInverse, float4(I.uv * float2(2, -2) + float2(-1, 1), S.depth, 1));
+    float3 posWs = posWsH.xyz / posWsH.w;
 
     float3 light = normalize(float3(0, 1, 0.2));
     float diffuse = saturate(dot(S.normal, light));
 
-    float3 view = normalize(camera.eye_position - pos_ws);
+    float3 view = normalize(camera.eyePosition - posWs);
     float3 hvec = normalize(light + view);
 
     float cosnh = saturate(dot(hvec, S.normal));

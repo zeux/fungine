@@ -28,12 +28,12 @@ assets.context.Run()
 // start asset watcher
 assets.watcher.Force() |> ignore
 
-let dbg_nulldraw = Core.DbgVar(false, "render/null draw")
-let dbg_wireframe = Core.DbgVar(false, "render/wireframe")
-let dbg_present_interval = Core.DbgVar(0, "vsync interval")
-let dbg_name = Core.DbgVar("foo", "name")
-let dbg_texfilter = Core.DbgVar(Filter.Anisotropic, "render/texture/filter")
-let dbg_fov = Core.DbgVar(45.f, "camera/fov")
+let dbgNulldraw = Core.DbgVar(false, "render/null draw")
+let dbgWireframe = Core.DbgVar(false, "render/wireframe")
+let dbgPresentInterval = Core.DbgVar(0, "vsync interval")
+let dbgName = Core.DbgVar("foo", "name")
+let dbgTexfilter = Core.DbgVar(Filter.Anisotropic, "render/texture/filter")
+let dbgFov = Core.DbgVar(45.f, "camera/fov")
 
 let form = new Form(Text = "fungine", Width = 1280, Height = 720)
 let device = Render.Device(form.Handle)
@@ -49,14 +49,14 @@ AssetDB.addType "dds" (Render.TextureLoader.load device.Device)
 AssetDB.addType "mesh" (fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Mesh)
 AssetDB.addType "shader" (fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Shader)
 
-let gbuffer_fill = Asset<Render.Shader>.Load ".build/src/shaders/gbuffer_fill_default.shader"
-let light_directional = Asset<Render.Shader>.Load ".build/src/shaders/lighting/directional.shader"
-let light_spot = Asset<Render.Shader>.Load ".build/src/shaders/lighting/spot.shader"
-let postfx_tonemap = Asset<Render.Shader>.Load ".build/src/shaders/postfx/tonemap.shader"
-let postfx_fxaa = Asset<Render.Shader>.Load ".build/src/shaders/postfx/fxaa.shader"
+let gbufferFill = Asset<Render.Shader>.Load ".build/src/shaders/gbuffer_fill_default.shader"
+let lightDirectional = Asset<Render.Shader>.Load ".build/src/shaders/lighting/directional.shader"
+let lightSpot = Asset<Render.Shader>.Load ".build/src/shaders/lighting/spot.shader"
+let postfxTonemap = Asset<Render.Shader>.Load ".build/src/shaders/postfx/tonemap.shader"
+let postfxFxaa = Asset<Render.Shader>.Load ".build/src/shaders/postfx/fxaa.shader"
 
-let vertex_size = (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).size
-let layout = new InputLayout(device.Device, gbuffer_fill.Data.VertexSignature.Resource, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
+let vertexSize = (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).size
+let layout = new InputLayout(device.Device, gbufferFill.Data.VertexSignature.Resource, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
 
 let constantBuffer0 = new Buffer(device.Device, null, BufferDescription(16512, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
 let constantBuffer1 = new Buffer(device.Device, null, BufferDescription(65536, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
@@ -71,13 +71,13 @@ let createDummyTexture color =
 
     new ShaderResourceView(device.Device, texture)
 
-let dummy_albedo = createDummyTexture [|128uy; 128uy; 128uy; 255uy|]
-let dummy_normal = createDummyTexture [|128uy; 128uy; 255uy; 255uy|]
-let dummy_specular = createDummyTexture [|0uy; 0uy; 0uy; 0uy|]
+let dummyAlbedo = createDummyTexture [|128uy; 128uy; 128uy; 255uy|]
+let dummyNormal = createDummyTexture [|128uy; 128uy; 255uy; 255uy|]
+let dummySpecular = createDummyTexture [|0uy; 0uy; 0uy; 0uy|]
 
 let mouse = Input.Mouse(form)
 let keyboard = Input.Keyboard(form)
-let camera_controller = Camera.CameraController(mouse, keyboard, Position = Vector3(-7.100705f, 47.303590f, 22.963710f), Yaw = -1.3f, Pitch = 0.15f)
+let cameraController = Camera.CameraController(mouse, keyboard, Position = Vector3(-7.100705f, 47.303590f, 22.963710f), Yaw = -1.3f, Pitch = 0.15f)
 
 let scene = List<Asset<Render.Mesh> * Matrix34>()
 
@@ -130,8 +130,8 @@ let placeFile path parent =
 
     placeNode nodes.[root + "_" + root] parent
 
-let scene_name = "heaven"
-// placeFile (sprintf "art/%s/%s.world" scene_name scene_name) Matrix34.Identity
+let sceneName = "heaven"
+// placeFile (sprintf "art/%s/%s.world" sceneName sceneName) Matrix34.Identity
 
 placeMesh "slave_driver/cc_slave_driver.mesh" (Matrix34.Translation(10.f-6.f, 10.f-2.f, 0.f) * Matrix34.Scaling(0.07f, 0.07f, 0.07f))
 placeMesh "heaven/meshes/buildings/lab.mesh" Matrix34.Identity
@@ -144,8 +144,8 @@ for x = -size to size do
     for y = -size to size do
         placeMesh (sprintf "floor/floor%02d.mesh" (rng.Next(1, 15))) (Matrix34.Translation(float32 x * 2.f, float32 y * 2.f, 0.f))
 
-let dbg_smoothness = Core.DbgVar(0.f, "lighting/smoothness")
-let dbg_roughness = Core.DbgVar(0.5f, "lighting/roughness")
+let dbgSmoothness = Core.DbgVar(0.f, "lighting/smoothness")
+let dbgRoughness = Core.DbgVar(0.5f, "lighting/roughness")
 
 module Seq =
     let groupByRef sel items =
@@ -172,11 +172,11 @@ type Camera(view: Matrix34, projection: Matrix44) =
     member this.EyePosition = view.Column 3
 
 [<Render.ShaderStruct>]
-type SpotLight(position: Vector3, direction: Vector3, outer_angle: float32, inner_angle: float32, radius: float32, color: Vector3) =
+type SpotLight(position: Vector3, direction: Vector3, outerAngle: float32, innerAngle: float32, radius: float32, color: Vector3) =
     member this.Position = position
     member this.Direction = direction
-    member this.OuterAngle = outer_angle
-    member this.InnerAngle = inner_angle
+    member this.OuterAngle = outerAngle
+    member this.InnerAngle = innerAngle
     member this.Radius = radius
     member this.Color = color
 
@@ -190,14 +190,14 @@ let uploadConstantData (context: DeviceContext) data =
 
 type ShaderContext(context: DeviceContext) =
     let values = List<obj>()
-    let vertex_params = List<Render.ShaderParameter>()
-    let pixel_params = List<Render.ShaderParameter>()
+    let vertexParams = List<Render.ShaderParameter>()
+    let pixelParams = List<Render.ShaderParameter>()
 
     member private this.EnsureSlot(slot) =
         while values.Count <= slot do
             values.Add(null)
-            vertex_params.Add(Render.ShaderParameter())
-            pixel_params.Add(Render.ShaderParameter())
+            vertexParams.Add(Render.ShaderParameter())
+            pixelParams.Add(Render.ShaderParameter())
 
     member private this.ValidateSlot(slot) =
         let inline bind (p: Render.ShaderParameter) (value: obj) (stage: ^T) =
@@ -208,8 +208,8 @@ type ShaderContext(context: DeviceContext) =
             | Render.ShaderParameterBinding.Sampler -> (^T: (member SetSampler: _ -> _ -> _) (stage, value :?> SamplerState, p.Register))
             | x -> failwithf "Unexpected binding value %A" x
 
-        bind vertex_params.[slot] values.[slot] context.VertexShader
-        bind pixel_params.[slot] values.[slot] context.PixelShader
+        bind vertexParams.[slot] values.[slot] context.VertexShader
+        bind pixelParams.[slot] values.[slot] context.PixelShader
 
     member private this.UpdateSlot(slot, value) =
         this.EnsureSlot(slot)
@@ -222,16 +222,16 @@ type ShaderContext(context: DeviceContext) =
             context.PixelShader.Set(value.PixelShader.Resource)
 
             for slot = 0 to values.Count - 1 do
-                vertex_params.[slot] <- Render.ShaderParameter()
-                pixel_params.[slot] <- Render.ShaderParameter()
+                vertexParams.[slot] <- Render.ShaderParameter()
+                pixelParams.[slot] <- Render.ShaderParameter()
 
             for p in value.VertexShader.Parameters do
                 this.EnsureSlot(p.Slot)
-                vertex_params.[p.Slot] <- p
+                vertexParams.[p.Slot] <- p
 
             for p in value.PixelShader.Parameters do
                 this.EnsureSlot(p.Slot)
-                pixel_params.[p.Slot] <- p
+                pixelParams.[p.Slot] <- p
 
             for slot = 0 to values.Count - 1 do
                 if values.[slot] <> null then
@@ -261,65 +261,65 @@ type ShaderContext(context: DeviceContext) =
     static member (?<-) (this: ShaderContext, name: string, value: obj) =
         this.SetConstant(Render.ShaderParameterRegistry.getSlot name, value)
 
-let renderScene (context: DeviceContext) (shader_context: ShaderContext) (camera: Camera) =
+let renderScene (context: DeviceContext) (shaderContext: ShaderContext) (camera: Camera) =
     context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.Less))
 
-    let fill_mode = if dbg_wireframe.Value then FillMode.Wireframe else FillMode.Solid
-    context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.Back, FillMode = fill_mode, IsFrontCounterclockwise = true))
+    let fillMode = if dbgWireframe.Value then FillMode.Wireframe else FillMode.Solid
+    context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.Back, FillMode = fillMode, IsFrontCounterclockwise = true))
 
     context.InputAssembler.InputLayout <- layout
     context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
 
-    shader_context.Shader <- gbuffer_fill.Data
+    shaderContext.Shader <- gbufferFill.Data
 
-    shader_context?camera <- camera
-    shader_context?default_sampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbg_texfilter.Value, MaximumAnisotropy = 16, MaximumLod = infinityf))
-    shader_context?mesh <- constantBuffer0
-    shader_context?transforms <- constantBuffer1
+    shaderContext?camera <- camera
+    shaderContext?defaultSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbgTexfilter.Value, MaximumAnisotropy = 16, MaximumLod = infinityf))
+    shaderContext?mesh <- constantBuffer0
+    shaderContext?transforms <- constantBuffer1
 
     for mesh, instances in scene |> Seq.choose (fun (mesh, transform) -> if mesh.IsReady then Some (mesh.Data, transform) else None) |> Seq.groupByRef (fun (mesh, transform) -> mesh) do
         let transforms = instances |> Array.map (fun (mesh, transform) -> transform)
 
-        if dbg_nulldraw.Value then () else
+        if dbgNulldraw.Value then () else
         let box = context.MapSubresource(constantBuffer1, MapMode.WriteDiscard, MapFlags.None)
         box.Data.WriteRange(transforms)
         context.UnmapSubresource(constantBuffer1, 0)
 
         for fragment in mesh.fragments do
             let setTexture (tex: Asset<Render.Texture> option) dummy name =
-                shader_context?(name) <- (if tex.IsSome && tex.Value.IsReady then tex.Value.Data.View else dummy)
+                shaderContext?(name) <- (if tex.IsSome && tex.Value.IsReady then tex.Value.Data.View else dummy)
 
             let material = fragment.material
 
-            setTexture material.albedo_map dummy_albedo "albedo_map"
-            setTexture material.normal_map dummy_normal "normal_map"
-            setTexture material.specular_map dummy_specular "specular_map"
+            setTexture material.albedoMap dummyAlbedo "albedoMap"
+            setTexture material.normalMap dummyNormal "normalMap"
+            setTexture material.specularMap dummySpecular "specularMap"
 
-            let compression_info = fragment.compression_info
+            let compressionInfo = fragment.compressionInfo
 
             let box = context.MapSubresource(constantBuffer0, MapMode.WriteDiscard, MapFlags.None)
-            box.Data.Write(dbg_roughness.Value)
-            box.Data.Write(compression_info.pos_offset)
-            box.Data.Write(dbg_smoothness.Value)
-            box.Data.Write(compression_info.pos_scale)
-            box.Data.Write(compression_info.uv_offset)
-            box.Data.Write(compression_info.uv_scale)
+            box.Data.Write(dbgRoughness.Value)
+            box.Data.Write(compressionInfo.posOffset)
+            box.Data.Write(dbgSmoothness.Value)
+            box.Data.Write(compressionInfo.posScale)
+            box.Data.Write(compressionInfo.uvOffset)
+            box.Data.Write(compressionInfo.uvScale)
             box.Data.WriteRange(fragment.skin.ComputeBoneTransforms mesh.skeleton)
             context.UnmapSubresource(constantBuffer0, 0)
 
-            context.InputAssembler.SetVertexBuffers(0, VertexBufferBinding(mesh.vertices.Resource, vertex_size, fragment.vertex_offset))
-            context.InputAssembler.SetIndexBuffer(mesh.indices.Resource, fragment.index_format, fragment.index_offset)
-            context.DrawIndexedInstanced(fragment.index_count, transforms.Length, 0, 0, 0)
+            context.InputAssembler.SetVertexBuffers(0, VertexBufferBinding(mesh.vertices.Resource, vertexSize, fragment.vertexOffset))
+            context.InputAssembler.SetIndexBuffer(mesh.indices.Resource, fragment.indexFormat, fragment.indexOffset)
+            context.DrawIndexedInstanced(fragment.indexCount, transforms.Length, 0, 0, 0)
 
-let fillGBuffer (context: DeviceContext) (shader_context: ShaderContext) (camera: Camera) (albedoBuffer: Render.RenderTarget) (specBuffer: Render.RenderTarget) (normalBuffer: Render.RenderTarget) (depthBuffer: Render.RenderTarget) =
+let fillGBuffer (context: DeviceContext) (shaderContext: ShaderContext) (camera: Camera) (albedoBuffer: Render.RenderTarget) (specBuffer: Render.RenderTarget) (normalBuffer: Render.RenderTarget) (depthBuffer: Render.RenderTarget) =
     context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
     context.OutputMerger.SetTargets(depthBuffer.DepthView, [|albedoBuffer; specBuffer; normalBuffer|] |> Array.map (fun rt -> rt.ColorView))
 
     Performance.BeginEvent(Color4(), "gbuffer") |> ignore
-    renderScene context shader_context camera
+    renderScene context shaderContext camera
     Performance.EndEvent() |> ignore
 
-let fillShadowBuffer (context: DeviceContext) (shader_context: ShaderContext) (camera: Camera) (shadowBuffer: Render.RenderTarget) =
+let fillShadowBuffer (context: DeviceContext) (shaderContext: ShaderContext) (camera: Camera) (shadowBuffer: Render.RenderTarget) =
     let texture = shadowBuffer.Resource :?> Texture2D
     context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 texture.Description.Width, float32 texture.Description.Height))
 
@@ -330,7 +330,7 @@ let fillShadowBuffer (context: DeviceContext) (shader_context: ShaderContext) (c
     context.OutputMerger.SetTargets(shadowBuffer.DepthView, dummyBuffer.ColorView)
 
     Performance.BeginEvent(Color4(), "shadowbuffer") |> ignore
-    renderScene context shader_context camera
+    renderScene context shaderContext camera
     Performance.EndEvent() |> ignore
 
 form.KeyUp.Add(fun args ->
@@ -340,33 +340,33 @@ form.KeyUp.Add(fun args ->
         w.KeyUp.Add (fun args -> if args.Key = System.Windows.Input.Key.Escape then w.Close())
         w.Show())
 
-let frame_timer = Diagnostics.Stopwatch.StartNew()
+let frameTimer = Diagnostics.Stopwatch.StartNew()
 
-let dbg_spot_offset = Core.DbgVar(30.f, "spot/offset")
-let dbg_spot_height = Core.DbgVar(30.f, "spot/height")
-let dbg_spot_innercone = Core.DbgVar(19.f, "spot/inner cone")
-let dbg_spot_outercone = Core.DbgVar(20.f, "spot/outer cone")
-let dbg_spot_radius = Core.DbgVar(100.f, "spot/radius")
-let dbg_spot_intensity = Core.DbgVar(8.f, "spot/intensity")
-let dbg_spot_seed = Core.DbgVar(1, "spot/seed")
-let dbg_spot_count = Core.DbgVar(3, "spot/count")
+let dbgSpotOffset = Core.DbgVar(30.f, "spot/offset")
+let dbgSpotHeight = Core.DbgVar(30.f, "spot/height")
+let dbgSpotInnercone = Core.DbgVar(19.f, "spot/inner cone")
+let dbgSpotOutercone = Core.DbgVar(20.f, "spot/outer cone")
+let dbgSpotRadius = Core.DbgVar(100.f, "spot/radius")
+let dbgSpotIntensity = Core.DbgVar(8.f, "spot/intensity")
+let dbgSpotSeed = Core.DbgVar(1, "spot/seed")
+let dbgSpotCount = Core.DbgVar(3, "spot/count")
 
 MessagePump.Run(form, fun () ->
-    let dt = float32 frame_timer.Elapsed.TotalSeconds
-    frame_timer.Restart()
+    let dt = float32 frameTimer.Elapsed.TotalSeconds
+    frameTimer.Restart()
 
     mouse.Update()
     keyboard.Update()
-    camera_controller.Update(dt)
+    cameraController.Update(dt)
 
     let context = device.Device.ImmediateContext
-    let shader_context = ShaderContext(context)
+    let shaderContext = ShaderContext(context)
 
     use colorBuffer = rtpool.Acquire("scene/hdr", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_Float)
     use depthBuffer = rtpool.Acquire("gbuffer/depth", form.ClientSize.Width, form.ClientSize.Height, Format.D24_UNorm_S8_UInt)
 
     // main camera
-    let camera = Camera(camera_controller.ViewMatrix, Math.Camera.projectionPerspective (dbg_fov.Value / 180.f * float32 Math.PI) (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 0.1f 1000.f)
+    let camera = Camera(cameraController.ViewMatrix, Math.Camera.projectionPerspective (dbgFov.Value / 180.f * float32 Math.PI) (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 0.1f 1000.f)
 
     // fill gbuffer
     use albedoBuffer = rtpool.Acquire("gbuffer/albedo", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
@@ -378,7 +378,7 @@ MessagePump.Run(form, fun () ->
     context.ClearRenderTargetView(normalBuffer.ColorView, SlimDX.Color4 Color.Black)
     context.ClearDepthStencilView(depthBuffer.DepthView, DepthStencilClearFlags.Depth, 1.f, 0uy)
 
-    fillGBuffer context shader_context camera albedoBuffer specularBuffer normalBuffer depthBuffer
+    fillGBuffer context shaderContext camera albedoBuffer specularBuffer normalBuffer depthBuffer
 
     context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
 
@@ -389,13 +389,13 @@ MessagePump.Run(form, fun () ->
     context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
     context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
 
-    shader_context.Shader <- light_directional.Data
+    shaderContext.Shader <- lightDirectional.Data
 
-    shader_context?gbuf_sampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
-    shader_context?gbuf_albedo <- albedoBuffer.View
-    shader_context?gbuf_specular <- specularBuffer.View
-    shader_context?gbuf_normal <- normalBuffer.View
-    shader_context?gbuf_depth <- depthBuffer.View
+    shaderContext?gbufSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
+    shaderContext?gbufAlbedo <- albedoBuffer.View
+    shaderContext?gbufSpecular <- specularBuffer.View
+    shaderContext?gbufNormal <- normalBuffer.View
+    shaderContext?gbufDepth <- depthBuffer.View
 
     context.Draw(3, 0)
 
@@ -414,35 +414,35 @@ MessagePump.Run(form, fun () ->
         Vector3(0.f, 1.f, 1.f)
         Vector3(1.f, 1.f, 1.f) |]
 
-    let rng = System.Random(dbg_spot_seed.Value)
+    let rng = System.Random(dbgSpotSeed.Value)
 
     use shadowBuffer = rtpool.Acquire("lighting/shadow buffer", 1024, 1024, Format.D24_UNorm_S8_UInt)
 
-    for i in 0 .. dbg_spot_count.Value - 1 do
+    for i in 0 .. dbgSpotCount.Value - 1 do
         // generate procedural spot light
-        let angle = deg2rad * 360.f * (float32 i / float32 dbg_spot_count.Value)
-        let position = Vector3(dbg_spot_offset.Value * sin angle, dbg_spot_offset.Value * cos angle, dbg_spot_height.Value)
+        let angle = deg2rad * 360.f * (float32 i / float32 dbgSpotCount.Value)
+        let position = Vector3(dbgSpotOffset.Value * sin angle, dbgSpotOffset.Value * cos angle, dbgSpotHeight.Value)
         let light =
             SpotLight(
                 position,
                 Vector3.Normalize(-position),
-                cos (deg2rad * dbg_spot_outercone.Value),
-                cos (deg2rad * dbg_spot_innercone.Value),
-                dbg_spot_radius.Value,
-                colors.[i % colors.Length] * dbg_spot_intensity.Value)
+                cos (deg2rad * dbgSpotOutercone.Value),
+                cos (deg2rad * dbgSpotInnercone.Value),
+                dbgSpotRadius.Value,
+                colors.[i % colors.Length] * dbgSpotIntensity.Value)
 
         // render shadow map
-        let light_camera =
+        let lightCamera =
             Camera(
                 Math.Camera.lookAt light.Position (light.Position + light.Direction) (if abs light.Direction.x < 0.7f then Vector3.UnitX else Vector3.UnitY),
-                Math.Camera.projectionPerspective (deg2rad * dbg_spot_outercone.Value * 2.f) 1.f 0.1f light.Radius)
+                Math.Camera.projectionPerspective (deg2rad * dbgSpotOutercone.Value * 2.f) 1.f 0.1f light.Radius)
 
         context.ClearDepthStencilView(shadowBuffer.DepthView, DepthStencilClearFlags.Depth, 1.f, 0uy)
 
-        fillShadowBuffer context shader_context light_camera shadowBuffer
+        fillShadowBuffer context shaderContext lightCamera shadowBuffer
 
         // draw spot light
-        shader_context?camera <- camera
+        shaderContext?camera <- camera
 
         context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
         context.OutputMerger.SetTargets(colorBuffer.ColorView)
@@ -452,11 +452,11 @@ MessagePump.Run(form, fun () ->
         context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
         context.OutputMerger.BlendState <- BlendState.FromDescription(device.Device, blendon)
 
-        shader_context.Shader <- light_spot.Data
-        shader_context?light <- light
-        shader_context?light_camera <- light_camera
-        shader_context?shadow_map <- shadowBuffer.View
-        shader_context?shadow_sampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.ComparisonMinMagMipLinear, ComparisonFunction = Comparison.Less))
+        shaderContext.Shader <- lightSpot.Data
+        shaderContext?light <- light
+        shaderContext?lightCamera <- lightCamera
+        shaderContext?shadowMap <- shadowBuffer.View
+        shaderContext?shadowSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.ComparisonMinMagMipLinear, ComparisonFunction = Comparison.Less))
 
         context.Draw(3, 0)
 
@@ -471,10 +471,10 @@ MessagePump.Run(form, fun () ->
     context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
     context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
 
-    shader_context.Shader <- postfx_tonemap.Data
+    shaderContext.Shader <- postfxTonemap.Data
 
-    shader_context?default_sampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
-    shader_context?color_map <- colorBuffer.View
+    shaderContext?defaultSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
+    shaderContext?colorMap <- colorBuffer.View
 
     context.Draw(3, 0)
 
@@ -485,14 +485,14 @@ MessagePump.Run(form, fun () ->
     context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
     context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
 
-    shader_context.Shader <- postfx_fxaa.Data
+    shaderContext.Shader <- postfxFxaa.Data
 
-    shader_context?default_sampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
-    shader_context?color_map <- ldrBuffer.View
+    shaderContext?defaultSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
+    shaderContext?colorMap <- ldrBuffer.View
 
     context.Draw(3, 0)
 
-    device.SwapChain.Present(dbg_present_interval.Value, PresentFlags.None) |> ignore
+    device.SwapChain.Present(dbgPresentInterval.Value, PresentFlags.None) |> ignore
 
     firsttime.Force() |> ignore)
 

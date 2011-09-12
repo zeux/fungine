@@ -13,25 +13,25 @@ struct Surface
     float depth;
 };
 
-SamplerState gbuf_sampler;
+SamplerState gbufSampler;
 
-Texture2D gbuf_albedo;
-Texture2D gbuf_specular;
-Texture2D gbuf_normal;
-Texture2D gbuf_depth;
+Texture2D gbufAlbedo;
+Texture2D gbufSpecular;
+Texture2D gbufNormal;
+Texture2D gbufDepth;
 
 Surface gbufSampleSurface(float2 uv)
 {
     Surface O;
 
-    O.albedo = degamma(gbuf_albedo.Sample(gbuf_sampler, uv)).rgb;
-    O.normal = gbuf_normal.Sample(gbuf_sampler, uv).xyz * 2 - 1;
+    O.albedo = degamma(gbufAlbedo.Sample(gbufSampler, uv)).rgb;
+    O.normal = gbufNormal.Sample(gbufSampler, uv).xyz * 2 - 1;
 
-    float4 spec = gbuf_specular.Sample(gbuf_sampler, uv);
+    float4 spec = gbufSpecular.Sample(gbufSampler, uv);
     O.specular = degamma(spec.rgb);
     O.roughness = spec.a;
 
-    O.depth = gbuf_depth.Sample(gbuf_sampler, uv).r;
+    O.depth = gbufDepth.Sample(gbufSampler, uv).r;
 
     return O;
 }

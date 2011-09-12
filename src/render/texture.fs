@@ -102,7 +102,7 @@ module private TextureLoaderDDS =
         | 0 ->
             if format.rgbBitCount = 32 && format.bBitMask = 0xff0000 && format.gBitMask = 0xff00 && format.rBitMask = 0xff &&
                (format.aBitMask = 0xff000000 || format.aBitMask = 0) then Format.R8G8B8A8_UNorm
-            else if format.rgbBitCount = 8 && format.rBitMask = 0xff then Format.R8_UNorm
+            elif format.rgbBitCount = 8 && format.rBitMask = 0xff then Format.R8_UNorm
             else failwithf "Unknown RGBA mask combination: %d bpp (R=%x G=%x B=%x A=%x)" format.rgbBitCount format.rBitMask format.gBitMask format.bBitMask format.aBitMask
         | 111 -> Format.R16_Float
         | 112 -> Format.R16G16_Float
@@ -123,7 +123,7 @@ module private TextureLoaderDDS =
 
         if (header.caps2 &&& DDSCAPS2_VOLUME) <> 0 then
             HeaderDX10(format, ResourceDimension.Texture3D, ResourceOptionFlags.None, 1)
-        else if (header.caps2 &&& DDSCAPS2_CUBEMAP) <> 0 then
+        elif (header.caps2 &&& DDSCAPS2_CUBEMAP) <> 0 then
             if (header.caps2 &&& DDSCAPS2_CUBEMAP_FACES) <> DDSCAPS2_CUBEMAP_FACES then failwithf "Partial cubemap textures are not supported"
             HeaderDX10(format, ResourceDimension.Texture2D, ResourceOptionFlags.TextureCube, 1)
         else
@@ -151,11 +151,11 @@ module private TextureLoaderDDS =
         let offset = ref 0
         Array.init (arraysize * miplevels) (fun idx ->
             let mip = idx % miplevels
-            let row_pitch = getRowPitch format (getMipSize width mip)
-            let slice_pitch = getSlicePitch format (getMipSize width mip) (getMipSize height mip)
-            let size = slice_pitch * getMipSize depth mip
+            let rowPitch = getRowPitch format (getMipSize width mip)
+            let slicePitch = getSlicePitch format (getMipSize width mip) (getMipSize height mip)
+            let size = slicePitch * getMipSize depth mip
             offset := !offset + size
-            conv row_pitch slice_pitch size (!offset - size))
+            conv rowPitch slicePitch size (!offset - size))
 
     // create texture
     let createTexture device (header: Header) (header10: HeaderDX10) streamc =
@@ -167,12 +167,12 @@ module private TextureLoaderDDS =
             let desc = Texture2DDescription(Width = header.width, Height = header.height, MipLevels = miplevels, ArraySize = header10.arraySize * asmult,
                         Format = header10.format, SampleDescription = DXGI.SampleDescription(1, 0), Usage = ResourceUsage.Immutable, BindFlags = BindFlags.ShaderResource,
                         OptionFlags = header10.flags)
-            let conv row_pitch slice_pitch size offset = DataRectangle(row_pitch, streamc offset size)
+            let conv rowPitch slicePitch size offset = DataRectangle(rowPitch, streamc offset size)
             new Texture2D(device, desc, getLayout desc.Format desc.Width desc.Height 1 desc.MipLevels desc.ArraySize conv) :> Resource
         | ResourceDimension.Texture3D ->
             let desc = Texture3DDescription(Width = header.width, Height = header.height, Depth = header.depth, MipLevels = miplevels,
                         Format = header10.format, Usage = ResourceUsage.Immutable, BindFlags = BindFlags.ShaderResource)
-            let conv row_pitch slice_pitch size offset = DataBox(row_pitch, slice_pitch, streamc offset size)
+            let conv rowPitch slicePitch size offset = DataBox(rowPitch, slicePitch, streamc offset size)
             new Texture3D(device, desc, getLayout desc.Format desc.Width desc.Height desc.Depth desc.MipLevels 1 conv) :> Resource
         | d -> failwithf "Unsupported image dimension %A" d
 
@@ -199,11 +199,11 @@ module private TextureLoaderDDS =
         for off in 0L .. 4096L .. data.Capacity-1L do data.ReadByte(off) |> ignore
 
         // get source data stream
-        let data_offset = 4 + header.size + (if header.format.fourCC = getFourCC "DX10" then sizeof<HeaderDX10> else 0)
+        let dataOffset = 4 + header.size + (if header.format.fourCC = getFourCC "DX10" then sizeof<HeaderDX10> else 0)
 
         let streamc offset size =
-            if int64 (data_offset + offset + size) > data.Capacity then failwith "Error reading image data: file is truncated"
-            new DataStream(data.SafeMemoryMappedViewHandle.DangerousGetHandle() + nativeint (data_offset + offset), int64 size, canRead = true, canWrite = false)
+            if int64 (dataOffset + offset + size) > data.Capacity then failwith "Error reading image data: file is truncated"
+            new DataStream(data.SafeMemoryMappedViewHandle.DangerousGetHandle() + nativeint (dataOffset + offset), int64 size, canRead = true, canWrite = false)
 
         // create texture resource
         let resource = createTexture device header header10 streamc

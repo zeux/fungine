@@ -32,7 +32,7 @@ type Loader = string -> obj
 let private loaders = Dictionary<string, Loader>()
 
 // asset load processor
-let private load_processor =
+let private loadProcessor =
     MailboxProcessor.Start(fun inbox ->
         let rec loop () = async {
             let! msg = inbox.Receive()
@@ -49,7 +49,7 @@ let private loadInternal (data: Data) path =
     let ext = Path.GetExtension(path)
     match loaders.TryGetValue(ext) with
     | true, l ->
-        load_processor.Post(fun () ->
+        loadProcessor.Post(fun () ->
             try
                 data.Value <- l path
             with

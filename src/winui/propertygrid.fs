@@ -1,4 +1,4 @@
-﻿module WinUI.PropertyGrid
+module WinUI.PropertyGrid
 
 open System.ComponentModel
 open System.Windows
@@ -51,8 +51,8 @@ type private Converter<'T, 'U>(forward: 'T -> 'U, backward: 'U -> 'T) =
         | _ -> DependencyProperty.UnsetValue
 
     interface IValueConverter with
-        member this.Convert(value, target_type, parameter, culture) = convert value forward
-        member this.ConvertBack(value, target_type, parameter, culture) = convert value backward
+        member this.Convert(value, targetType, parameter, culture) = convert value forward
+        member this.ConvertBack(value, targetType, parameter, culture) = convert value backward
 
 // create edit control group from variable reference
 let private createControlEdit data converter =
@@ -66,11 +66,11 @@ let private createControlEdit data converter =
     edit :> FrameworkElement
 
 // create slider control group from variable reference
-let private createControlSlider data string_converter float_converter =
-    let edit = createControlEdit data string_converter
+let private createControlSlider data stringConverter floatConverter =
+    let edit = createControlEdit data stringConverter
 
     let slider = Slider(Minimum = 0.0, Maximum = 100.0, Margin = Thickness(4.0, 0.0, 4.0, 0.0))
-    slider.SetBinding(Slider.ValueProperty, Data.Binding("Value", Mode = BindingMode.TwoWay, Source = data, Converter = float_converter)) |> ignore
+    slider.SetBinding(Slider.ValueProperty, Data.Binding("Value", Mode = BindingMode.TwoWay, Source = data, Converter = floatConverter)) |> ignore
 
     let grid = Grid()
 
@@ -126,7 +126,7 @@ let create (variables: (string * obj) array) =
     let add column control = grid.Add(control, !row - 1, column)
 
     let background = Brushes.Honeydew
-    let header_text = Brushes.LightSteelBlue
+    let headerText = Brushes.LightSteelBlue
     let arrow = Geometry.Parse("M 0 0 L 4 4 L 8 0 Z")
 
     for (group, items) in groups do
@@ -136,20 +136,20 @@ let create (variables: (string * obj) array) =
         add 0 border
         Grid.SetColumnSpan(border, 3)
 
-        let path = Path(Fill = header_text, Data = arrow, Margin = Thickness(4., 4., 0., 0.), VerticalAlignment = VerticalAlignment.Center)
+        let path = Path(Fill = headerText, Data = arrow, Margin = Thickness(4., 4., 0., 0.), VerticalAlignment = VerticalAlignment.Center)
         add 0 path
 
-        let header = Label(Content = Documents.Bold(Documents.Run(group)), Foreground = header_text, VerticalAlignment = VerticalAlignment.Center)
+        let header = Label(Content = Documents.Bold(Documents.Run(group)), Foreground = headerText, VerticalAlignment = VerticalAlignment.Center)
         add 1 header
         Grid.SetColumnSpan(header, 2)
 
         for (_, name, value) in items do
             nextrow ()
 
-            let header_border = Border(BorderBrush = background, BorderThickness = Thickness(1.0, 1.0, 0.0, 0.0))
+            let headerBorder = Border(BorderBrush = background, BorderThickness = Thickness(1.0, 1.0, 0.0, 0.0))
 
             add 0 (Border(Background = background))
-            add 1 (header_border)
+            add 1 (headerBorder)
             add 2 (Border(BorderBrush = background, BorderThickness = Thickness(1.0, 1.0, 0.0, 0.0)))
 
             add 1 (TextBlock(Text = name, Margin = Thickness(4.0), VerticalAlignment = VerticalAlignment.Center))
@@ -162,7 +162,7 @@ let create (variables: (string * obj) array) =
             add 2 control
 
             (data :> INotifyPropertyChanged).PropertyChanged.Add(fun _ ->
-                header_border.Background <- if value?DefaultValue = value?Value then Brushes.Transparent else Brushes.Bisque)
+                headerBorder.Background <- if value?DefaultValue = value?Value then Brushes.Transparent else Brushes.Bisque)
 
     // create new window
     let window = Window(Content = ScrollViewer(Content = grid))

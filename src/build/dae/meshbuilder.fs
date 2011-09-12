@@ -1,4 +1,4 @@
-﻿module Build.Dae.MeshBuilder
+module Build.Dae.MeshBuilder
 
 open System.Xml
 
@@ -8,16 +8,16 @@ open Build.Dae.Parse
 open BuildSystem
 
 // convert fat mesh to packed & optimized mesh
-let private buildOptimizedMesh fat_mesh format =
+let private buildOptimizedMesh fatMesh format =
     // build packed & indexed mesh
-    let packed_mesh = MeshPacker.pack fat_mesh format
+    let packedMesh = MeshPacker.pack fatMesh format
 
     // optimize for Post T&L cache
-    let postopt_mesh = { packed_mesh with indices = PostTLOptimizerLinear.optimize packed_mesh.indices }
+    let postoptMesh = { packedMesh with indices = PostTLOptimizerLinear.optimize packedMesh.indices }
 
     // optimize for Pre T&L cache
-    let (vertices, indices) = PreTLOptimizer.optimize postopt_mesh.vertices postopt_mesh.indices postopt_mesh.vertex_size
-    { postopt_mesh with vertices = vertices; indices = indices }
+    let (vertices, indices) = PreTLOptimizer.optimize postoptMesh.vertices postoptMesh.indices postoptMesh.vertexSize
+    { postoptMesh with vertices = vertices; indices = indices }
 
 // get a byte copy of the array
 let private getByteCopy (arr: 'a array) =
@@ -26,9 +26,9 @@ let private getByteCopy (arr: 'a array) =
     result
 
 // pack index buffer to 16/32 bits
-let private packIndexBuffer indices vertex_count =
+let private packIndexBuffer indices vertexCount =
     // pack to the smallest available size
-    if vertex_count <= 65536 then
+    if vertexCount <= 65536 then
         Render.Format.R16_UInt, indices |> Array.map (uint16) |> getByteCopy
     else
         Render.Format.R32_UInt, indices |> getByteCopy
@@ -49,17 +49,17 @@ let private mergeMeshGeometry (meshes: PackedMesh array) =
     let vertices = meshes |> Array.map (fun mesh -> mesh.vertices)
 
     // get index data
-    let indices = meshes |> Array.map (fun mesh -> packIndexBuffer mesh.indices (mesh.vertices.Length / mesh.vertex_size))
-    let (index_formats, index_data) = Array.unzip indices
+    let indices = meshes |> Array.map (fun mesh -> packIndexBuffer mesh.indices (mesh.vertices.Length / mesh.vertexSize))
+    let (indexFormats, indexData) = Array.unzip indices
 
     // merge arrays
-    let merged_vertices, vertex_offsets = mergeArrays vertices
-    let merged_indices, index_offsets = mergeArrays index_data
+    let mergedVertices, vertexOffsets = mergeArrays vertices
+    let mergedIndices, indexOffsets = mergeArrays indexData
 
     // gather mesh data
-    let mesh_data = Array.zip3 vertex_offsets index_offsets index_formats
+    let meshData = Array.zip3 vertexOffsets indexOffsets indexFormats
 
-    merged_vertices, merged_indices, mesh_data
+    mergedVertices, mergedIndices, meshData
 
 // build packed & optimized meshes from document
 let private buildPackedMeshes (doc: Document) conv skeleton =
@@ -71,36 +71,36 @@ let private buildPackedMeshes (doc: Document) conv skeleton =
     let instances = doc.Root.Select("/COLLADA/library_visual_scenes//node/instance_geometry | /COLLADA/library_visual_scenes//node/instance_controller")
 
     // get all meshes
-    let fat_meshes = instances |> Array.collect (fun i ->
+    let fatMeshes = instances |> Array.collect (fun i ->
         FatMeshBuilder.build doc conv i fvf skeleton
         |> Array.map (fun (mesh, material) -> i, mesh, material))
 
     // build packed & optimized meshes
-    fat_meshes |> Array.map (fun (inst, mesh, material) -> inst, buildOptimizedMesh mesh format, material)
+    fatMeshes |> Array.map (fun (inst, mesh, material) -> inst, buildOptimizedMesh mesh format, material)
 
 // build mesh fragments
-let private buildMeshFragments meshes mesh_data materials skeleton =
-    let dummy_inv_bind_pose = [|Matrix34.Identity|]
+let private buildMeshFragments meshes meshData materials skeleton =
+    let dummyInvBindPose = [|Matrix34.Identity|]
 
     meshes |> Array.mapi (fun idx (inst: XmlNode, mesh, _) ->
-        let (vertex_offset, index_offset, index_format) = Array.get mesh_data idx
+        let (vertexOffset, indexOffset, indexFormat) = Array.get meshData idx
 
         // create dummy 1-bone skin binding for non-skinned meshes
         let skin =
             match mesh.skin with
             | Some binding -> binding
-            | None -> Render.SkinBinding([| skeleton.node_map.[inst.ParentNode] |], dummy_inv_bind_pose)
+            | None -> Render.SkinBinding([| skeleton.nodeMap.[inst.ParentNode] |], dummyInvBindPose)
         
         // build fragment structure
         { new Render.MeshFragment
           with material = Array.get materials idx
           and skin = skin
-          and compression_info = mesh.compression_info
-          and vertex_format = mesh.format
-          and index_format = index_format
-          and vertex_offset = vertex_offset
-          and index_offset = index_offset
-          and index_count = mesh.indices.Length })
+          and compressionInfo = mesh.compressionInfo
+          and vertexFormat = mesh.format
+          and indexFormat = indexFormat
+          and vertexOffset = vertexOffset
+          and indexOffset = indexOffset
+          and indexCount = mesh.indices.Length })
 
 // build mesh file from dae file
 let private build source target = 
@@ -108,8 +108,8 @@ let private build source target =
     let doc = Document(source)
 
     // get cached texture/material builders
-    let all_textures = Core.Cache (fun id -> TextureBuilder.build doc id)
-    let all_materials = Core.Cache (fun id -> MaterialBuilder.build doc id (all_textures.Get >> snd))
+    let allTextures = Core.Cache (fun id -> TextureBuilder.build doc id)
+    let allMaterials = Core.Cache (fun id -> MaterialBuilder.build doc id (allTextures.Get >> snd))
 
     // get basis converter (convert up axis, skip unit conversion)
     let conv = BasisConverter(doc)
@@ -121,23 +121,23 @@ let private build source target =
     let meshes = buildPackedMeshes doc conv skeleton
 
     // build merged vertex & index buffers
-    let (vertices, indices, mesh_data) = mergeMeshGeometry (meshes |> Array.map (fun (_, mesh, _) -> mesh))
-    let vertex_buffer = Render.Buffer(SlimDX.Direct3D11.BindFlags.VertexBuffer, vertices)
-    let index_buffer = Render.Buffer(SlimDX.Direct3D11.BindFlags.IndexBuffer, indices)
+    let (vertices, indices, meshData) = mergeMeshGeometry (meshes |> Array.map (fun (_, mesh, _) -> mesh))
+    let vertexBuffer = Render.Buffer(SlimDX.Direct3D11.BindFlags.VertexBuffer, vertices)
+    let indexBuffer = Render.Buffer(SlimDX.Direct3D11.BindFlags.IndexBuffer, indices)
 
     // build materials
-    let materials = meshes |> Array.map (fun (_, _, material) -> all_materials.Get material)
+    let materials = meshes |> Array.map (fun (_, _, material) -> allMaterials.Get material)
 
     // build mesh fragments
-    let fragments = buildMeshFragments meshes mesh_data materials skeleton
+    let fragments = buildMeshFragments meshes meshData materials skeleton
 
     // build & save mesh
-    let mesh = { new Render.Mesh with fragments = fragments and vertices = vertex_buffer and indices = index_buffer and skeleton = skeleton.data }
+    let mesh = { new Render.Mesh with fragments = fragments and vertices = vertexBuffer and indices = indexBuffer and skeleton = skeleton.data }
 
     Core.Serialization.Save.toFile target mesh
 
     // return texture list
-    all_textures.Pairs |> Seq.map (fun p -> p.Value)
+    allTextures.Pairs |> Seq.map (fun p -> p.Value)
 
 // .dae -> .mesh builder object
 let builder = { new Builder("Mesh") with

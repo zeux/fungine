@@ -23,8 +23,8 @@ type private TaskState(task: Task) =
 
 // synchronous task scheduler
 type private TaskScheduler(db: Database) =
-    let task_by_output = Dictionary<string, TaskState>()
-    let tasks_by_input = Dictionary<string, List<TaskState>>()
+    let taskByOutput = Dictionary<string, TaskState>()
+    let tasksByInput = Dictionary<string, List<TaskState>>()
     let tasks = List<TaskState>()
 
     // list of differences between two signatures
@@ -113,19 +113,19 @@ type private TaskScheduler(db: Database) =
 
     // wait for node to be complete
     member private this.Wait (node: Node) =
-        match task_by_output.TryGetValue(node.Uid) with
+        match taskByOutput.TryGetValue(node.Uid) with
         | true, dep -> this.Wait dep
         | _ -> ()
 
     // add state dependency
     member private this.AddDependency (state, node: Node) =
-        match tasks_by_input.TryGetValue(node.Uid) with
+        match tasksByInput.TryGetValue(node.Uid) with
         | true, list ->
             list.Add(state)
         | _ ->
             let list = new List<_>()
             list.Add(state)
-            tasks_by_input.Add(node.Uid, list)
+            tasksByInput.Add(node.Uid, list)
 
     // run task with implicit dependency processing
     member private this.RunTaskImplicitDeps (task: Task) =
@@ -197,7 +197,7 @@ type private TaskScheduler(db: Database) =
 
         // add task to output -> task map
         for output in task.Targets do
-            task_by_output.Add(output.Uid, state)
+            taskByOutput.Add(output.Uid, state)
 
         tasks.Add(state)
 
@@ -214,7 +214,7 @@ type private TaskScheduler(db: Database) =
     // process file updates so that the next run will build the dependent tasks
     member this.UpdateInputs inputs =
         let rec update (input: Node) =
-            match tasks_by_input.TryGetValue(input.Uid) with
+            match tasksByInput.TryGetValue(input.Uid) with
             | true, list ->
                 // update all tasks that depend on input
                 list |> Seq.sumBy (fun task ->

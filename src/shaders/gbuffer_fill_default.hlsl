@@ -5,11 +5,11 @@ cbuffer camera { Camera camera; };
 cbuffer mesh
 {
     float roughness;
-    float3 position_offset;
+    float3 positionOffset;
     float smoothness;
-    float3 position_scale;
-    float2 texcoord_offset;
-    float2 texcoord_scale;
+    float3 positionScale;
+    float2 texcoordOffset;
+    float2 texcoordScale;
     float3x4 bones[2];
 }
 
@@ -18,11 +18,11 @@ cbuffer transforms
     float3x4 offsets[2];
 }
 
-SamplerState default_sampler;
+SamplerState defaultSampler;
 
-Texture2D<float4> albedo_map;
-Texture2D<float2> normal_map;
-Texture2D<float3> specular_map;
+Texture2D<float4> albedoMap;
+Texture2D<float2> normalMap;
+Texture2D<float3> specularMap;
 
 struct VS_IN
 {
@@ -30,8 +30,8 @@ struct VS_IN
     float3 normal: NORMAL;
     float4 tangent: TANGENT;
 	float2 uv0: TEXCOORD0;
-    uint4 bone_indices: BONEINDICES;
-    float4 bone_weights: BONEWEIGHTS;
+    uint4 boneIndices: BONEINDICES;
+    float4 boneWeights: BONEWEIGHTS;
 };
 
 struct PS_IN
@@ -51,50 +51,50 @@ struct PS_OUT
     float4 normal: SV_Target2;
 };
 
-PS_IN vs_main(VS_IN I, uint instance: SV_InstanceId)
+PS_IN vsMain(VS_IN I, uint instance: SV_InstanceId)
 {
 	PS_IN O;
 	
-    I.pos.xyz = I.pos.xyz * position_scale + position_offset;
+    I.pos.xyz = I.pos.xyz * positionScale + positionOffset;
     I.pos.w = 1;
 
     float3x4 transform = 0;
 
     [unroll] for (int i = 0; i < 4; ++i)
     {
-        transform += bones[I.bone_indices[i]] * I.bone_weights[i];
+        transform += bones[I.boneIndices[i]] * I.boneWeights[i];
     }
 
-    float3 pos_ls = mul(transform, I.pos);
-    float3 pos_ws = mul(offsets[instance], float4(pos_ls, 1));
+    float3 posLs = mul(transform, I.pos);
+    float3 posWs = mul(offsets[instance], float4(posLs, 1));
 
-	O.pos = mul(camera.view_projection, float4(pos_ws, 1));
+	O.pos = mul(camera.viewProjection, float4(posWs, 1));
     O.normal = normalize(mul((float3x3)offsets[instance], mul((float3x3)transform, I.normal * 2 - 1)));
     O.tangent = normalize(mul((float3x3)offsets[instance], mul((float3x3)transform, I.tangent.xyz * 2 - 1)));
     O.bitangent = cross(O.normal, O.tangent) * (I.tangent.w * 2 - 1);
-    O.uv0 = I.uv0 * texcoord_scale + texcoord_offset;
+    O.uv0 = I.uv0 * texcoordScale + texcoordOffset;
 	
 	return O;
 }
 
-float3 sample_normal(Texture2D<float2> map, float2 uv)
+float3 sampleNormal(Texture2D<float2> map, float2 uv)
 {
-    float2 xy = map.Sample(default_sampler, uv) * 2 - 1;
+    float2 xy = map.Sample(defaultSampler, uv) * 2 - 1;
     xy *= 1 - smoothness;
 
     return float3(xy, sqrt(1 - dot(xy, xy)));
 }
 
-PS_OUT ps_main(PS_IN I)
+PS_OUT psMain(PS_IN I)
 {
-    float3 normal_ts = sample_normal(normal_map, I.uv0);
-    float3 normal = normalize(normal_ts.x * I.tangent + normal_ts.y * I.bitangent + normal_ts.z * I.normal);
+    float3 normalTs = sampleNormal(normalMap, I.uv0);
+    float3 normal = normalize(normalTs.x * I.tangent + normalTs.y * I.bitangent + normalTs.z * I.normal);
 
-    float4 albedo = albedo_map.Sample(default_sampler, I.uv0);
+    float4 albedo = albedoMap.Sample(defaultSampler, I.uv0);
 
     if (albedo.a < 0.5) discard;
 
-    float3 spec = specular_map.Sample(default_sampler, I.uv0);
+    float3 spec = specularMap.Sample(defaultSampler, I.uv0);
 
     PS_OUT O;
     O.albedo = albedo;

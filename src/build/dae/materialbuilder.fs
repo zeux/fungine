@@ -1,11 +1,11 @@
-﻿module Build.Dae.MaterialBuilder
+module Build.Dae.MaterialBuilder
 
 open System.Xml
 
 open Build.Dae.Parse
 
 // get texture with the specified name
-let private buildTexture (effect: XmlNode) (nodes: XmlNode array) name texture_creator =
+let private buildTexture (effect: XmlNode) (nodes: XmlNode array) name textureCreator =
     // look for node parameter
     let param = nodes |> Array.tryPick (fun n ->
         if n.Name = name then
@@ -17,15 +17,15 @@ let private buildTexture (effect: XmlNode) (nodes: XmlNode array) name texture_c
     match param with
     | Some node ->
         let sampler = effect.SelectSingleNode (sprintf "profile_COMMON/newparam[@sid='%s']" (node.Attribute "texture"))
-        let surface_sid = sampler.SelectSingleNode "sampler2D/source/text() | samplerCUBE/source/text()"
-        let surface = effect.SelectSingleNode (sprintf "profile_COMMON/newparam[@sid='%s']" surface_sid.Value)
+        let surfaceSid = sampler.SelectSingleNode "sampler2D/source/text() | samplerCUBE/source/text()"
+        let surface = effect.SelectSingleNode (sprintf "profile_COMMON/newparam[@sid='%s']" surfaceSid.Value)
         let image = surface.SelectSingleNode "surface/init_from/text() | surface/init_cube/all/@ref"
 
-        Some (texture_creator image.Value)
+        Some (textureCreator image.Value)
     | None -> None
 
 // build material
-let build (doc: Document) id texture_creator =
+let build (doc: Document) id textureCreator =
     // get material node
     let material = doc.Node id
 
@@ -37,9 +37,9 @@ let build (doc: Document) id texture_creator =
     let nodes = effect.Select (subnodes |> Array.map (sprintf "profile_COMMON/technique/%s/*") |> String.concat " | ")
 
     // get textures
-    let albedo_map = buildTexture effect nodes "diffuse" texture_creator
-    let normal_map = buildTexture effect nodes "bump" texture_creator
-    let specular_map = buildTexture effect nodes "specular" texture_creator
+    let albedoMap = buildTexture effect nodes "diffuse" textureCreator
+    let normalMap = buildTexture effect nodes "bump" textureCreator
+    let specularMap = buildTexture effect nodes "specular" textureCreator
 
     // build material
-    { new Render.Material with albedo_map = albedo_map and normal_map = normal_map and specular_map = specular_map }
+    { new Render.Material with albedoMap = albedoMap and normalMap = normalMap and specularMap = specularMap }

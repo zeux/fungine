@@ -1,4 +1,4 @@
-﻿module Build.Dae.FatMeshBuilder
+module Build.Dae.FatMeshBuilder
 
 open System.Collections.Generic
 open System.Xml
@@ -15,8 +15,8 @@ let private (|Regex|_|) pattern input =
         None
 
 // get UV remap information (uv index => set index)
-let private getUVRemap (material_instance: XmlNode) =
-    material_instance.Select("bind_vertex_input")
+let private getUVRemap (materialInstance: XmlNode) =
+    materialInstance.Select("bind_vertex_input")
     |> Array.map (fun node ->
         assert (node.Attribute "input_semantic" = "TEXCOORD")
         node.Attribute "semantic", node.Attribute "input_set")
@@ -46,9 +46,9 @@ let private getVertexInputs (doc: Document) (node: XmlNode) =
             [| getVertexInput input offset |])
 
 // get vertex components information as (component, id, offset) array
-let private getVertexComponents inputs uv_remap fvf =
+let private getVertexComponents inputs uvRemap fvf =
     // assume that TBN is always for tex0
-    let tbn_set = defaultArg (Map.tryFind 0 uv_remap) 0
+    let tbnSet = defaultArg (Map.tryFind 0 uvRemap) 0
 
     // convert inputs to vertex components, where applicable
     let components = inputs |> Array.choose (fun (semantics, set, id, offset) ->
@@ -57,9 +57,9 @@ let private getVertexComponents inputs uv_remap fvf =
             | "POSITION", 0 -> Some Position
             | "NORMAL", 0 -> Some Normal
             | "COLOR", n -> Some (Color n)
-            | "TEXTANGENT", n when n = tbn_set -> Some Tangent
-            | "TEXBINORMAL", n when n = tbn_set -> Some Bitangent
-            | "TEXCOORD", n -> uv_remap |> Map.tryPick (fun uv set -> if set = n then Some (TexCoord uv) else None)
+            | "TEXTANGENT", n when n = tbnSet -> Some Tangent
+            | "TEXBINORMAL", n when n = tbnSet -> Some Bitangent
+            | "TEXCOORD", n -> uvRemap |> Map.tryPick (fun uv set -> if set = n then Some (TexCoord uv) else None)
             | _ -> None
 
         match comp with
@@ -82,22 +82,22 @@ let private getVertexComponentData (doc: Document) comp id =
     | _ -> [||]
 
 // build vertex buffer
-let private buildVertexBuffer (conv: BasisConverter) (indices: int array) index_stride (components: (FatVertexComponent * float32 array * int) array) (skin: Skin option) =
+let private buildVertexBuffer (conv: BasisConverter) (indices: int array) indexStride (components: (FatVertexComponent * float32 array * int) array) (skin: Skin option) =
     // create an array with the specified size
     let arrayCreate size = if size > 0 then Array.zeroCreate size else null
 
     // get color/uv set count
-    let color_sets = components |> Array.map (fun (comp, _, _) -> match comp with | Color n -> n + 1 | _ -> 0) |> Array.max
-    let uv_sets = components |> Array.map (fun (comp, _, _) -> match comp with | TexCoord n -> n + 1 | _ -> 0) |> Array.max
+    let colorSets = components |> Array.map (fun (comp, _, _) -> match comp with | Color n -> n + 1 | _ -> 0) |> Array.max
+    let uvSets = components |> Array.map (fun (comp, _, _) -> match comp with | TexCoord n -> n + 1 | _ -> 0) |> Array.max
 
     // build vertex data
-    Array.init (indices.Length / index_stride) (fun index_block ->
-        let index_block_offset = index_block * index_stride
+    Array.init (indices.Length / indexStride) (fun indexBlock ->
+        let indexBlockOffset = indexBlock * indexStride
 
-        let mutable v = FatVertex(color = arrayCreate color_sets, texcoord = arrayCreate uv_sets)
+        let mutable v = FatVertex(color = arrayCreate colorSets, texcoord = arrayCreate uvSets)
 
-        for (comp, data, index_offset) in components do
-            let offset = indices.[index_block_offset + index_offset]
+        for (comp, data, indexOffset) in components do
+            let offset = indices.[indexBlockOffset + indexOffset]
 
             match comp with
             | Position -> v.position <- Vector3(data.[offset * 3 + 0], data.[offset * 3 + 1], data.[offset * 3 + 2]) |> conv.Position
@@ -112,47 +112,47 @@ let private buildVertexBuffer (conv: BasisConverter) (indices: int array) index_
         v)
 
 // build a single mesh
-let private buildInternal (doc: Document) (conv: BasisConverter) (geometry: XmlNode) (controller: XmlNode) (material_instance: XmlNode) fvf skin =
+let private buildInternal (doc: Document) (conv: BasisConverter) (geometry: XmlNode) (controller: XmlNode) (materialInstance: XmlNode) fvf skin =
     // get UV remap information
-    let uv_remap = getUVRemap material_instance
+    let uvRemap = getUVRemap materialInstance
 
     // get triangles node
-    let triangles = geometry.SelectSingleNode("mesh/triangles[@material = '" + material_instance.Attribute "symbol" + "']")
+    let triangles = geometry.SelectSingleNode("mesh/triangles[@material = '" + materialInstance.Attribute "symbol" + "']")
 
     // get all vertex inputs
     let inputs = getVertexInputs doc triangles
 
     // get index array stride (why it is not explicitly stated in the file is beyond me)
-    let index_stride = 1 + (inputs |> Array.map (fun (semantics, set, id, offset) -> offset) |> Array.max)
+    let indexStride = 1 + (inputs |> Array.map (fun (semantics, set, id, offset) -> offset) |> Array.max)
 
     // get components
-    let static_components = getVertexComponents inputs uv_remap fvf |> Array.map (fun (comp, id, offset) -> comp, (getVertexComponentData doc comp id), offset)
-    let skinned_components =
+    let staticComponents = getVertexComponents inputs uvRemap fvf |> Array.map (fun (comp, id, offset) -> comp, (getVertexComponentData doc comp id), offset)
+    let skinnedComponents =
         if Option.isSome skin then
-            let _, _, position_offset = static_components |> Array.find (fun (comp, data, offset) -> comp = Position)
-            let skinning_info = fvf |> Array.find (fun comp -> match comp with SkinningInfo _ -> true | _ -> false)
+            let _, _, positionOffset = staticComponents |> Array.find (fun (comp, data, offset) -> comp = Position)
+            let skinningInfo = fvf |> Array.find (fun comp -> match comp with SkinningInfo _ -> true | _ -> false)
 
-            Array.create 1 (skinning_info, [||], position_offset)
+            Array.create 1 (skinningInfo, [||], positionOffset)
         else
             [||]
 
-    let components = Array.append static_components skinned_components
+    let components = Array.append staticComponents skinnedComponents
 
     // get indices of the individual components
     let indices = getIntArray (triangles.SelectSingleNode("p"))
-    assert (indices.Length % index_stride = 0)
+    assert (indices.Length % indexStride = 0)
 
     // create the vertex buffer
-    let vertices = buildVertexBuffer conv indices index_stride components skin
+    let vertices = buildVertexBuffer conv indices indexStride components skin
 
     { new FatMesh with vertices = vertices and skin = if skin.IsSome then Some skin.Value.binding else None }
 
 // build all meshes for <instance_controller> or <instance_geometry> node
 let build (doc: Document) (conv: BasisConverter) (instance: XmlNode) fvf skeleton =
     // get controller and shape nodes
-    let instance_url = instance.Attribute "url"
-    let controller = if instance.Name = "instance_controller" then doc.Node instance_url else null
-    let geometry = doc.Node (if controller <> null then controller.SelectSingleNode("skin/@source").Value else instance_url)
+    let instanceUrl = instance.Attribute "url"
+    let controller = if instance.Name = "instance_controller" then doc.Node instanceUrl else null
+    let geometry = doc.Node (if controller <> null then controller.SelectSingleNode("skin/@source").Value else instanceUrl)
 
     // get skin data (if we have controller and we need skinning info)
     let skin = Array.tryPick (fun comp ->
@@ -161,7 +161,7 @@ let build (doc: Document) (conv: BasisConverter) (instance: XmlNode) fvf skeleto
         | _ -> None) fvf
 
     // get material instances
-    let material_instances = instance.Select("bind_material/technique_common/instance_material")
+    let materialInstances = instance.Select("bind_material/technique_common/instance_material")
 
     // build meshes
-    Array.map (fun mi -> buildInternal doc conv geometry controller mi fvf skin, mi.Attribute "target") material_instances
+    Array.map (fun mi -> buildInternal doc conv geometry controller mi fvf skin, mi.Attribute "target") materialInstances

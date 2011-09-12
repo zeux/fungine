@@ -43,7 +43,7 @@ let packDirectionUnnormalized (v: MathTypes.Vector3) bits offset =
     let inline rounderr x = abs (x - float (int (x + 0.5)))
 
     // normalize by largest component
-    let axis = if abs v.x > abs v.y && abs v.x > abs v.z then 0 else if abs v.y > abs v.x then 1 else 2
+    let axis = if abs v.x > abs v.y && abs v.x > abs v.z then 0 elif abs v.y > abs v.x then 1 else 2
     let n1 = v / abs v.[axis]
 
     // select two other components (abs values)

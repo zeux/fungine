@@ -17,18 +17,18 @@ let getSerializableFields (typ: Type) =
     let fields = typ.FindMembers(MemberTypes.Field, BindingFlags.Instance ||| BindingFlags.NonPublic ||| BindingFlags.Public, null, null) |> Array.map (fun f -> f :?> FieldInfo)
 
     // get all serializable fields
-    let fields_ser = fields |> Array.filter (fun f -> not f.IsNotSerialized)
+    let fieldsSer = fields |> Array.filter (fun f -> not f.IsNotSerialized)
 
-    fields_ser
+    fieldsSer
 
 // emit a loop that iterates through all array elements (leaving array index in loc0)
 let emitArrayLoop (gen: ILGenerator) objemit bodyemit =
     // declare local variables for length and for loop counter
-    let idx_local = gen.DeclareLocal(typeof<int>)
-    assert (idx_local.LocalIndex = 0)
+    let idxLocal = gen.DeclareLocal(typeof<int>)
+    assert (idxLocal.LocalIndex = 0)
 
-    let cnt_local = gen.DeclareLocal(typeof<int>)
-    assert (cnt_local.LocalIndex = 1)
+    let cntLocal = gen.DeclareLocal(typeof<int>)
+    assert (cntLocal.LocalIndex = 1)
 
     // store size to local
     objemit gen
@@ -36,12 +36,12 @@ let emitArrayLoop (gen: ILGenerator) objemit bodyemit =
     gen.Emit(OpCodes.Stloc_1) // count
 
     // jump to the loop comparison part (needed for empty arrays)
-    let loop_cmp = gen.DefineLabel()
-    gen.Emit(OpCodes.Br, loop_cmp)
+    let loopCmp = gen.DefineLabel()
+    gen.Emit(OpCodes.Br, loopCmp)
 
     // loop body
-    let loop_begin = gen.DefineLabel()
-    gen.MarkLabel(loop_begin)
+    let loopBegin = gen.DefineLabel()
+    gen.MarkLabel(loopBegin)
 
     bodyemit gen
 
@@ -52,10 +52,10 @@ let emitArrayLoop (gen: ILGenerator) objemit bodyemit =
     gen.Emit(OpCodes.Stloc_0)
 
     // if (index < count) goto begin
-    gen.MarkLabel(loop_cmp)
+    gen.MarkLabel(loopCmp)
     gen.Emit(OpCodes.Ldloc_0) // index
     gen.Emit(OpCodes.Ldloc_1) // count
-    gen.Emit(OpCodes.Blt, loop_begin)
+    gen.Emit(OpCodes.Blt, loopBegin)
 
 // encoding for serialized strings
 let stringEncoding = System.Text.UTF8Encoding()

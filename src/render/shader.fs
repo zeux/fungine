@@ -73,7 +73,7 @@ type ShaderObject<'T when 'T: null>(bytecode: byte array, parameters: ShaderPara
     member this.Parameters = parameters
 
 // shader
-type Shader(vertex_signature: ShaderSignature, vertex: ShaderObject<VertexShader>, pixel: ShaderObject<PixelShader>) =
+type Shader(vertexSignature: ShaderSignature, vertex: ShaderObject<VertexShader>, pixel: ShaderObject<PixelShader>) =
     // get vertex shader
     member this.VertexShader = vertex
 
@@ -81,7 +81,7 @@ type Shader(vertex_signature: ShaderSignature, vertex: ShaderObject<VertexShader
     member this.PixelShader = pixel
 
     // get input vertex signature
-    member this.VertexSignature = vertex_signature
+    member this.VertexSignature = vertexSignature
 
     // set shader to context
     member this.Set (context: DeviceContext) =

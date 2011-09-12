@@ -5,18 +5,18 @@ open System.Diagnostics
 open System.IO
 
 // build context
-type Context(root_path, build_path) =
+type Context(rootPath, buildPath) =
     static let mutable current: Context option = None
 
     // setup node root so that DB paths are stable
-    do Node.Root <- root_path
+    do Node.Root <- rootPath
 
-    let db = Database(build_path + "/.builddb")
+    let db = Database(buildPath + "/.builddb")
     let scheduler = TaskScheduler(db)
     let tasks = Dictionary<string, Task>()
 
     // get build path
-    member this.BuildPath = build_path
+    member this.BuildPath = buildPath
 
     // get target
     member this.Target (source: Node) ext =

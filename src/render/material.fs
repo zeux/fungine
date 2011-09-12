@@ -1,7 +1,7 @@
 namespace Render
 
 type Material =
-    { albedo_map: Asset<Texture> option
-      normal_map: Asset<Texture> option
-      specular_map: Asset<Texture> option
+    { albedoMap: Asset<Texture> option
+      normalMap: Asset<Texture> option
+      specularMap: Asset<Texture> option
     }

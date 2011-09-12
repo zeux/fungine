@@ -4,9 +4,9 @@
 #define FXAA_QUALITY__PRESET 12
 #include "fxaa3.h"
 
-SamplerState default_sampler;
+SamplerState defaultSampler;
 
-Texture2D<float4> color_map;
+Texture2D<float4> colorMap;
 
 struct PS_IN
 {
@@ -15,7 +15,7 @@ struct PS_IN
     float2 uv: TEXCOORD;
 };
 
-PS_IN vs_main(uint id: SV_VertexID)
+PS_IN vsMain(uint id: SV_VertexID)
 {
     // form a full-screen triangle
     float2 pos = float2(id == 1 ? 2 : 0, id == 2 ? 2 : 0);
@@ -27,16 +27,16 @@ PS_IN vs_main(uint id: SV_VertexID)
     return O;
 }
 
-float4 ps_main(PS_IN I): SV_Target
+float4 psMain(PS_IN I): SV_Target
 {
     float fxaaSubpix = 0.75;
     float fxaaEdgeThreshold = 0.166;
     float fxaaEdgeThresholdMin = 0.0833;
 
     float2 fxaaFrame;
-    color_map.GetDimensions(fxaaFrame.x, fxaaFrame.y);
+    colorMap.GetDimensions(fxaaFrame.x, fxaaFrame.y);
 
-    FxaaTex tex = { default_sampler, color_map };
+    FxaaTex tex = { defaultSampler, colorMap };
 
     return FxaaPixelShader(I.uv, 0, tex, tex, tex, 1 / fxaaFrame, 0, 0, 0, fxaaSubpix, fxaaEdgeThreshold, fxaaEdgeThresholdMin, 0, 0, 0, 0);
 }

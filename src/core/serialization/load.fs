@@ -95,10 +95,10 @@ let rec private emitLoadValue (gen: ILGenerator) objemitpre objemitpost (typ: Ty
     if typ.IsPrimitive then
         emitLoadValuePrimitive gen objemitpre objemitpost typ
     // load enums as integer values
-    else if typ.IsEnum then
+    elif typ.IsEnum then
         emitLoadValuePrimitive gen objemitpre objemitpost (typ.GetEnumUnderlyingType())
     // load structs as embedded field lists
-    else if typ.IsValueType then
+    elif typ.IsValueType then
         emitLoadFields gen objemitpre typ
     // load objects as object ids
     else
@@ -118,21 +118,21 @@ and private emitLoadFields (gen: ILGenerator) objemit (typ: Type) =
 
 // load an array of primitive type (fast path)
 let private emitLoadPrimitiveArray (gen: ILGenerator) objemit (typ: Type) =
-    let data_field = typeof<MemoryReader>.GetField("data", BindingFlags.Instance ||| BindingFlags.NonPublic)
-    let size_local = gen.DeclareLocal(typeof<int>)
-    let skip_label = gen.DefineLabel()
+    let dataField = typeof<MemoryReader>.GetField("data", BindingFlags.Instance ||| BindingFlags.NonPublic)
+    let sizeLocal = gen.DeclareLocal(typeof<int>)
+    let skipLabel = gen.DefineLabel()
 
     // calculate array size in bytes
     objemit gen
     gen.Emit(OpCodes.Ldlen)
     gen.Emit(OpCodes.Sizeof, typ.GetElementType())
     gen.Emit(OpCodes.Mul)
-    gen.Emit(OpCodes.Stloc, size_local)
+    gen.Emit(OpCodes.Stloc, sizeLocal)
 
     // return if size is zero
-    gen.Emit(OpCodes.Ldloc, size_local)
+    gen.Emit(OpCodes.Ldloc, sizeLocal)
     gen.Emit(OpCodes.Ldc_I4_0)
-    gen.Emit(OpCodes.Beq, skip_label)
+    gen.Emit(OpCodes.Beq, skipLabel)
 
     // copy data
     objemit gen
@@ -140,9 +140,9 @@ let private emitLoadPrimitiveArray (gen: ILGenerator) objemit (typ: Type) =
     gen.Emit(OpCodes.Ldelema, typ.GetElementType())
 
     gen.Emit(OpCodes.Ldarg_1) // reader
-    gen.Emit(OpCodes.Ldfld, data_field)
+    gen.Emit(OpCodes.Ldfld, dataField)
 
-    gen.Emit(OpCodes.Ldloc, size_local)
+    gen.Emit(OpCodes.Ldloc, sizeLocal)
 
     gen.Emit(OpCodes.Unaligned, 1uy)
     gen.Emit(OpCodes.Cpblk)
@@ -151,14 +151,14 @@ let private emitLoadPrimitiveArray (gen: ILGenerator) objemit (typ: Type) =
     gen.Emit(OpCodes.Ldarg_1)
 
     gen.Emit(OpCodes.Ldarg_1)
-    gen.Emit(OpCodes.Ldfld, data_field)
-    gen.Emit(OpCodes.Ldloc, size_local)
+    gen.Emit(OpCodes.Ldfld, dataField)
+    gen.Emit(OpCodes.Ldloc, sizeLocal)
     gen.Emit(OpCodes.Add)
 
-    gen.Emit(OpCodes.Stfld, data_field)
+    gen.Emit(OpCodes.Stfld, dataField)
 
     // skip here for empty arrays
-    gen.MarkLabel(skip_label)
+    gen.MarkLabel(skipLabel)
 
 // load an array
 let private emitLoadArray (gen: ILGenerator) objemit (typ: Type) =
@@ -173,17 +173,17 @@ let private emitLoadArray (gen: ILGenerator) objemit (typ: Type) =
 
 // load string
 let private emitLoadString (gen: ILGenerator) objemit =
-    let data_field = typeof<MemoryReader>.GetField("data", BindingFlags.Instance ||| BindingFlags.NonPublic)
-    let char_local = gen.DeclareLocal(typeof<nativeint>, pinned = true)
+    let dataField = typeof<MemoryReader>.GetField("data", BindingFlags.Instance ||| BindingFlags.NonPublic)
+    let charLocal = gen.DeclareLocal(typeof<nativeint>, pinned = true)
 
     // get pointer to string data
     objemit gen
     gen.Emit(OpCodes.Ldflda, typeof<string>.GetField("m_firstChar", BindingFlags.Instance ||| BindingFlags.NonPublic))
-    gen.Emit(OpCodes.Stloc, char_local)
+    gen.Emit(OpCodes.Stloc, charLocal)
 
     // load string data
     gen.Emit(OpCodes.Ldarg_1) // reader
-    gen.Emit(OpCodes.Ldloc, char_local)
+    gen.Emit(OpCodes.Ldloc, charLocal)
     objemit gen
     gen.Emit(OpCodes.Ldfld, typeof<string>.GetField("m_stringLength", BindingFlags.Instance ||| BindingFlags.NonPublic))
     gen.Emit(OpCodes.Call, typeof<MemoryReader>.GetMethod("ReadStringData", BindingFlags.Instance ||| BindingFlags.NonPublic))
@@ -195,9 +195,9 @@ let private emitLoad (gen: ILGenerator) (typ: Type) =
 
     if typ.IsValueType then
         emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Unbox, typ)) (fun gen -> gen.Emit(OpCodes.Stobj, typ)) typ
-    else if typ = typeof<string> then
+    elif typ = typeof<string> then
         emitLoadString gen objemit
-    else if typ.IsArray then
+    elif typ.IsArray then
         assert (typ.GetArrayRank() = 1)
         (if typ.GetElementType().IsPrimitive then emitLoadPrimitiveArray else emitLoadArray) gen objemit typ
     else
@@ -227,7 +227,7 @@ let private buildCreateDelegate (typ: Type) =
 
         gen.Emit(OpCodes.Ldarg_0)
         gen.Emit(OpCodes.Newarr, typ.GetElementType())
-    else if typ = typeof<string> then
+    elif typ = typeof<string> then
         gen.Emit(OpCodes.Ldarg_0)
         gen.Emit(OpCodes.Call, typ.GetMethod("FastAllocateString", BindingFlags.Static ||| BindingFlags.NonPublic))
     else
@@ -275,15 +275,15 @@ let private fixupDelegateCache = Core.ConcurrentCache(buildFixupDelegate)
 // load type table
 let private loadTypeTable (reader: MemoryReader) =
     // load type data
-    let type_count = reader.ReadInt32()
-    let type_names = Array.init type_count (fun _ -> reader.ReadString())
-    let type_versions = Array.init type_count (fun _ -> reader.ReadInt32())
+    let typeCount = reader.ReadInt32()
+    let typeNames = Array.init typeCount (fun _ -> reader.ReadString())
+    let typeVersions = Array.init typeCount (fun _ -> reader.ReadInt32())
 
     // resolve types
     Array.map2 (fun name version ->
         let typ = Type.GetType(name)
         if version <> Version.get typ then failwithf "Version mismatch for type %A" typ
-        typ) type_names type_versions
+        typ) typeNames typeVersions
 
 // load object from memory
 let fromMemoryEx data size context =
@@ -301,28 +301,28 @@ let fromMemoryEx data size context =
     let creators = types |> Array.map createDelegateCache.Get
     let loaders = types |> Array.map loadDelegateCache.Get
     let fixupers = types |> Array.map fixupDelegateCache.Get
-    let needs_array = types |> Array.map (fun typ -> typ.IsArray || typ = typeof<string>)
+    let needsArray = types |> Array.map (fun typ -> typ.IsArray || typ = typeof<string>)
 
     // read object table
-    let object_types = Array.init (reader.ReadInt32()) (fun _ -> reader.ReadInt32())
+    let objectTypes = Array.init (reader.ReadInt32()) (fun _ -> reader.ReadInt32())
 
     // read array size table
-    let array_sizes = object_types |> Array.map (fun tid -> if needs_array.[tid] then reader.ReadInt32() else 0)
+    let arraySizes = objectTypes |> Array.map (fun tid -> if needsArray.[tid] then reader.ReadInt32() else 0)
 
     // create uninitialized objects
-    let objects = Array.map2 (fun tid size -> creators.[tid].Invoke(size)) object_types array_sizes
+    let objects = Array.map2 (fun tid size -> creators.[tid].Invoke(size)) objectTypes arraySizes
 
     // create object table (0 is the null object, object indices are 1-based)
     let table = Array.append [|null|] objects
 
     // load objects
-    Array.iter2 (fun tid obj -> loaders.[tid].Invoke(table, reader, obj)) object_types objects
+    Array.iter2 (fun tid obj -> loaders.[tid].Invoke(table, reader, obj)) objectTypes objects
 
     // check bounds
     assert (reader.Data <= data + (nativeint size))
 
     // call fixup handlers
-    Array.iter2 (fun tid obj -> fixupers.[tid].Invoke(context, obj)) object_types objects
+    Array.iter2 (fun tid obj -> fixupers.[tid].Invoke(context, obj)) objectTypes objects
 
     // return root object
     objects.[0]

@@ -28,9 +28,9 @@ let private readPrimitive (typ: Type) node =
 let private getValueParser (typ: Type) =
     if typ.IsEnum then 
         Some (readEnum typ)
-    else if typ.IsPrimitive then
+    elif typ.IsPrimitive then
         Some (readPrimitive typ)
-    else if typ = typeof<string> then
+    elif typ = typeof<string> then
         Some (readString >> box)
     else
         None

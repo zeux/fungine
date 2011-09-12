@@ -1,10 +1,10 @@
-﻿module Camera
+module Camera
 
 open Input
 
-let dbg_yaw_speed = Core.DbgVar(0.01f, "camera/yaw speed")
-let dbg_pitch_speed = Core.DbgVar(0.01f, "camera/pitch speed")
-let dbg_movement_speed = Core.DbgVar(5.f, "camera/movement speed")
+let dbgYawSpeed = Core.DbgVar(0.01f, "camera/yaw speed")
+let dbgPitchSpeed = Core.DbgVar(0.01f, "camera/pitch speed")
+let dbgMovementSpeed = Core.DbgVar(5.f, "camera/movement speed")
 
 type CameraController(mouse: Mouse, keyboard: Keyboard) =
     let mutable yaw = 0.f
@@ -14,8 +14,8 @@ type CameraController(mouse: Mouse, keyboard: Keyboard) =
 
     member this.Update dt =
         if mouse.ButtonDown MouseButton.Left then
-            yaw <- yaw + (float32 mouse.AxisX) * dbg_yaw_speed.Value
-            pitch <- pitch + (float32 mouse.AxisY) * dbg_pitch_speed.Value
+            yaw <- yaw + (float32 mouse.AxisX) * dbgYawSpeed.Value
+            pitch <- pitch + (float32 mouse.AxisY) * dbgPitchSpeed.Value
 
         let offsets = 
             [| Key.W, Vector3.UnitX
@@ -26,7 +26,7 @@ type CameraController(mouse: Mouse, keyboard: Keyboard) =
 
         if offsets.Length > 0 then
             let transform = this.Transform
-            let speed = dbg_movement_speed.Value * (if keyboard.KeyDown Key.ShiftKey then 5.f else 1.f)
+            let speed = dbgMovementSpeed.Value * (if keyboard.KeyDown Key.ShiftKey then 5.f else 1.f)
 
             position <- position + Matrix34.TransformDirection(transform, Array.sum offsets) * (speed * dt)
 

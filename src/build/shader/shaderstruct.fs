@@ -1,28 +1,27 @@
-﻿module Build.ShaderStruct
+module Build.ShaderStruct
 
 open System
 open System.IO
 open System.Reflection
 open System.Text
-open System.Text.RegularExpressions
 
 open BuildSystem
 
-// convert name to shader name (changes naming convention)
+// convert name to shader name (changes naming convention from PascalCase to camelCase)
 let private getShaderName (name: string) =
-    Regex.Split(name, "(?<=[^A-Z])(?=[A-Z])") |> Array.map (fun s -> s.ToLower()) |> String.concat "_"
+    name.Substring(0, 1).ToLower() + name.Substring(1)
 
 // convert type to shader type name
 let private getShaderType (typ: Type) =
     if typ.IsClass then typ.Name
-    else if typ = typeof<float32> then "float"
-    else if typ = typeof<int> then "int"
-    else if typ = typeof<bool> then "bool"
-    else if typ = typeof<Vector2> then "float2"
-    else if typ = typeof<Vector3> then "float3"
-    else if typ = typeof<Vector4> then "float4"
-    else if typ = typeof<Matrix34> then "float3x4"
-    else if typ = typeof<Matrix44> then "float4x4"
+    elif typ = typeof<float32> then "float"
+    elif typ = typeof<int> then "int"
+    elif typ = typeof<bool> then "bool"
+    elif typ = typeof<Vector2> then "float2"
+    elif typ = typeof<Vector3> then "float3"
+    elif typ = typeof<Vector4> then "float4"
+    elif typ = typeof<Matrix34> then "float3x4"
+    elif typ = typeof<Matrix44> then "float4x4"
     else failwithf "Type %A is not supported in shader code" typ
 
 // get shader struct contents for type
