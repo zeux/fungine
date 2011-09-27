@@ -1,6 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 11
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "fungine", "fungine.fsproj", "{1DA9D6E3-6745-46C2-ADE2-421F7039664C}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "fungine.build", "fungine.build.fsproj", "{FF03A2B1-9469-4131-AAB7-46FC36B582D6}"
