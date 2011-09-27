@@ -10,21 +10,25 @@ let private initialHash = int32 2166136261u
 let private updateHash ver value =
     (16777619 * ver) ^^^ value
 
+// compute string hash (GetHashCode returns different results on x86/x64)
+let private getStringHash (data: string) =
+    data |> Seq.fold (fun acc ch -> updateHash acc (int ch)) initialHash
+
 // get hash for enumeration type
 let private buildEnumHash (typ: Type) =
     assert typ.IsEnum
 
     // get all enum values
-    let values = Array.zip (typ.GetEnumNames()) [| for v in typ.GetEnumValues() -> v.GetHashCode() |]
+    let values = Array.zip (typ.GetEnumNames()) [| for v in typ.GetEnumValues() -> hash v |]
 
     // get enum type hash
-    let hash = typ.GetEnumUnderlyingType().Name.GetHashCode()
+    let hash = getStringHash (typ.GetEnumUnderlyingType().Name)
 
     // return hash combined with value hash
     values
     |> Array.sortBy (fun (_, value) -> value)
     |> Array.fold (fun ver (name, value) ->
-        updateHash (updateHash ver value) (name.GetHashCode())) hash
+        updateHash (updateHash ver value) (getStringHash name)) hash
 
 // a cache of enum hash values
 let private enumHashCache = Core.ConcurrentCache(buildEnumHash)
@@ -32,7 +36,7 @@ let private enumHashCache = Core.ConcurrentCache(buildEnumHash)
 // update hash version with type
 let rec private updateVersion toplevel ver (typ: Type) =
     // type name always contributes to the version
-    let basever = updateHash ver (typ.FullName.GetHashCode())
+    let basever = updateHash ver (getStringHash (string typ))
 
     // primitive types don't have additional versionable properties
     if typ.IsPrimitive then
