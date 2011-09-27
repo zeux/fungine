@@ -25,7 +25,6 @@
     <ClCompile Include="nvtt\src\nvcore\Library.cpp" />
     <ClCompile Include="nvtt\src\nvcore\Memory.cpp" />
     <ClCompile Include="nvtt\src\nvcore\StrLib.cpp" />
-    <ClCompile Include="nvtt\src\nvcore\TextReader.cpp" />
     <ClCompile Include="nvtt\src\nvcore\TextWriter.cpp" />
     <ClCompile Include="nvtt\src\nvimage\BlockDXT.cpp" />
     <ClCompile Include="nvtt\src\nvimage\ColorBlock.cpp" />

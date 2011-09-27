@@ -2,7 +2,9 @@
 setlocal
 
 rem Checkout sources
-call svn checkout http://nvidia-texture-tools.googlecode.com/svn/trunk/ nvtt
+call svn checkout http://nvidia-texture-tools.googlecode.com/svn/trunk/src nvtt/src
+call svn checkout http://nvidia-texture-tools.googlecode.com/svn/trunk/extern/poshlib nvtt/extern/poshlib
+call svn checkout http://nvidia-texture-tools.googlecode.com/svn/trunk/extern/stb nvtt/extern/stb
 
 rem Build solution
 for /f "usebackq tokens=3" %%i in (`reg query HKLM\Software\Microsoft\MSBuild\ToolsVersions\4.0 /v MSBuildToolsPath`) do set MSBUILDPATH=%%i
