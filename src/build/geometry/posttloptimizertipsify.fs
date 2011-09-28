@@ -23,11 +23,30 @@ type private Adjacency(indices: int array, vertexCount) =
     // get triangles adjacent to vertex
     member this.Triangles vertex = data.[vertex]
 
-// update tag-based cache
-let inline private updateCache (cacheTags: int array) cacheSize tag index =
-    if !tag - cacheTags.[index] > cacheSize then
-        cacheTags.[index] <- !tag
-        incr tag
+// tag-based FIFO vertex cache
+type private VertexCache(vertexCount, cacheSize) =
+    let cache = Array.zeroCreate vertexCount
+    let mutable tag = cacheSize + 1
+
+    // make sure that no vertices are in cache
+    member this.Invalidate () =
+        tag <- Checked.(+) tag (cacheSize + 1)
+
+    // update cache with vertex
+    member this.Update vertex =
+        if tag - cache.[vertex] > cacheSize then
+            cache.[vertex] <- tag
+            tag <- tag + 1
+
+    // get position of vertex in cache (if it's greater than cache size then vertex is not in the cache)
+    member this.Position vertex =
+        tag - cache.[vertex]
+
+    // get current cache tag
+    member this.Tag = tag
+
+    // get cache size
+    member this.Size = cacheSize
 
 // get next vertex from dead-end stack
 let private getNextVertexDeadEndStack (deadEnd: List<int>) (liveTriangles: int array) =
@@ -63,7 +82,7 @@ let private getNextVertexDeadEnd deadEnd liveTriangles inputCursor =
     | v -> v
 
 // get next vertex from neighbours
-let private getNextVertexNeighbour (nextCandidates: List<int>) (liveTriangles: int array) (cacheTags: int array) cacheSize tag =
+let private getNextVertexNeighbour (nextCandidates: List<int>) (liveTriangles: int array) (cache: VertexCache) =
     let mutable bestCandidate = -1
     let mutable bestPriority = -1
 
@@ -71,8 +90,8 @@ let private getNextVertexNeighbour (nextCandidates: List<int>) (liveTriangles: i
         // otherwise we don't need to process it
         if liveTriangles.[vertex] > 0 then
             // will it be in cache after fanning?
-            let cachePosition = tag - cacheTags.[vertex]
-            let priority = if 2 * liveTriangles.[vertex] + cachePosition <= cacheSize then cachePosition else 0
+            let cachePosition = cache.Position vertex
+            let priority = if 2 * liveTriangles.[vertex] + cachePosition <= cache.Size then cachePosition else 0
 
             if priority > bestPriority then
                 bestCandidate <- vertex
@@ -84,26 +103,19 @@ let private getNextVertexNeighbour (nextCandidates: List<int>) (liveTriangles: i
 let private optimizeInternal indices vertexCount cacheSize =
     let adjacency = Adjacency(indices, vertexCount)
 
-    // initialize helper data for getNextVertex (reserve worst case size for dead end stack)
-    let deadEnd = List<_>(capacity = indices.Length)
+    // initialize helper data for getNextVertex
+    let cache = VertexCache(vertexCount, cacheSize)
     let liveTriangles = Array.init vertexCount (fun i -> (adjacency.Triangles i).Length)
-    let cacheTags = Array.zeroCreate vertexCount
+    let nextCandidates = List<int>()
+    let deadEnd = List<int>()
+    let inputCursor = ref 1 // vertex to restart from in case of dead-end
 
     // track emitted flag per triangle
     let emitted = Array.zeroCreate (indices.Length / 3)
 
-    // prepare clusters (reserve worst case size)
-    let clusters = List<_>(capacity = indices.Length)
-    clusters.Add(0)
-
-    // all vertices are not in cache initially
-    let tag = ref (cacheSize + 1)
-
-    // vertex to restart from in case of dead-end
-    let inputCursor = ref 1
-
+    // prepare result
+    let clusters = List<_> [0]
     let result = List<int>(capacity = indices.Length)
-    let nextCandidates = List<int>()
 
     let rec loop vertex =
         nextCandidates.Clear()
@@ -117,14 +129,19 @@ let private optimizeInternal indices vertexCount cacheSize =
                 for i in 0 .. 2 do
                     let idx = indices.[triangle * 3 + i]
 
+                    // emit vertex and update cache
                     result.Add(idx)
-                    deadEnd.Add(idx)
-                    nextCandidates.Add(idx)
+                    cache.Update idx
+
+                    // if there are more live triangles with this vertex, we'll need to process them in getNextVertex
                     liveTriangles.[idx] <- liveTriangles.[idx] - 1
-                    updateCache cacheTags cacheSize tag idx
+
+                    if liveTriangles.[idx] > 0 then
+                        deadEnd.Add(idx)
+                        nextCandidates.Add(idx)
 
         // get next vertex
-        match getNextVertexNeighbour nextCandidates liveTriangles cacheTags cacheSize !tag with
+        match getNextVertexNeighbour nextCandidates liveTriangles cache with
         | -1 ->
             match getNextVertexDeadEnd deadEnd liveTriangles inputCursor with
             | -1 -> ()
@@ -185,22 +202,21 @@ let private optimizeOverdrawOrder (indices: int array) positions clusters =
         Array.sub indices (cbegin * 3) ((cend - cbegin) * 3))
 
 // calculate ACMR for some prefix of triangle stream (up to specified threshold), return ACMR and the prefix length
-let private calculateACMRBounded (indices: int array) rbegin rend cacheTags cacheSize tag threshold =
+let private calculateACMRBounded (indices: int array) rbegin rend (cache: VertexCache) threshold =
     // ensures that all vertices are not in cache
-    tag := Checked.(+) !tag (cacheSize + 1)
+    cache.Invalidate()
 
     // remember starting tag to count cache misses
-    let tagStart = !tag
+    let tagStart = cache.Tag
 
     let rec loop face =
         // update cache
         if face < rend / 3 then
             for i in 0 .. 2 do
-                let idx = indices.[rbegin + face * 3 + i]
-                updateCache cacheTags cacheSize tag idx
+                cache.Update indices.[rbegin + face * 3 + i]
     
         // update ACMR and check for threshold
-        let acmr = float32 (!tag - tagStart) / float32 (face + 1)
+        let acmr = float32 (cache.Tag - tagStart) / float32 (face + 1)
 
         if face < rend / 3 && acmr > threshold then loop (face + 1)
         else acmr, face + 1
@@ -212,20 +228,17 @@ let private generateSoftClusterBoundaries (indices: int array) (clusters: int ar
     // get cluster triangle ranges
     let ranges = clusters |> Array.mapi (fun i b -> b, if i + 1 < clusters.Length then clusters.[i + 1] else indices.Length / 3)
 
-    // initialize cache
-    let cacheTags = Array.zeroCreate vertexCount
-    let tag = ref 0
-
     // calculate initial and target acmr
-    let acmr, _ = calculateACMRBounded indices 0 indices.Length cacheTags cacheSize tag 0.f
+    let cache = VertexCache(vertexCount, cacheSize)
+    let acmr, _ = calculateACMRBounded indices 0 indices.Length cache 0.f
     let acmrThreshold = acmr * (1.f + threshold)
 
-    let result = List<int>(capacity = clusters.Length)
+    let result = List<int>()
 
     for (cbegin, cend) in ranges do
         let rec loop start =
             if start < cend then
-                let acmr, face = calculateACMRBounded indices start cend cacheTags cacheSize tag acmrThreshold
+                let acmr, face = calculateACMRBounded indices start cend cache acmrThreshold
                 result.Add(start)
                 loop (start + face * 3)
 
