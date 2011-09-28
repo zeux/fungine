@@ -3,7 +3,7 @@ module Build.Geometry.PostTLOptimizerD3DX
 open System.Runtime.InteropServices
 
 [<DllImport("d3dx9_24")>]
-extern int D3DXOptimizeFaces([<MarshalAs(UnmanagedType.LPArray)>] int[] indices, int faceCount, int vertexCount, bool indices32, [<MarshalAs(UnmanagedType.LPArray)>] int[] remap)
+extern int private D3DXOptimizeFaces([<MarshalAs(UnmanagedType.LPArray)>] int[] indices, int faceCount, int vertexCount, bool indices32, [<MarshalAs(UnmanagedType.LPArray)>] int[] remap)
 
 // optimize indices for Post T&L cache efficiency using D3DX
 let optimize indices =

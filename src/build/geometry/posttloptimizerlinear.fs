@@ -3,10 +3,10 @@ module Build.Geometry.PostTLOptimizerLinear
 open System.Collections.Generic
 
 // triangle tuple
-type Triangle = int * int * int
+type private Triangle = int * int * int
 
 // vertex data
-type Vertex =
+type private Vertex =
     new(count) =
         { score = 0.f
           activeTriangles = 0
