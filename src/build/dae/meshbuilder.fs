@@ -13,7 +13,7 @@ let private buildOptimizedMesh fatMesh format =
     let packedMesh, vertexRemap = MeshPacker.pack fatMesh format
 
     // optimize for Post T&L cache
-    let postoptMesh = { packedMesh with indices = PostTLOptimizerLinear.optimize packedMesh.indices }
+    let postoptMesh = { packedMesh with indices = PostTLOptimizerTipsify.optimize packedMesh.indices 16 }
 
     // optimize for Pre T&L cache
     let (vertices, indices) = PreTLOptimizer.optimize postoptMesh.vertices postoptMesh.indices postoptMesh.vertexSize
