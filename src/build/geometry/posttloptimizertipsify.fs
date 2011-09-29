@@ -166,7 +166,7 @@ let private getClusterInfo (indices: int array) (positions: Vector3 array) (cbeg
         let a = indices.[(cbegin + i) * 3 + 0]
         let b = indices.[(cbegin + i) * 3 + 1]
         let c = indices.[(cbegin + i) * 3 + 2]
-        let normal = Vector3.Cross(positions.[b] - positions.[a], positions.[c] - positions.[a])
+        let normal = Vector3.Cross(positions.[c] - positions.[a], positions.[b] - positions.[a])
         (positions.[a] + positions.[b] + positions.[c]) / 3.f, normal, normal.Length)
 
     // get cluster centroid and normal (triangle area weighted sum) and area
