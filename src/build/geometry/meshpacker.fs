@@ -96,6 +96,26 @@ module MeshPacker =
         
         result, compressionInfo
 
+    // get vertex hash
+    let private getVertexHash (data: byte array) offset count =
+        let rec loop i acc =
+            if i < count then
+                loop (i + 1) (acc * 16777619 + int data.[offset + i])
+            else
+                acc
+
+        loop 0 (int 2166136261u)
+
+    // compare vertices
+    let private areVerticesEqual (data: byte array) loffset roffset count =
+        let rec loop i =
+            if i < count then
+                if data.[loffset + i] = data.[roffset + i] then loop (i + 1)
+                else false
+            else true
+
+        loop 0
+
     // pack fat mesh using the desired format for vertices, merge equal vertices (results in vertex/index buffer pair)
     let pack (mesh: Build.Geometry.FatMesh) format =
         // get vertex size from the format
@@ -106,21 +126,25 @@ module MeshPacker =
         let vertices, compressionInfo = packVertices mesh.vertices format vertexSize
 
         // build index data
-        let remap = Dictionary<byte array, int>(HashIdentity.Structural)
+        let cache =
+            Dictionary<int, int>(HashIdentity.FromFunctions
+                (fun i -> getVertexHash vertices (i * vertexSize) vertexSize)
+                (fun l r -> areVerticesEqual vertices (l * vertexSize) (r * vertexSize) vertexSize))
 
-        let indices = Array.init mesh.vertices.Length (fun i ->
-            let vertex = Array.sub vertices (i * vertexSize) vertexSize
+        let indices = Array.init mesh.vertices.Length (fun i -> Core.CacheUtil.update cache i (fun _ -> cache.Count))
 
-            Core.CacheUtil.update remap vertex (fun _ -> remap.Count))
+        // build vertex remap table
+        let remap = Array.zeroCreate cache.Count 
+
+        for p in cache do remap.[p.Value] <- p.Key
 
         // build indexed vertex data
-        let indexedVertices = Array.zeroCreate (remap.Count * vertexSize)
+        let indexedVertices = Array.zeroCreate (remap.Length * vertexSize)
 
-        for kvp in remap do
-            let vertex = kvp.Key
-            let index = kvp.Value
-
-            Array.blit vertex 0 indexedVertices (index * vertexSize) vertexSize
+        remap |> Array.iteri (fun i v -> Array.blit vertices (v * vertexSize) indexedVertices (i * vertexSize) vertexSize)
 
         // build the mesh
-        { new PackedMesh with compressionInfo = compressionInfo and format = format and vertexSize = vertexSize and vertices = indexedVertices and indices = indices and skin = mesh.skin }
+        let mesh = { new PackedMesh with compressionInfo = compressionInfo and format = format and vertexSize = vertexSize and vertices = indexedVertices and indices = indices and skin = mesh.skin }
+
+        // return mesh and remap table
+        mesh, remap

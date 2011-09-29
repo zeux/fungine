@@ -10,7 +10,7 @@ open BuildSystem
 // convert fat mesh to packed & optimized mesh
 let private buildOptimizedMesh fatMesh format =
     // build packed & indexed mesh
-    let packedMesh = MeshPacker.pack fatMesh format
+    let packedMesh, vertexRemap = MeshPacker.pack fatMesh format
 
     // optimize for Post T&L cache
     let postoptMesh = { packedMesh with indices = PostTLOptimizerLinear.optimize packedMesh.indices }
