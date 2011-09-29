@@ -6,9 +6,9 @@ open System.Collections.Generic
 // generic cache utils
 module CacheUtil =
     let update (dict: IDictionary<_, _>) key creator =
-        match dict.TryGetValue(key) with
-        | true, value -> value
-        | _ ->
+        let mutable value = Unchecked.defaultof<_>
+        if dict.TryGetValue(key, &value) then value
+        else
             let value = creator key
             dict.Add(key, value)
             value
