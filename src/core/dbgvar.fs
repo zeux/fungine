@@ -5,15 +5,11 @@ open System.Collections.Concurrent
 module DbgVars =
     // variable storage
     type Cell(defaults) =
-        let mutable value = defaults
-
         // default value accessor
         member this.DefaultValue = defaults
 
         // value accessor
-        member this.Value
-            with get () = value
-            and set rhs = value <- rhs
+        member val Value = defaults with get, set
 
     // all registered debug variables
     let private variables = ConcurrentDictionary<string, Cell>()
