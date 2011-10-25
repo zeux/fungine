@@ -5,7 +5,7 @@ open System.Collections.Generic
 
 // generic cache utils
 module CacheUtil =
-    let update (dict: IDictionary<_, _>) key creator =
+    let inline update (dict: IDictionary<_, _>) key creator =
         let mutable value = Unchecked.defaultof<_>
         if dict.TryGetValue(key, &value) then value
         else
