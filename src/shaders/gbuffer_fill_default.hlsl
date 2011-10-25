@@ -1,15 +1,13 @@
 #include <auto_Camera.h>
+#include <auto_Material.h>
+#include <auto_MeshCompressionInfo.h>
 
 cbuffer camera { Camera camera; };
+cbuffer meshCompressionInfo { MeshCompressionInfo meshCompressionInfo; };
+cbuffer material { Material material; };
 
 cbuffer mesh
 {
-    float roughness;
-    float3 positionOffset;
-    float smoothness;
-    float3 positionScale;
-    float2 texcoordOffset;
-    float2 texcoordScale;
     float3x4 bones[2];
 }
 
@@ -55,7 +53,7 @@ PS_IN vsMain(VS_IN I, uint instance: SV_InstanceId)
 {
 	PS_IN O;
 	
-    I.pos.xyz = I.pos.xyz * positionScale + positionOffset;
+    I.pos.xyz = I.pos.xyz * meshCompressionInfo.posScale + meshCompressionInfo.posOffset;
     I.pos.w = 1;
 
     float3x4 transform = 0;
@@ -72,7 +70,7 @@ PS_IN vsMain(VS_IN I, uint instance: SV_InstanceId)
     O.normal = normalize(mul((float3x3)offsets[instance], mul((float3x3)transform, I.normal * 2 - 1)));
     O.tangent = normalize(mul((float3x3)offsets[instance], mul((float3x3)transform, I.tangent.xyz * 2 - 1)));
     O.bitangent = cross(O.normal, O.tangent) * (I.tangent.w * 2 - 1);
-    O.uv0 = I.uv0 * texcoordScale + texcoordOffset;
+    O.uv0 = I.uv0 * meshCompressionInfo.uvScale + meshCompressionInfo.uvOffset;
 	
 	return O;
 }
@@ -80,7 +78,7 @@ PS_IN vsMain(VS_IN I, uint instance: SV_InstanceId)
 float3 sampleNormal(Texture2D<float2> map, float2 uv)
 {
     float2 xy = map.Sample(defaultSampler, uv) * 2 - 1;
-    xy *= 1 - smoothness;
+    xy *= 1 - material.smoothness;
 
     return float3(xy, sqrt(1 - dot(xy, xy)));
 }
@@ -98,7 +96,7 @@ PS_OUT psMain(PS_IN I)
 
     PS_OUT O;
     O.albedo = albedo;
-    O.specular = float4(spec, roughness);
+    O.specular = float4(spec, material.roughness);
     O.normal = float4(normal * 0.5 + 0.5, 0);
 
 	return O;

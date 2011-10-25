@@ -58,9 +58,6 @@ let postfxFxaa = Asset<Render.Shader>.Load ".build/src/shaders/postfx/fxaa.shade
 let vertexSize = (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).size
 let layout = new InputLayout(device.Device, gbufferFill.Data.VertexSignature.Resource, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
 
-let constantBuffer0 = new Buffer(device.Device, null, BufferDescription(16512, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
-let constantBuffer1 = new Buffer(device.Device, null, BufferDescription(65536, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
-
 let createDummyTexture color =
     let stream = new DataStream(4L, canRead = false, canWrite = true)
     stream.WriteRange(color)
@@ -180,11 +177,51 @@ type SpotLight(position: Vector3, direction: Vector3, outerAngle: float32, inner
     member this.Radius = radius
     member this.Color = color
 
+[<Render.ShaderStruct>]
+type Material(roughness: float32, smoothness: float32) =
+    member this.Roughness = roughness
+    member this.Smoothness = smoothness
+
+type ConstantBufferPool(device: Device) =
+    let pool = Dictionary<int, int ref * List<_>>()
+    let cb size = new Buffer(device, null, BufferDescription(size, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
+
+    member this.Acquire size =
+        lock pool (fun _ ->
+            match pool.TryGetValue(size) with
+            | true, (i, l) when !i < l.Count ->
+                let cb = l.[!i]
+                incr i
+                cb
+            | true, (i, l) ->
+                let cb = cb size
+                incr i
+                l.Add(cb)
+                cb
+            | false, _ ->
+                let cb = cb size
+                pool.Add(size, (ref 1, List<_>([cb])))
+                cb)
+
+    member this.Reset () =
+        lock pool (fun _ ->
+            for p in pool do
+                fst p.Value := 0)
+
+let cbPool = ConstantBufferPool(device.Device)
+
 let uploadConstantData (context: DeviceContext) data =
     let size, upload = Render.ShaderStruct.getUploadDelegate (data.GetType())
-    let cb = new Buffer(device.Device, null, BufferDescription(size, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
+    let cb = cbPool.Acquire size
     let box = context.MapSubresource(cb, MapMode.WriteDiscard, MapFlags.None)
     upload.Invoke(data, box.Data.DataPointer, size)
+    context.UnmapSubresource(cb, 0)
+    cb
+
+let uploadMatrixArray (context: DeviceContext) (data: Matrix34 array) =
+    let cb = cbPool.Acquire (data.Length * 48)
+    let box = context.MapSubresource(cb, MapMode.WriteDiscard, MapFlags.None)
+    box.Data.WriteRange(data)
     context.UnmapSubresource(cb, 0)
     cb
 
@@ -274,42 +311,29 @@ let renderScene (context: DeviceContext) (shaderContext: ShaderContext) (camera:
 
     shaderContext?camera <- camera
     shaderContext?defaultSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbgTexfilter.Value, MaximumAnisotropy = 16, MaximumLod = infinityf))
-    shaderContext?mesh <- constantBuffer0
-    shaderContext?transforms <- constantBuffer1
 
     for mesh, instances in scene |> Seq.choose (fun (mesh, transform) -> if mesh.IsReady then Some (mesh.Data, transform) else None) |> Seq.groupByRef (fun (mesh, transform) -> mesh) do
-        let transforms = instances |> Array.map (fun (mesh, transform) -> transform)
-
         if dbgNulldraw.Value then () else
-        let box = context.MapSubresource(constantBuffer1, MapMode.WriteDiscard, MapFlags.None)
-        box.Data.WriteRange(transforms)
-        context.UnmapSubresource(constantBuffer1, 0)
+
+        shaderContext?transforms <- uploadMatrixArray context (instances |> Array.map (fun (mesh, transform) -> transform))
 
         for fragment in mesh.fragments do
-            let setTexture (tex: Asset<Render.Texture> option) dummy name =
-                shaderContext?(name) <- (if tex.IsSome && tex.Value.IsReady then tex.Value.Data.View else dummy)
+            let texture (tex: Asset<Render.Texture> option) dummy = if tex.IsSome && tex.Value.IsReady then tex.Value.Data.View else dummy
 
             let material = fragment.material
 
-            setTexture material.albedoMap dummyAlbedo "albedoMap"
-            setTexture material.normalMap dummyNormal "normalMap"
-            setTexture material.specularMap dummySpecular "specularMap"
+            shaderContext?albedoMap <- texture material.albedoMap dummyAlbedo
+            shaderContext?normalMap <- texture material.normalMap dummyNormal
+            shaderContext?specularMap <- texture material.specularMap dummySpecular
 
-            let compressionInfo = fragment.compressionInfo
+            shaderContext?meshCompressionInfo <- fragment.compressionInfo
+            shaderContext?material <- Material(dbgRoughness.Value, dbgSmoothness.Value)
 
-            let box = context.MapSubresource(constantBuffer0, MapMode.WriteDiscard, MapFlags.None)
-            box.Data.Write(dbgRoughness.Value)
-            box.Data.Write(compressionInfo.posOffset)
-            box.Data.Write(dbgSmoothness.Value)
-            box.Data.Write(compressionInfo.posScale)
-            box.Data.Write(compressionInfo.uvOffset)
-            box.Data.Write(compressionInfo.uvScale)
-            box.Data.WriteRange(fragment.skin.ComputeBoneTransforms mesh.skeleton)
-            context.UnmapSubresource(constantBuffer0, 0)
+            shaderContext?mesh <- uploadMatrixArray context (fragment.skin.ComputeBoneTransforms mesh.skeleton)
 
             context.InputAssembler.SetVertexBuffers(0, VertexBufferBinding(mesh.vertices.Resource, vertexSize, fragment.vertexOffset))
             context.InputAssembler.SetIndexBuffer(mesh.indices.Resource, fragment.indexFormat, fragment.indexOffset)
-            context.DrawIndexedInstanced(fragment.indexCount, transforms.Length, 0, 0, 0)
+            context.DrawIndexedInstanced(fragment.indexCount, instances.Length, 0, 0, 0)
 
 let fillGBuffer (context: DeviceContext) (shaderContext: ShaderContext) (camera: Camera) (albedoBuffer: Render.RenderTarget) (specBuffer: Render.RenderTarget) (normalBuffer: Render.RenderTarget) (depthBuffer: Render.RenderTarget) =
     context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
@@ -351,9 +375,17 @@ let dbgSpotIntensity = Core.DbgVar(8.f, "spot/intensity")
 let dbgSpotSeed = Core.DbgVar(1, "spot/seed")
 let dbgSpotCount = Core.DbgVar(3, "spot/count")
 
+let frameTimes = Array.zeroCreate 32
+let frameTimeIndex = ref 0
+
 MessagePump.Run(form, fun () ->
     let dt = float32 frameTimer.Elapsed.TotalSeconds
     frameTimer.Restart()
+
+    frameTimes.[!frameTimeIndex] <- dt
+    frameTimeIndex := (!frameTimeIndex + 1) % frameTimes.Length
+
+    form.Text <- sprintf "frame: %.2f ms [%.2f..%.2f]" (1000.f * Array.average frameTimes) (1000.f * Array.min frameTimes) (1000.f * Array.max frameTimes)
 
     mouse.Update()
     keyboard.Update()
@@ -494,6 +526,7 @@ MessagePump.Run(form, fun () ->
 
     device.SwapChain.Present(dbgPresentInterval.Value, PresentFlags.None) |> ignore
 
+    cbPool.Reset()
     firsttime.Force() |> ignore)
 
 device.Device.ImmediateContext.ClearState()
