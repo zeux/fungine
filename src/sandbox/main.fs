@@ -182,53 +182,71 @@ type Material(roughness: float32, smoothness: float32) =
     member this.Roughness = roughness
     member this.Smoothness = smoothness
 
+type ConstantBufferPoolSlot =
+    { scratch: DataBox
+      free: Stack<Buffer> }
+
+[<Struct>]
+type ConstantBuffer(slot: ConstantBufferPoolSlot, buffer: Buffer) =
+    interface IDisposable with
+        member this.Dispose() =
+            if buffer <> null then
+                slot.free.Push(buffer)
+
+    member this.Buffer = buffer
+    member this.Scratch = slot.scratch
+
 type ConstantBufferPool(device: Device) =
-    let pool = Dictionary<int, int ref * List<_>>()
-    let cb size = new Buffer(device, null, BufferDescription(size, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0))
+    let pool = Dictionary<int, ConstantBufferPoolSlot>()
 
     member this.Acquire size =
-        lock pool (fun _ ->
-            match pool.TryGetValue(size) with
-            | true, (i, l) when !i < l.Count ->
-                let cb = l.[!i]
-                incr i
-                cb
-            | true, (i, l) ->
-                let cb = cb size
-                incr i
-                l.Add(cb)
-                cb
-            | false, _ ->
-                let cb = cb size
-                pool.Add(size, (ref 1, List<_>([cb])))
-                cb)
+        let slot =
+            Core.CacheUtil.update pool size (fun size ->
+                { new ConstantBufferPoolSlot with scratch = DataBox(0, 0, new DataStream(int64 size, canRead = true, canWrite = true)) and free = Stack<_>() })
 
-    member this.Reset () =
-        lock pool (fun _ ->
-            for p in pool do
-                fst p.Value := 0)
+        let cb =
+            if slot.free.Count > 0 then
+                slot.free.Pop()
+            else
+                new Buffer(device, null, BufferDescription(size, ResourceUsage.Default, BindFlags.ConstantBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, 0))
+
+
+        new ConstantBuffer(slot, cb)
 
 let cbPool = ConstantBufferPool(device.Device)
 
-let uploadConstantData (context: DeviceContext) data =
+let uploadConstantStruct (context: DeviceContext) data =
     let size, upload = Render.ShaderStruct.getUploadDelegate (data.GetType())
     let cb = cbPool.Acquire size
-    let box = context.MapSubresource(cb, MapMode.WriteDiscard, MapFlags.None)
-    upload.Invoke(data, box.Data.DataPointer, size)
-    context.UnmapSubresource(cb, 0)
+    let scratch = cb.Scratch
+    upload.Invoke(data, scratch.Data.DataPointer, size)
+    context.UpdateSubresource(scratch, cb.Buffer, 0)
     cb
 
 let uploadMatrixArray (context: DeviceContext) (data: Matrix34 array) =
     let cb = cbPool.Acquire (data.Length * 48)
-    let box = context.MapSubresource(cb, MapMode.WriteDiscard, MapFlags.None)
-    box.Data.WriteRange(data)
-    context.UnmapSubresource(cb, 0)
+    let scratch = cb.Scratch
+    scratch.Data.WriteRange(data)
+    scratch.Data.Position <- 0L
+    context.UpdateSubresource(scratch, cb.Buffer, 0)
     cb
+
+let uploadConstantData (context: DeviceContext) data =
+    if data.GetType() = typeof<Matrix34 array> then
+        uploadMatrixArray context (unbox data)
+    else
+        uploadConstantStruct context data
 
 type ShaderContext(context: DeviceContext) =
     let values = List<obj>()
+    let cbslots = List<ConstantBuffer>()
     let vertexParams = List<Render.ShaderParameter>()
     let pixelParams = List<Render.ShaderParameter>()
+
+    interface IDisposable with
+        member this.Dispose() =
+            for p in cbslots do
+                (p :> IDisposable).Dispose()
 
     member private this.EnsureSlot(slot) =
         while values.Count <= slot do
@@ -284,7 +302,13 @@ type ShaderContext(context: DeviceContext) =
         this.UpdateSlot(slot, value)
 
     member this.SetConstant(slot, value: obj) =
-        this.UpdateSlot(slot, uploadConstantData context value)
+        while cbslots.Count <= slot do cbslots.Add(Unchecked.defaultof<_>)
+
+        (cbslots.[slot] :> IDisposable).Dispose()
+
+        let data = uploadConstantData context value
+        this.UpdateSlot(slot, data.Buffer)
+        cbslots.[slot] <- data
 
     static member (?<-) (this: ShaderContext, name: string, value: ShaderResourceView) =
         this.SetConstant(Render.ShaderParameterRegistry.getSlot name, value)
@@ -315,7 +339,7 @@ let renderScene (context: DeviceContext) (shaderContext: ShaderContext) (camera:
     for mesh, instances in scene |> Seq.choose (fun (mesh, transform) -> if mesh.IsReady then Some (mesh.Data, transform) else None) |> Seq.groupByRef (fun (mesh, transform) -> mesh) do
         if dbgNulldraw.Value then () else
 
-        shaderContext?transforms <- uploadMatrixArray context (instances |> Array.map (fun (mesh, transform) -> transform))
+        shaderContext?transforms <- instances |> Array.map (fun (mesh, transform) -> transform)
 
         for fragment in mesh.fragments do
             let texture (tex: Asset<Render.Texture> option) dummy = if tex.IsSome && tex.Value.IsReady then tex.Value.Data.View else dummy
@@ -329,7 +353,7 @@ let renderScene (context: DeviceContext) (shaderContext: ShaderContext) (camera:
             shaderContext?meshCompressionInfo <- fragment.compressionInfo
             shaderContext?material <- Material(dbgRoughness.Value, dbgSmoothness.Value)
 
-            shaderContext?mesh <- uploadMatrixArray context (fragment.skin.ComputeBoneTransforms mesh.skeleton)
+            shaderContext?mesh <- fragment.skin.ComputeBoneTransforms mesh.skeleton
 
             context.InputAssembler.SetVertexBuffers(0, VertexBufferBinding(mesh.vertices.Resource, vertexSize, fragment.vertexOffset))
             context.InputAssembler.SetIndexBuffer(mesh.indices.Resource, fragment.indexFormat, fragment.indexOffset)
@@ -392,7 +416,7 @@ MessagePump.Run(form, fun () ->
     cameraController.Update(dt)
 
     let context = device.Device.ImmediateContext
-    let shaderContext = ShaderContext(context)
+    use shaderContext = new ShaderContext(context)
 
     use colorBuffer = rtpool.Acquire("scene/hdr", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_Float)
     use depthBuffer = rtpool.Acquire("gbuffer/depth", form.ClientSize.Width, form.ClientSize.Height, Format.D24_UNorm_S8_UInt)
@@ -526,7 +550,6 @@ MessagePump.Run(form, fun () ->
 
     device.SwapChain.Present(dbgPresentInterval.Value, PresentFlags.None) |> ignore
 
-    cbPool.Reset()
     firsttime.Force() |> ignore)
 
 device.Device.ImmediateContext.ClearState()
