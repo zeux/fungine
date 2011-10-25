@@ -24,9 +24,7 @@ type Context(rootPath, buildPath) =
         Node (Path.Combine(this.BuildPath, Path.ChangeExtension(source.Path, ext)))
 
     // add task
-    member this.Task(builder, sources: Node array, targets: Node array) =
-        let task = Task(sources, targets, builder)
-
+    member this.Task(task: Task) =
         // check task uniqueness
         match tasks.TryGetValue(task.Uid) with
         | true, t ->
@@ -34,6 +32,10 @@ type Context(rootPath, buildPath) =
         | _ ->
             tasks.Add(task.Uid, task)
             scheduler.Add(task)
+
+    // add task with source/target list
+    member this.Task(builder, sources: Node array, targets: Node array) =
+        this.Task(Task(sources, targets, builder))
 
     // add task with single target
     member this.Task(builder, sources: Node array, target: Node) =
