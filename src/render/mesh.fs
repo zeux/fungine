@@ -9,6 +9,7 @@ type SkinBinding(bones: int array, invBindPose: Matrix34 array) =
         Array.map2 (fun bone invBind -> (skeleton.AbsoluteTransform bone) * invBind) bones invBindPose
 
 // quantization coefficients for compressed vertex data
+[<ShaderStruct>]
 type MeshCompressionInfo =
     { posOffset: Vector3
       posScale: Vector3
