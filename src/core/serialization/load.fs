@@ -351,12 +351,9 @@ let fromStream (stream: Stream) size = fromStreamEx stream size null
 
 // load object from file
 let fromFileEx path context =
-    // map entire file to memory
-    use file = MemoryMappedFile.CreateFromFile(path, FileMode.Open, null, 0L, MemoryMappedFileAccess.Read)
-    use stream = file.CreateViewStream(0L, 0L, MemoryMappedFileAccess.Read)
+    use file = File.OpenRead(path)
 
-    // deserialize objects from mapped memory
-    fromMemoryEx (stream.SafeMemoryMappedViewHandle.DangerousGetHandle()) (int stream.Length) context
+    fromStreamEx file (int file.Length) context
 
 // load object from file
 let fromFile path = fromFileEx path null
