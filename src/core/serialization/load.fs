@@ -174,7 +174,7 @@ let private emitLoadArray (gen: ILGenerator) objemit (typ: Type) =
 // load string
 let private emitLoadString (gen: ILGenerator) objemit =
     let dataField = typeof<MemoryReader>.GetField("data", BindingFlags.Instance ||| BindingFlags.NonPublic)
-    let charLocal = gen.DeclareLocal(typeof<nativeint>, pinned = true)
+    let charLocal = gen.DeclareLocal(typeof<char>.MakeByRefType(), pinned = true)
 
     // get pointer to string data
     objemit gen
