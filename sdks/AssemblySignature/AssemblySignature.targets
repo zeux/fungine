@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <UsingTask TaskName="GenerateAssemblySignature" AssemblyFile="AssemblySignature.dll" />
+    <UsingTask TaskName="GenerateAssemblyDependency" AssemblyFile="AssemblySignature.dll" />
+
+    <ItemGroup>
+        <IntermediateAssemblySignature Include="@(IntermediateAssembly->'%(FullPath).sig')" />
+        <OutputAssemblySignature Include="@(IntermediateAssemblySignature->'$(OutDir)/%(FileName)%(Extension)')" />
+        <AssemblyDependency Include="@(IntermediateAssembly->'%(FullPath).dep')" />
+        <FileWrites Include="@(IntermediateAssemblySignature);@(OutputAssemblySignature);@(AssemblyDependency)" />
+
+        <ReferenceSignature Include="@(AssemblyDependency)" />
+    </ItemGroup>
+
+    <Target Name="GenerateAssemblyDependency" Inputs="@(ReferencePath)" Outputs="@(AssemblyDependency)" AfterTargets="ResolveReferences" BeforeTargets="CoreCompile">
+        <GenerateAssemblyDependency AssemblyName="$(AssemblyName)" References="@(ReferencePath)" Output="@(AssemblyDependency)" />
+    </Target>
+
+    <Target Name="GenerateAssemblySignature" Inputs="@(IntermediateAssembly)" Outputs="@(IntermediateAssemblySignature)" AfterTargets="Compile">
+        <GenerateAssemblySignature Input="@(IntermediateAssembly)" References="@(ReferencePath);@(ReferenceDependencyPaths)" Output="@(IntermediateAssemblySignature)" />
+    </Target>
+
+    <Target Name="CopyAssemblySignature" Inputs="@(IntermediateAssemblySignature)" Outputs="@(OutputAssemblySignature)" AfterTargets="GenerateAssemblySignature">
+        <Copy SourceFiles="@(IntermediateAssemblySignature)" DestinationFolder="$(OutDir)" />
+    </Target>
+</Project>
