@@ -5,7 +5,6 @@ open SlimDX.Direct3D11
 
 open System
 open System.IO
-open System.IO.MemoryMappedFiles
 open System.Runtime.InteropServices
 
 #nowarn "9" // Uses of this construct may result in the generation of unverifiable .NET IL code
@@ -176,34 +175,30 @@ module private TextureLoaderDDS =
             new Texture3D(device, desc, getLayout desc.Format desc.Width desc.Height desc.Depth desc.MipLevels 1 conv) :> Resource
         | d -> failwithf "Unsupported image dimension %A" d
 
+    // load file in memory
+    let loadFile path =
+        use file = File.OpenRead(path)
+        let data = new SlimDX.DataStream(file.Length, canRead = true, canWrite = true)
+        file.CopyTo(data)
+        data.Position <- 0L
+        data
+
     // load texture from file
     let load device path =
-        use file = MemoryMappedFile.CreateFromFile(path, FileMode.Open, null, 0L, MemoryMappedFileAccess.Read)
-        use data = file.CreateViewAccessor(0L, 0L, MemoryMappedFileAccess.Read)
+        use data = loadFile path
 
         // read header
-        if data.ReadInt32(0L) <> getFourCC "DDS " then failwith "Unrecognized header: incorrect magic"
+        if data.Read<int>() <> getFourCC "DDS " then failwith "Unrecognized header: incorrect magic"
 
-        let mutable header = Header()
-        data.Read(4L, &header)
-
-        // read DX10 header
-        let mutable header10 = HeaderDX10()
-
-        if header.format.fourCC = getFourCC "DX10" then
-            data.Read(int64 (4 + header.size), &header10)
-        else
-            header10 <- getHeaderDX10 header
-
-        // page in everything to avoid page faults inside CreateTexture (they can happen during driver/GDI locks, resulting in render stalls)
-        for off in 0L .. 4096L .. data.Capacity-1L do data.ReadByte(off) |> ignore
+        let header = data.Read<Header>()
+        let header10 = if header.format.fourCC = getFourCC "DX10" then data.Read<HeaderDX10>() else getHeaderDX10 header
 
         // get source data stream
         let dataOffset = 4 + header.size + (if header.format.fourCC = getFourCC "DX10" then sizeof<HeaderDX10> else 0)
 
         let streamc offset size =
-            if int64 (dataOffset + offset + size) > data.Capacity then failwith "Error reading image data: file is truncated"
-            new DataStream(data.SafeMemoryMappedViewHandle.DangerousGetHandle() + nativeint (dataOffset + offset), int64 size, canRead = true, canWrite = false)
+            if int64 (dataOffset + offset + size) > data.Length then failwith "Error reading image data: file is truncated"
+            new DataStream(data.DataPointer + nativeint (dataOffset + offset), int64 size, canRead = true, canWrite = false)
 
         // create texture resource
         let resource = createTexture device header header10 streamc
