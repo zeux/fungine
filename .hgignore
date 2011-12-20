@@ -2,7 +2,7 @@ syntax:regexp
 
 # build artifacts
 ^\.build/
-^bin/.*\.(dll|exe|pdb)$
+^bin/.*\.(dll|exe|pdb|sig)$
 
 # visual studio temporary files
 ^src/.*\.suo$
