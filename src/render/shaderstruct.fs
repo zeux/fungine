@@ -23,11 +23,11 @@ module ShaderStruct =
             let pt = p.PropertyType
             p.CanRead && (primitiveTypes.ContainsKey(pt) || pt.IsDefined(typeof<ShaderStructAttribute>, false)))
 
+    // round a value up to 16 bytes
+    let round16 v = (v + 15) / 16 * 16
+
     // get offsets for all reflected properties and the total structure size
     let rec private getPropertyOffsets (typ: Type) =
-        // round a value up to 16 bytes
-        let round16 v = (v + 15) / 16 * 16
-
         // get all reflected properties & their sizes
         let props = getProperties typ
         let sizes = props |> Array.map (fun p -> let pt = p.PropertyType in if pt.IsClass then snd (getPropertyOffsets pt) else primitiveTypes.[pt])
@@ -50,10 +50,10 @@ module ShaderStruct =
     // all upload methods are created as methods of this type
     type private UploadMethodHost = class end
 
-    // upload object to memory
-    let private emitUploadObject (gen: ILGenerator) (p: PropertyInfo) (offset: int) =
+    // upload property with reference type to memory
+    let private emitUploadPropertyReference (gen: ILGenerator) objemit (p: PropertyInfo) (offset: int) =
         // load object
-        gen.Emit(OpCodes.Ldloc_0)
+        objemit gen
         gen.Emit(OpCodes.Call, p.GetGetMethod())
 
         // compute address
@@ -69,29 +69,91 @@ module ShaderStruct =
         // call upload method
         gen.Emit(OpCodes.Call, typeof<UploadMethodHost>.GetMethod("upload " + p.PropertyType.Name))
 
-    // upload value to memory
-    let private emitUploadValue (gen: ILGenerator) (p: PropertyInfo) (offset: int) =
+    // upload value type to memory
+    let private emitUploadValue (gen: ILGenerator) objemit (typ: Type) (offset: int) =
         // compute address
         gen.Emit(OpCodes.Ldarg_1)
         gen.Emit(OpCodes.Ldc_I4, offset)
         gen.Emit(OpCodes.Add)
 
         // load value
-        gen.Emit(OpCodes.Ldloc_0)
-        gen.Emit(OpCodes.Call, p.GetGetMethod())
+        objemit gen
 
         // store object
-        gen.Emit(OpCodes.Stobj, p.PropertyType)
+        gen.Emit(OpCodes.Stobj, typ)
+
+    // upload property with value type to memory
+    let private emitUploadPropertyValue (gen: ILGenerator) objemit (p: PropertyInfo) (offset: int) =
+        emitUploadValue gen (fun gen ->
+            objemit gen
+            gen.Emit(OpCodes.Call, p.GetGetMethod())) p.PropertyType offset
+
+    // emit a loop that iterates through all array elements (array object is in loc0, array index is in loc1 at each iteration)
+    let private emitArrayLoop (gen: ILGenerator) bodyemit =
+        // declare local variable for loop counter
+        let idxLocal = gen.DeclareLocal(typeof<int>)
+        assert (idxLocal.LocalIndex = 1)
+    
+        // jump to the loop comparison part (needed for empty arrays)
+        let loopCmp = gen.DefineLabel()
+        gen.Emit(OpCodes.Br, loopCmp)
+    
+        // loop body
+        let loopBegin = gen.DefineLabel()
+        gen.MarkLabel(loopBegin)
+    
+        bodyemit gen
+    
+        // index++
+        gen.Emit(OpCodes.Ldloc_1) // index
+        gen.Emit(OpCodes.Ldc_I4_1)
+        gen.Emit(OpCodes.Add)
+        gen.Emit(OpCodes.Stloc_1)
+
+        // if (index < count) goto begin
+        gen.MarkLabel(loopCmp)
+        gen.Emit(OpCodes.Ldloc_1) // index
+        gen.Emit(OpCodes.Ldloc_0) // array
+        gen.Emit(OpCodes.Ldlen) // count
+        gen.Emit(OpCodes.Blt, loopBegin)
+
+    // emit a loop that iterates through all array elements and updates buffer using the element size
+    let private emitArrayLoopUpdateBuffer (gen: ILGenerator) (size: int) bodyemit =
+        emitArrayLoop gen (fun gen ->
+            bodyemit gen
+
+            // buffer address += element size
+            gen.Emit(OpCodes.Ldarg_1)
+            gen.Emit(OpCodes.Ldc_I4, size)
+            gen.Emit(OpCodes.Add)
+            gen.Emit(OpCodes.Starg_S, 1uy)
+
+            // buffer size -= element size
+            gen.Emit(OpCodes.Ldarg_2)
+            gen.Emit(OpCodes.Ldc_I4, size)
+            gen.Emit(OpCodes.Sub)
+            gen.Emit(OpCodes.Starg_S, 2uy))
 
     // upload struct to memory
-    let private emitUpload (gen: ILGenerator) (typ: Type) =
+    let private emitUpload (gen: ILGenerator) (typ: Type) (vtyp: Type) =
         // get type layout
-        let props = getProperties typ
-        let offsets, size = getPropertyOffsets typ
+        let props, offsets, size =
+            if primitiveTypes.ContainsKey(vtyp) then
+                None, [|0|], round16 primitiveTypes.[vtyp]
+            else
+                let offsets, size = getPropertyOffsets vtyp
+                Some (getProperties vtyp), offsets, size
 
         // check buffer size
         gen.Emit(OpCodes.Ldarg_2)
         gen.Emit(OpCodes.Ldc_I4, size)
+
+        // multiply element size by element count in case of array
+        if typ.IsArray then
+            gen.Emit(OpCodes.Ldarg_0)
+            gen.Emit(OpCodes.Ldlen)
+            gen.Emit(OpCodes.Mul)
+
         gen.Emit(OpCodes.Sub_Ovf_Un)
         gen.Emit(OpCodes.Pop)
 
@@ -103,8 +165,21 @@ module ShaderStruct =
         gen.Emit(OpCodes.Castclass, typ)
         gen.Emit(OpCodes.Stloc_0)
 
-        // write everything
-        props |> Array.iteri (fun i p -> (if p.PropertyType.IsClass then emitUploadObject else emitUploadValue) gen p offsets.[i])
+        // write a single element (object has one element, array has several elements)
+        let emitElement gen objemit =
+            match props with
+            | Some pl -> pl |> Array.iteri (fun i p -> (if p.PropertyType.IsClass then emitUploadPropertyReference else emitUploadPropertyValue) gen objemit p offsets.[i])
+            | None -> emitUploadValue gen objemit vtyp offsets.[0]
+
+        // write the entire object
+        if typ.IsArray then
+            emitArrayLoopUpdateBuffer gen size (fun gen ->
+                emitElement gen (fun gen ->
+                    gen.Emit(OpCodes.Ldloc_0)
+                    gen.Emit(OpCodes.Ldloc_1)
+                    gen.Emit(OpCodes.Ldelem, vtyp)))
+        else
+            emitElement gen (fun gen -> gen.Emit(OpCodes.Ldloc_0))
 
         // all done
         gen.Emit(OpCodes.Ret)
@@ -113,12 +188,13 @@ module ShaderStruct =
 
     // create an upload delegate for a given type
     let private buildUploadDelegate (typ: Type) =
-        if not (typ.IsDefined(typeof<ShaderStructAttribute>, false)) then failwithf "Type %A does not have ShaderStruct attribute" typ
+        let vtyp = if typ.IsArray then typ.GetElementType() else typ
+        if not (primitiveTypes.ContainsKey(vtyp)) && not (vtyp.IsDefined(typeof<ShaderStructAttribute>, false)) then failwithf "Type %A does not have ShaderStruct attribute" typ
 
         let dm = DynamicMethod("upload " + typ.ToString(), null, [|typeof<obj>; typeof<nativeint>; typeof<int>|], typeof<UploadMethodHost>, skipVisibility = true)
         let gen = dm.GetILGenerator()
 
-        let size = emitUpload gen typ
+        let size = emitUpload gen typ vtyp
 
         size, dm.CreateDelegate(typeof<UploadDelegate>) :?> UploadDelegate
 

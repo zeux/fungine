@@ -8,30 +8,15 @@ open SlimDX.Direct3D11
 #nowarn "1173" // F# 3.0 compiler regression on ?<- operator as class member
 
 module private ShaderUtil =
-    // upload a (boxed) struct into a constant buffer
-    let uploadConstantStruct (cbPool: ConstantBufferPool) (context: DeviceContext) (data: obj) =
-        let size, upload = Render.ShaderStruct.getUploadDelegate (data.GetType())
+    // upload a single object or an object array into a constant buffer
+    let uploadConstantData (cbPool: ConstantBufferPool) (context: DeviceContext) (data: obj) =
+        let elementSize, upload = Render.ShaderStruct.getUploadDelegate (data.GetType())
+        let size = elementSize * (match data with :? Array as a -> a.Length | _ -> 1)
         let cb = cbPool.Acquire size
         let scratch = cb.Scratch
         upload.Invoke(data, scratch.Data.DataPointer, size)
         context.UpdateSubresource(scratch, cb.Buffer, 0)
         cb
-    
-    // upload an array of matrices into a constant buffer ($$ replace with generic uploadArray that can handle primitive types and structs)
-    let uploadMatrixArray (cbPool: ConstantBufferPool) (context: DeviceContext) (data: Matrix34 array) =
-        let cb = cbPool.Acquire (data.Length * 48)
-        let scratch = cb.Scratch
-        scratch.Data.WriteRange(data)
-        scratch.Data.Position <- 0L
-        context.UpdateSubresource(scratch, cb.Buffer, 0)
-        cb
-    
-    // upload an object into a constant buffer
-    let uploadConstantData (cbPool: ConstantBufferPool) (context: DeviceContext) (data: obj) =
-        if data.GetType() = typeof<Matrix34 array> then
-            uploadMatrixArray cbPool context (unbox data)
-        else
-            uploadConstantStruct cbPool context data
 
 // shader context; it can be used for setting shaders and shader parameters
 // note: there is no internal queueing of commands - all calls update the device context state immediately
