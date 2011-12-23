@@ -182,147 +182,9 @@ type Material(roughness: float32, smoothness: float32) =
     member this.Roughness = roughness
     member this.Smoothness = smoothness
 
-type ConstantBufferPoolSlot =
-    { scratch: DataBox
-      free: Stack<Buffer> }
+let cbPool = Render.ConstantBufferPool(device.Device)
 
-[<Struct>]
-type ConstantBuffer(slot: ConstantBufferPoolSlot, buffer: Buffer) =
-    interface IDisposable with
-        member this.Dispose() =
-            if buffer <> null then
-                slot.free.Push(buffer)
-
-    member this.Buffer = buffer
-    member this.Scratch = slot.scratch
-
-type ConstantBufferPool(device: Device) =
-    let pool = Dictionary<int, ConstantBufferPoolSlot>()
-
-    member this.Acquire size =
-        let slot =
-            Core.CacheUtil.update pool size (fun size ->
-                { new ConstantBufferPoolSlot with scratch = DataBox(0, 0, new DataStream(int64 size, canRead = true, canWrite = true)) and free = Stack<_>() })
-
-        let cb =
-            if slot.free.Count > 0 then
-                slot.free.Pop()
-            else
-                new Buffer(device, null, BufferDescription(size, ResourceUsage.Default, BindFlags.ConstantBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, 0))
-
-
-        new ConstantBuffer(slot, cb)
-
-let cbPool = ConstantBufferPool(device.Device)
-
-let uploadConstantStruct (context: DeviceContext) data =
-    let size, upload = Render.ShaderStruct.getUploadDelegate (data.GetType())
-    let cb = cbPool.Acquire size
-    let scratch = cb.Scratch
-    upload.Invoke(data, scratch.Data.DataPointer, size)
-    context.UpdateSubresource(scratch, cb.Buffer, 0)
-    cb
-
-let uploadMatrixArray (context: DeviceContext) (data: Matrix34 array) =
-    let cb = cbPool.Acquire (data.Length * 48)
-    let scratch = cb.Scratch
-    scratch.Data.WriteRange(data)
-    scratch.Data.Position <- 0L
-    context.UpdateSubresource(scratch, cb.Buffer, 0)
-    cb
-
-let uploadConstantData (context: DeviceContext) data =
-    if data.GetType() = typeof<Matrix34 array> then
-        uploadMatrixArray context (unbox data)
-    else
-        uploadConstantStruct context data
-
-type ShaderContext(context: DeviceContext) =
-    let values = List<obj>()
-    let cbslots = List<ConstantBuffer>()
-    let vertexParams = List<Render.ShaderParameter>()
-    let pixelParams = List<Render.ShaderParameter>()
-
-    interface IDisposable with
-        member this.Dispose() =
-            for p in cbslots do
-                (p :> IDisposable).Dispose()
-
-    member private this.EnsureSlot(slot) =
-        while values.Count <= slot do
-            values.Add(null)
-            vertexParams.Add(Render.ShaderParameter())
-            pixelParams.Add(Render.ShaderParameter())
-
-    member private this.ValidateSlot(slot) =
-        let inline bind (p: Render.ShaderParameter) (value: obj) (stage: ^T) =
-            match p.Binding with
-            | Render.ShaderParameterBinding.None -> ()
-            | Render.ShaderParameterBinding.ConstantBuffer -> (^T: (member SetConstantBuffer: _ -> _ -> _) (stage, value :?> Buffer, p.Register))
-            | Render.ShaderParameterBinding.ShaderResource -> (^T: (member SetShaderResource: _ -> _ -> _) (stage, value :?> ShaderResourceView, p.Register))
-            | Render.ShaderParameterBinding.Sampler -> (^T: (member SetSampler: _ -> _ -> _) (stage, value :?> SamplerState, p.Register))
-            | x -> failwithf "Unexpected binding value %A" x
-
-        bind vertexParams.[slot] values.[slot] context.VertexShader
-        bind pixelParams.[slot] values.[slot] context.PixelShader
-
-    member private this.UpdateSlot(slot, value) =
-        this.EnsureSlot(slot)
-        values.[slot] <- value
-        this.ValidateSlot(slot)
-
-    member this.Shader
-        with set (value: Render.Shader) =
-            context.VertexShader.Set(value.VertexShader.Resource)
-            context.PixelShader.Set(value.PixelShader.Resource)
-
-            for slot = 0 to values.Count - 1 do
-                vertexParams.[slot] <- Render.ShaderParameter()
-                pixelParams.[slot] <- Render.ShaderParameter()
-
-            for p in value.VertexShader.Parameters do
-                this.EnsureSlot(p.Slot)
-                vertexParams.[p.Slot] <- p
-
-            for p in value.PixelShader.Parameters do
-                this.EnsureSlot(p.Slot)
-                pixelParams.[p.Slot] <- p
-
-            for slot = 0 to values.Count - 1 do
-                if values.[slot] <> null then
-                    this.ValidateSlot(slot)
-
-    member this.SetConstant(slot, value: ShaderResourceView) =
-        this.UpdateSlot(slot, value)
-
-    member this.SetConstant(slot, value: SamplerState) =
-        this.UpdateSlot(slot, value)
-
-    member this.SetConstant(slot, value: Buffer) =
-        this.UpdateSlot(slot, value)
-
-    member this.SetConstant(slot, value: obj) =
-        while cbslots.Count <= slot do cbslots.Add(Unchecked.defaultof<_>)
-
-        (cbslots.[slot] :> IDisposable).Dispose()
-
-        let data = uploadConstantData context value
-        this.UpdateSlot(slot, data.Buffer)
-        cbslots.[slot] <- data
-
-    static member (?<-) (this: ShaderContext, name: string, value: ShaderResourceView) =
-        this.SetConstant(Render.ShaderParameterRegistry.getSlot name, value)
-
-    static member (?<-) (this: ShaderContext, name: string, value: SamplerState) =
-        this.SetConstant(Render.ShaderParameterRegistry.getSlot name, value)
-
-    static member (?<-) (this: ShaderContext, name: string, value: Buffer) =
-        this.SetConstant(Render.ShaderParameterRegistry.getSlot name, value)
-
-    static member (?<-) (this: ShaderContext, name: string, value: obj) =
-        this.SetConstant(Render.ShaderParameterRegistry.getSlot name, value)
-
-let renderScene (context: DeviceContext) (shaderContext: ShaderContext) (camera: Camera) =
+let renderScene (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) =
     context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.Less))
 
     let fillMode = if dbgWireframe.Value then FillMode.Wireframe else FillMode.Solid
@@ -359,7 +221,7 @@ let renderScene (context: DeviceContext) (shaderContext: ShaderContext) (camera:
             context.InputAssembler.SetIndexBuffer(mesh.indices.Resource, fragment.indexFormat, fragment.indexOffset)
             context.DrawIndexedInstanced(fragment.indexCount, instances.Length, 0, 0, 0)
 
-let fillGBuffer (context: DeviceContext) (shaderContext: ShaderContext) (camera: Camera) (albedoBuffer: Render.RenderTarget) (specBuffer: Render.RenderTarget) (normalBuffer: Render.RenderTarget) (depthBuffer: Render.RenderTarget) =
+let fillGBuffer (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) (albedoBuffer: Render.RenderTarget) (specBuffer: Render.RenderTarget) (normalBuffer: Render.RenderTarget) (depthBuffer: Render.RenderTarget) =
     context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
     context.OutputMerger.SetTargets(depthBuffer.DepthView, [|albedoBuffer; specBuffer; normalBuffer|] |> Array.map (fun rt -> rt.ColorView))
 
@@ -367,7 +229,7 @@ let fillGBuffer (context: DeviceContext) (shaderContext: ShaderContext) (camera:
     renderScene context shaderContext camera
     Performance.EndEvent() |> ignore
 
-let fillShadowBuffer (context: DeviceContext) (shaderContext: ShaderContext) (camera: Camera) (shadowBuffer: Render.RenderTarget) =
+let fillShadowBuffer (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) (shadowBuffer: Render.RenderTarget) =
     let texture = shadowBuffer.Resource :?> Texture2D
     context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 texture.Description.Width, float32 texture.Description.Height))
 
@@ -416,7 +278,7 @@ MessagePump.Run(form, fun () ->
     cameraController.Update(dt)
 
     let context = device.Device.ImmediateContext
-    use shaderContext = new ShaderContext(context)
+    use shaderContext = new Render.ShaderContext(cbPool, context)
 
     use colorBuffer = rtpool.Acquire("scene/hdr", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_Float)
     use depthBuffer = rtpool.Acquire("gbuffer/depth", form.ClientSize.Width, form.ClientSize.Height, Format.D24_UNorm_S8_UInt)
