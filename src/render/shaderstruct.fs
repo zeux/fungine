@@ -69,6 +69,13 @@ module ShaderStruct =
         // call upload method
         gen.Emit(OpCodes.Call, typeof<UploadMethodHost>.GetMethod("upload " + p.PropertyType.Name))
 
+    // convert value to shader-ready type
+    let private emitConvertValue (gen: ILGenerator) typ =
+        if typ = typeof<bool> then
+            typeof<int>
+        else
+            typ
+
     // upload value type to memory
     let private emitUploadValue (gen: ILGenerator) objemit (typ: Type) (offset: int) =
         // compute address
@@ -80,7 +87,8 @@ module ShaderStruct =
         objemit gen
 
         // store object
-        gen.Emit(OpCodes.Stobj, typ)
+        let styp = emitConvertValue gen typ
+        gen.Emit(OpCodes.Stobj, styp)
 
     // upload property with value type to memory
     let private emitUploadPropertyValue (gen: ILGenerator) objemit (p: PropertyInfo) (offset: int) =
