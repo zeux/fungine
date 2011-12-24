@@ -24,7 +24,7 @@ module ShaderStruct =
             p.CanRead && (primitiveTypes.ContainsKey(pt) || pt.IsDefined(typeof<ShaderStructAttribute>, false)))
 
     // round a value up to 16 bytes
-    let round16 v = (v + 15) / 16 * 16
+    let private round16 v = (v + 15) &&& ~~~15
 
     // get offsets for all reflected properties and the total structure size
     let rec private getPropertyOffsets (typ: Type) =
@@ -36,7 +36,7 @@ module ShaderStruct =
         let offsets =
             sizes |> Array.scan (fun off size ->
                 // round starting offset to 16 bytes if new value straddles the 16b boundary
-                if size < 16 && ((off + size) % 16 = 0 || (off + size) % 16 > off % 16) then
+                if off / 16 = (off + size - 1) / 16 then
                     off + size
                 else
                     round16 off + size) 0
@@ -96,51 +96,24 @@ module ShaderStruct =
             objemit gen
             gen.Emit(OpCodes.Call, p.GetGetMethod())) p.PropertyType offset
 
-    // emit a loop that iterates through all array elements (array object is in loc0, array index is in loc1 at each iteration)
-    let private emitArrayLoop (gen: ILGenerator) bodyemit =
-        // declare local variable for loop counter
-        let idxLocal = gen.DeclareLocal(typeof<int>)
-        assert (idxLocal.LocalIndex = 1)
-    
-        // jump to the loop comparison part (needed for empty arrays)
-        let loopCmp = gen.DefineLabel()
-        gen.Emit(OpCodes.Br, loopCmp)
-    
-        // loop body
-        let loopBegin = gen.DefineLabel()
-        gen.MarkLabel(loopBegin)
-    
-        bodyemit gen
-    
-        // index++
-        gen.Emit(OpCodes.Ldloc_1) // index
-        gen.Emit(OpCodes.Ldc_I4_1)
-        gen.Emit(OpCodes.Add)
-        gen.Emit(OpCodes.Stloc_1)
-
-        // if (index < count) goto begin
-        gen.MarkLabel(loopCmp)
-        gen.Emit(OpCodes.Ldloc_1) // index
-        gen.Emit(OpCodes.Ldloc_0) // array
-        gen.Emit(OpCodes.Ldlen) // count
-        gen.Emit(OpCodes.Blt, loopBegin)
-
     // emit a loop that iterates through all array elements and updates buffer using the element size
     let private emitArrayLoopUpdateBuffer (gen: ILGenerator) (size: int) bodyemit =
-        emitArrayLoop gen (fun gen ->
-            bodyemit gen
-
-            // buffer address += element size
-            gen.Emit(OpCodes.Ldarg_1)
-            gen.Emit(OpCodes.Ldc_I4, size)
-            gen.Emit(OpCodes.Add)
-            gen.Emit(OpCodes.Starg_S, 1uy)
-
-            // buffer size -= element size
-            gen.Emit(OpCodes.Ldarg_2)
-            gen.Emit(OpCodes.Ldc_I4, size)
-            gen.Emit(OpCodes.Sub)
-            gen.Emit(OpCodes.Starg_S, 2uy))
+        Core.Serialization.Util.emitArrayLoop gen
+            (fun gen -> gen.Emit(OpCodes.Ldloc_0))
+            (fun gen ->
+                bodyemit gen
+    
+                // buffer address += element size
+                gen.Emit(OpCodes.Ldarg_1)
+                gen.Emit(OpCodes.Ldc_I4, size)
+                gen.Emit(OpCodes.Add)
+                gen.Emit(OpCodes.Starg_S, 1uy)
+    
+                // buffer size -= element size
+                gen.Emit(OpCodes.Ldarg_2)
+                gen.Emit(OpCodes.Ldc_I4, size)
+                gen.Emit(OpCodes.Sub)
+                gen.Emit(OpCodes.Starg_S, 2uy))
 
     // upload struct to memory
     let private emitUpload (gen: ILGenerator) (typ: Type) (vtyp: Type) =
