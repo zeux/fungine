@@ -23,17 +23,8 @@ let getSerializableFields (typ: Type) =
 
 // emit a loop that iterates through all array elements (leaving array index in loc0)
 let emitArrayLoop (gen: ILGenerator) objemit bodyemit =
-    // declare local variables for length and for loop counter
+    // declare local variable for loop counter
     let idxLocal = gen.DeclareLocal(typeof<int>)
-    assert (idxLocal.LocalIndex = 0)
-
-    let cntLocal = gen.DeclareLocal(typeof<int>)
-    assert (cntLocal.LocalIndex = 1)
-
-    // store size to local
-    objemit gen
-    gen.Emit(OpCodes.Ldlen)
-    gen.Emit(OpCodes.Stloc_1) // count
 
     // jump to the loop comparison part (needed for empty arrays)
     let loopCmp = gen.DefineLabel()
@@ -46,15 +37,16 @@ let emitArrayLoop (gen: ILGenerator) objemit bodyemit =
     bodyemit gen
 
     // index++
-    gen.Emit(OpCodes.Ldloc_0) // index
+    gen.Emit(OpCodes.Ldloc, idxLocal)
     gen.Emit(OpCodes.Ldc_I4_1)
     gen.Emit(OpCodes.Add)
-    gen.Emit(OpCodes.Stloc_0)
+    gen.Emit(OpCodes.Stloc, idxLocal)
 
     // if (index < count) goto begin
     gen.MarkLabel(loopCmp)
-    gen.Emit(OpCodes.Ldloc_0) // index
-    gen.Emit(OpCodes.Ldloc_1) // count
+    gen.Emit(OpCodes.Ldloc, idxLocal)
+    objemit gen
+    gen.Emit(OpCodes.Ldlen) // count
     gen.Emit(OpCodes.Blt, loopBegin)
 
 // encoding for serialized strings
