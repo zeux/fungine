@@ -34,7 +34,7 @@ let emitArrayLoop (gen: ILGenerator) objemit bodyemit =
     let loopBegin = gen.DefineLabel()
     gen.MarkLabel(loopBegin)
 
-    bodyemit gen
+    bodyemit gen idxLocal
 
     // index++
     gen.Emit(OpCodes.Ldloc, idxLocal)

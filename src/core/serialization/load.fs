@@ -165,11 +165,11 @@ let private emitLoadArray (gen: ILGenerator) objemit (typ: Type) =
     let etype = typ.GetElementType()
 
     // serialize contents
-    Util.emitArrayLoop gen objemit (fun gen ->
+    Util.emitArrayLoop gen objemit (fun gen idx ->
         if Util.isStruct etype then
-            emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc_0); gen.Emit(OpCodes.Ldelema, etype)) emitNone etype
+            emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc, idx); gen.Emit(OpCodes.Ldelema, etype)) emitNone etype
         else
-            emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc_0)) (fun gen -> gen.Emit(OpCodes.Stelem, etype)) etype)
+            emitLoadValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc, idx)) (fun gen -> gen.Emit(OpCodes.Stelem, etype)) etype)
 
 // load string
 let private emitLoadString (gen: ILGenerator) objemit =

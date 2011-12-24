@@ -100,8 +100,8 @@ module ShaderStruct =
     let private emitArrayLoopUpdateBuffer (gen: ILGenerator) (size: int) bodyemit =
         Core.Serialization.Util.emitArrayLoop gen
             (fun gen -> gen.Emit(OpCodes.Ldloc_0))
-            (fun gen ->
-                bodyemit gen
+            (fun gen idx ->
+                bodyemit gen idx
     
                 // buffer address += element size
                 gen.Emit(OpCodes.Ldarg_1)
@@ -139,12 +139,11 @@ module ShaderStruct =
         gen.Emit(OpCodes.Pop)
 
         // cast to proper type
-        let obj = gen.DeclareLocal(typ)
-        assert (obj.LocalIndex = 0)
+        let objLocal = gen.DeclareLocal(typ)
 
         gen.Emit(OpCodes.Ldarg_0)
         gen.Emit(OpCodes.Castclass, typ)
-        gen.Emit(OpCodes.Stloc_0)
+        gen.Emit(OpCodes.Stloc, objLocal)
 
         // write a single element (object has one element, array has several elements)
         let emitElement gen objemit =
@@ -154,13 +153,13 @@ module ShaderStruct =
 
         // write the entire object
         if typ.IsArray then
-            emitArrayLoopUpdateBuffer gen size (fun gen ->
+            emitArrayLoopUpdateBuffer gen size (fun gen idx ->
                 emitElement gen (fun gen ->
-                    gen.Emit(OpCodes.Ldloc_0)
-                    gen.Emit(OpCodes.Ldloc_1)
+                    gen.Emit(OpCodes.Ldloc, objLocal)
+                    gen.Emit(OpCodes.Ldloc, idx)
                     gen.Emit(OpCodes.Ldelem, vtyp)))
         else
-            emitElement gen (fun gen -> gen.Emit(OpCodes.Ldloc_0))
+            emitElement gen (fun gen -> gen.Emit(OpCodes.Ldloc, objLocal))
 
         // all done
         gen.Emit(OpCodes.Ret)

@@ -85,8 +85,8 @@ let private emitSaveArray (gen: ILGenerator) objemit (typ: Type) =
     let etype = typ.GetElementType()
     let cmd = if Util.isStruct etype then OpCodes.Ldelema else OpCodes.Ldelem
 
-    Util.emitArrayLoop gen objemit (fun gen ->
-        emitSaveValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc_0); gen.Emit(cmd, etype)) etype)
+    Util.emitArrayLoop gen objemit (fun gen idx ->
+        emitSaveValue gen (fun gen -> objemit gen; gen.Emit(OpCodes.Ldloc, idx); gen.Emit(cmd, etype)) etype)
 
 // save a top-level type
 let private emitSave (gen: ILGenerator) (typ: Type) =
