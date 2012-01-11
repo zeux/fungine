@@ -146,3 +146,15 @@ type Matrix44 =
             (+ m.row0.x * b3 - m.row0.y * b1 + m.row0.z * b0) * s,
             (- m.row3.x * a3 + m.row3.y * a1 - m.row3.z * a0) * s,
             (+ m.row2.x * a3 - m.row2.y * a1 + m.row2.z * a0) * s)
+
+    // transform vector
+    static member Transform (m: Matrix44, v: Vector4) =
+        Vector4(v.x * m.row0.x + v.y * m.row0.y + v.z * m.row0.z + v.w * m.row0.w,
+                v.x * m.row1.x + v.y * m.row1.y + v.z * m.row1.z + v.w * m.row1.w,
+                v.x * m.row2.x + v.y * m.row2.y + v.z * m.row2.z + v.w * m.row2.w,
+                v.x * m.row3.x + v.y * m.row3.y + v.z * m.row3.z + v.w * m.row3.w)
+
+    // transform vector and perform perspective division
+    static member TransformPerspective (m: Matrix44, v: Vector4) =
+        let r = Matrix44.Transform(m, v)
+        Vector3(r.x / r.w, r.y / r.w, r.z / r.w)
