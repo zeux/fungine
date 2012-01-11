@@ -26,6 +26,7 @@
     <Compile Include="math\vector2.fs" />
     <Compile Include="math\vector3.fs" />
     <Compile Include="math\vector4.fs" />
+    <Compile Include="math\swizzle.fs" />
     <Compile Include="math\matrix34.fs" />
     <Compile Include="math\matrix44.fs" />
     <Compile Include="math\types.fs" />
