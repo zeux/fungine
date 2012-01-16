@@ -45,15 +45,21 @@ form.SizeChanged.Add(fun args ->
     rtpool.ReleaseUnused())
 
 // setup asset loaders
-AssetDB.addType "dds" (Render.TextureLoader.load device.Device)
-AssetDB.addType "mesh" (fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Mesh)
-AssetDB.addType "shader" (fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Shader)
+let assetDB = Asset.Database()
+let assetLoaders =
+    [
+        ".dds", Render.TextureLoader.load device.Device >> box
+        ".mesh", fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Mesh |> box
+        ".shader", fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Shader |> box
+    ]
 
-let gbufferFill = Asset<Render.Shader>.Load ".build/src/shaders/gbuffer_fill_default.shader"
-let lightDirectional = Asset<Render.Shader>.Load ".build/src/shaders/lighting/directional.shader"
-let lightSpot = Asset<Render.Shader>.Load ".build/src/shaders/lighting/spot.shader"
-let postfxTonemap = Asset<Render.Shader>.Load ".build/src/shaders/postfx/tonemap.shader"
-let postfxFxaa = Asset<Render.Shader>.Load ".build/src/shaders/postfx/fxaa.shader"
+let loader = Asset.Loader(assetDB, assetLoaders |> dict)
+
+let gbufferFill = loader.Load<Render.Shader> ".build/src/shaders/gbuffer_fill_default.shader"
+let lightDirectional = loader.Load<Render.Shader> ".build/src/shaders/lighting/directional.shader"
+let lightSpot = loader.Load<Render.Shader> ".build/src/shaders/lighting/spot.shader"
+let postfxTonemap = loader.Load<Render.Shader> ".build/src/shaders/postfx/tonemap.shader"
+let postfxFxaa = loader.Load<Render.Shader> ".build/src/shaders/postfx/fxaa.shader"
 
 let vertexSize = (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).size
 let layout = new InputLayout(device.Device, gbufferFill.Data.VertexSignature.Resource, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
@@ -76,11 +82,11 @@ let mouse = Input.Mouse(form)
 let keyboard = Input.Keyboard(form)
 let cameraController = Camera.CameraController(mouse, keyboard, Position = Vector3(-7.100705f, 47.303590f, 22.963710f), Yaw = -1.3f, Pitch = 0.15f)
 
-let scene = List<Asset<Render.Mesh> * Matrix34>()
+let scene = List<Asset.Ref<Render.Mesh> * Matrix34>()
 
 let placeMesh path parent =
     try
-        let mesh = Asset.LoadAsync (".build/art/" + System.IO.Path.ChangeExtension(path, ".mesh"))
+        let mesh = loader.LoadAsync (".build/art/" + System.IO.Path.ChangeExtension(path, ".mesh"))
         scene.Add((mesh, parent))
     with e -> printfn "%s" e.Message
 
@@ -204,7 +210,7 @@ let renderScene (context: DeviceContext) (shaderContext: Render.ShaderContext) (
         shaderContext?transforms <- instances |> Array.map (fun (mesh, transform) -> transform)
 
         for fragment in mesh.fragments do
-            let texture (tex: Asset<Render.Texture> option) dummy = if tex.IsSome && tex.Value.IsReady then tex.Value.Data.View else dummy
+            let texture (tex: Asset.Ref<Render.Texture> option) dummy = if tex.IsSome && tex.Value.IsReady then tex.Value.Data.View else dummy
 
             let material = fragment.material
 

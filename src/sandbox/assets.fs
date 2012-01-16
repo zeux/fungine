@@ -10,7 +10,8 @@ let context = Context(System.Environment.CurrentDirectory, ".build")
 let watcher = lazy Core.FS.Watcher(".", fun path ->
     let node = Node path
     context.RunUpdated [| node |]
-    AssetDB.tryReload node.Path)
+    //AssetDB.tryReload node.Path)
+    )
 
 // texture settings
 Build.Texture.addSettings "art/texture.db"
