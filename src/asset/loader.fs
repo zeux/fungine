@@ -74,8 +74,8 @@ and Ref<'T> internal(path: string, data: Data) =
     // wait for asset to be ready
     member this.Wait () = data.Event.Wait()
 
-    // data accessor
-    member this.Data = data.Value :?> 'T
+    // value accessor
+    member this.Value = data.Value :?> 'T
 
     // path accessor
     member this.Path = path

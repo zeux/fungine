@@ -63,7 +63,7 @@ let postfxTonemap = loader.Load<Render.Shader> ".build/src/shaders/postfx/tonema
 let postfxFxaa = loader.Load<Render.Shader> ".build/src/shaders/postfx/fxaa.shader"
 
 let vertexSize = (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).size
-let layout = new InputLayout(device.Device, gbufferFill.Data.VertexSignature.Resource, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
+let layout = new InputLayout(device.Device, gbufferFill.Value.VertexSignature.Resource, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
 
 let createDummyTexture color =
     let stream = new DataStream(4L, canRead = false, canWrite = true)
@@ -205,13 +205,13 @@ let renderScene (context: DeviceContext) (shaderContext: Render.ShaderContext) (
     shaderContext?camera <- camera
     shaderContext?defaultSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbgTexfilter.Value, MaximumAnisotropy = 16, MaximumLod = infinityf))
 
-    for mesh, instances in scene |> Seq.choose (fun (mesh, transform) -> if mesh.IsReady then Some (mesh.Data, transform) else None) |> Seq.groupByRef (fun (mesh, transform) -> mesh) do
+    for mesh, instances in scene |> Seq.choose (fun (mesh, transform) -> if mesh.IsReady then Some (mesh.Value, transform) else None) |> Seq.groupByRef (fun (mesh, transform) -> mesh) do
         if dbgNulldraw.Value then () else
 
         shaderContext?transforms <- instances |> Array.map (fun (mesh, transform) -> transform)
 
         for fragment in mesh.fragments do
-            let texture (tex: Asset.Ref<Render.Texture> option) dummy = if tex.IsSome && tex.Value.IsReady then tex.Value.Data.View else dummy
+            let texture (tex: Asset.Ref<Render.Texture> option) dummy = if tex.IsSome && tex.Value.IsReady then tex.Value.Value.View else dummy
 
             let material = fragment.material
 
@@ -233,7 +233,7 @@ let fillGBuffer (context: DeviceContext) (shaderContext: Render.ShaderContext) (
     context.OutputMerger.SetTargets(depthBuffer.DepthView, [|albedoBuffer; specBuffer; normalBuffer|] |> Array.map (fun rt -> rt.ColorView))
 
     Performance.BeginEvent(Color4(), "gbuffer") |> ignore
-    renderScene context shaderContext camera gbufferFill.Data
+    renderScene context shaderContext camera gbufferFill.Value
     Performance.EndEvent() |> ignore
 
 let fillShadowBuffer (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) (shadowBuffer: Render.RenderTarget) =
@@ -247,7 +247,7 @@ let fillShadowBuffer (context: DeviceContext) (shaderContext: Render.ShaderConte
     context.OutputMerger.SetTargets(shadowBuffer.DepthView, [||])
 
     Performance.BeginEvent(Color4(), "shadowbuffer") |> ignore
-    renderScene context shaderContext camera depthFill.Data
+    renderScene context shaderContext camera depthFill.Value
     Performance.EndEvent() |> ignore
 
 form.KeyUp.Add(fun args ->
@@ -314,7 +314,7 @@ MessagePump.Run(form, fun () ->
     context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
     context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
 
-    shaderContext.Shader <- lightDirectional.Data
+    shaderContext.Shader <- lightDirectional.Value
 
     shaderContext?gbufSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
     shaderContext?gbufAlbedo <- albedoBuffer.View
@@ -377,7 +377,7 @@ MessagePump.Run(form, fun () ->
         context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
         context.OutputMerger.BlendState <- BlendState.FromDescription(device.Device, blendon)
 
-        shaderContext.Shader <- lightSpot.Data
+        shaderContext.Shader <- lightSpot.Value
         shaderContext?light <- light
         shaderContext?lightCamera <- lightCamera
         shaderContext?shadowMap <- shadowBuffer.View
@@ -396,7 +396,7 @@ MessagePump.Run(form, fun () ->
     context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
     context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
 
-    shaderContext.Shader <- postfxTonemap.Data
+    shaderContext.Shader <- postfxTonemap.Value
 
     shaderContext?defaultSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
     shaderContext?colorMap <- colorBuffer.View
@@ -410,7 +410,7 @@ MessagePump.Run(form, fun () ->
     context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
     context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
 
-    shaderContext.Shader <- postfxFxaa.Data
+    shaderContext.Shader <- postfxFxaa.Value
 
     shaderContext?defaultSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
     shaderContext?colorMap <- ldrBuffer.View
