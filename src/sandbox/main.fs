@@ -43,14 +43,13 @@ form.SizeChanged.Add(fun args ->
 
 // setup asset loaders
 let assetDB = Asset.Database()
-let assetLoaders =
-    [
-        ".dds", Render.TextureLoader.load device.Device >> box
-        ".mesh", fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Mesh |> box
-        ".shader", fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Shader |> box
-    ]
-
-let loader = Asset.Loader(assetDB, assetLoaders |> dict)
+let loader =
+    Asset.Loader(assetDB,
+        dict [
+            ".dds", Render.TextureLoader.load device.Device >> box
+            ".mesh", fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Mesh |> box
+            ".shader", fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Shader |> box
+        ])
 
 // start asset watcher
 let _ = assets.assetWatcher loader
@@ -250,6 +249,16 @@ let fillShadowBuffer (context: DeviceContext) (shaderContext: Render.ShaderConte
     renderScene context shaderContext camera depthFill.Value
     Performance.EndEvent() |> ignore
 
+let renderFullScreenTri (context: DeviceContext) (shaderContext: Render.ShaderContext) (shader: Render.Shader) =
+    context.InputAssembler.InputLayout <- null
+    context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
+    context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
+    context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
+
+    shaderContext.Shader <- shader
+
+    context.Draw(3, 0)
+
 form.KeyUp.Add(fun args ->
     if args.Alt && args.KeyCode = System.Windows.Forms.Keys.Oemcomma then
         let w = WinUI.PropertyGrid.create (Core.DbgVars.getVariables() |> Array.map (fun (name, v) -> name, box v))
@@ -309,12 +318,6 @@ MessagePump.Run(form, fun () ->
 
     // light & shade
     context.OutputMerger.SetTargets(colorBuffer.ColorView)
-    context.InputAssembler.InputLayout <- null
-    context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
-    context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
-    context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
-
-    shaderContext.Shader <- lightDirectional.Value
 
     shaderContext?gbufSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
     shaderContext?gbufAlbedo <- albedoBuffer.View
@@ -322,7 +325,7 @@ MessagePump.Run(form, fun () ->
     shaderContext?gbufNormal <- normalBuffer.View
     shaderContext?gbufDepth <- depthBuffer.View
 
-    context.Draw(3, 0)
+    renderFullScreenTri context shaderContext lightDirectional.Value
 
     // add some spot lights!
     let mutable blendon = BlendStateDescription()
@@ -367,23 +370,18 @@ MessagePump.Run(form, fun () ->
         fillShadowBuffer context shaderContext lightCamera shadowBuffer
 
         // draw spot light
-        shaderContext?camera <- camera
-
         context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
         context.OutputMerger.SetTargets(colorBuffer.ColorView)
-        context.InputAssembler.InputLayout <- null
-        context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
-        context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
-        context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
-        context.OutputMerger.BlendState <- BlendState.FromDescription(device.Device, blendon)
 
-        shaderContext.Shader <- lightSpot.Value
+        shaderContext?camera <- camera
         shaderContext?light <- light
         shaderContext?lightCamera <- lightCamera
         shaderContext?shadowMap <- shadowBuffer.View
         shaderContext?shadowSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.ComparisonMinMagMipLinear, ComparisonFunction = Comparison.Less))
 
-        context.Draw(3, 0)
+        context.OutputMerger.BlendState <- BlendState.FromDescription(device.Device, blendon)
+
+        renderFullScreenTri context shaderContext lightSpot.Value
 
         context.OutputMerger.BlendState <- null
 
@@ -391,31 +389,19 @@ MessagePump.Run(form, fun () ->
     use ldrBuffer = rtpool.Acquire("scene/ldr", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
 
     context.OutputMerger.SetTargets(ldrBuffer.ColorView)
-    context.InputAssembler.InputLayout <- null
-    context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
-    context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
-    context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
-
-    shaderContext.Shader <- postfxTonemap.Value
 
     shaderContext?defaultSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
     shaderContext?colorMap <- colorBuffer.View
 
-    context.Draw(3, 0)
+    renderFullScreenTri context shaderContext postfxTonemap.Value
 
     // fxaa blit
     context.OutputMerger.SetTargets(device.BackBuffer.ColorView)
-    context.InputAssembler.InputLayout <- null
-    context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
-    context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
-    context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
-
-    shaderContext.Shader <- postfxFxaa.Value
 
     shaderContext?defaultSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
     shaderContext?colorMap <- ldrBuffer.View
 
-    context.Draw(3, 0)
+    renderFullScreenTri context shaderContext postfxFxaa.Value
 
     device.SwapChain.Present(dbgPresentInterval.Value, PresentFlags.None) |> ignore
 
