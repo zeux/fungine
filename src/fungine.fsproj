@@ -17,6 +17,7 @@
     <Compile Include="core\serialization\version.fs" />
     <Compile Include="core\serialization\save.fs" />
     <Compile Include="core\serialization\load.fs" />
+    <Compile Include="core\serialization\fixup.fs" />
     <Compile Include="core\serialization\tests.fs" />
     <Compile Include="core\data\node.fs" />
     <Compile Include="core\data\load.fs" />
