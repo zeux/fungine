@@ -1,3 +1,2 @@
-#define DEPTH_ONLY 0
+#define DEPTH_ONLY 1
 #include "fill_default.h"
-

@@ -56,6 +56,7 @@ let loader = Asset.Loader(assetDB, assetLoaders |> dict)
 let _ = assets.assetWatcher loader
 
 let gbufferFill = loader.Load<Render.Shader> ".build/src/shaders/gbuffer_fill_default.shader"
+let depthFill = loader.Load<Render.Shader> ".build/src/shaders/depth_fill_default.shader"
 let lightDirectional = loader.Load<Render.Shader> ".build/src/shaders/lighting/directional.shader"
 let lightSpot = loader.Load<Render.Shader> ".build/src/shaders/lighting/spot.shader"
 let postfxTonemap = loader.Load<Render.Shader> ".build/src/shaders/postfx/tonemap.shader"
@@ -190,7 +191,7 @@ type Material(roughness: float32, smoothness: float32) =
 
 let cbPool = Render.ConstantBufferPool(device.Device)
 
-let renderScene (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) =
+let renderScene (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) (shader: Render.Shader) =
     context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.Less))
 
     let fillMode = if dbgWireframe.Value then FillMode.Wireframe else FillMode.Solid
@@ -199,7 +200,7 @@ let renderScene (context: DeviceContext) (shaderContext: Render.ShaderContext) (
     context.InputAssembler.InputLayout <- layout
     context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
 
-    shaderContext.Shader <- gbufferFill.Data
+    shaderContext.Shader <- shader
 
     shaderContext?camera <- camera
     shaderContext?defaultSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbgTexfilter.Value, MaximumAnisotropy = 16, MaximumLod = infinityf))
@@ -232,7 +233,7 @@ let fillGBuffer (context: DeviceContext) (shaderContext: Render.ShaderContext) (
     context.OutputMerger.SetTargets(depthBuffer.DepthView, [|albedoBuffer; specBuffer; normalBuffer|] |> Array.map (fun rt -> rt.ColorView))
 
     Performance.BeginEvent(Color4(), "gbuffer") |> ignore
-    renderScene context shaderContext camera
+    renderScene context shaderContext camera gbufferFill.Data
     Performance.EndEvent() |> ignore
 
 let fillShadowBuffer (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) (shadowBuffer: Render.RenderTarget) =
@@ -243,10 +244,10 @@ let fillShadowBuffer (context: DeviceContext) (shaderContext: Render.ShaderConte
 
     context.ClearRenderTargetView(dummyBuffer.ColorView, Color4())
 
-    context.OutputMerger.SetTargets(shadowBuffer.DepthView, dummyBuffer.ColorView)
+    context.OutputMerger.SetTargets(shadowBuffer.DepthView, [||])
 
     Performance.BeginEvent(Color4(), "shadowbuffer") |> ignore
-    renderScene context shaderContext camera
+    renderScene context shaderContext camera depthFill.Data
     Performance.EndEvent() |> ignore
 
 form.KeyUp.Add(fun args ->
