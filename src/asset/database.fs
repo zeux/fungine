@@ -25,21 +25,24 @@ type internal Data() =
 type Database() =
     let assets = Dictionary<string, WeakReference<Data>>()
 
+    // normalize path
+    let normalize path = Path.GetFullPath(path).ToLowerInvariant()
+
     // fetch strong pointer to asset data from cache by path; assume single-threaded access
     member private this.TryGetUnsafe(path, data: byref<Data>) =
         let mutable wrdata = null
         assets.TryGetValue(path, &wrdata) && wrdata.TryGetTarget(&data)
 
     // get existing asset or add a new one by path, try both raw and normalized paths; assume single-threaded access
-    // returns true if a new entry was inserted
+    // returns true if the asset was found
     member private this.GetOrAddUnsafe(path, data: byref<Data>) =
         // try raw path
-        if this.TryGetUnsafe(path, &data) then false
+        if this.TryGetUnsafe(path, &data) then true
         else
             // try normalized path
-            let npath = Path.GetFullPath(path).ToLowerInvariant()
+            let npath = normalize path
 
-            if this.TryGetUnsafe(npath, &data) then false
+            if this.TryGetUnsafe(npath, &data) then true
             else
                 data <- Data()
 
@@ -49,23 +52,21 @@ type Database() =
                 assets.[path] <- wr
                 assets.[npath] <- wr
 
-                true
+                false
 
     // get existing asset or add a new one by path, try both raw and normalized paths; assume single-threaded access
-    // returns true if a new entry was inserted
-    member private this.GetOrAdd(path, data: byref<Data>) =
+    // returns true if the asset was found
+    member internal this.GetOrAdd(path, data: byref<Data>) =
         Monitor.Enter(assets)
         try
             this.GetOrAddUnsafe(path, &data)
         finally
             Monitor.Exit(assets)
 
-    // load asset
-    member internal this.Load(path, loader) =
-        let mutable data = null
-
-        // add asset to database and call loader if necessary
-        if this.GetOrAdd(path, &data) then
-            loader path data
-
-        data
+    // get existing asset
+    member internal this.TryFind(path, data: byref<Data>) =
+        Monitor.Enter(assets)
+        try
+            this.TryGetUnsafe(normalize path, &data)
+        finally
+            Monitor.Exit(assets)

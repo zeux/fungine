@@ -25,9 +25,6 @@ System.Console.WindowWidth <- max System.Console.WindowWidth 140
 // build assets
 assets.context.Run()
 
-// start asset watcher
-assets.watcher.Force() |> ignore
-
 let dbgNulldraw = Core.DbgVar(false, "render/null draw")
 let dbgWireframe = Core.DbgVar(false, "render/wireframe")
 let dbgPresentInterval = Core.DbgVar(0, "vsync interval")
@@ -54,6 +51,9 @@ let assetLoaders =
     ]
 
 let loader = Asset.Loader(assetDB, assetLoaders |> dict)
+
+// start asset watcher
+let _ = assets.assetWatcher loader
 
 let gbufferFill = loader.Load<Render.Shader> ".build/src/shaders/gbuffer_fill_default.shader"
 let lightDirectional = loader.Load<Render.Shader> ".build/src/shaders/lighting/directional.shader"

@@ -19,21 +19,27 @@ type Loader(database: Database, loaders: LoaderMap) =
     
             loop ())
 
+    // force load asset data by path
+    member private this.ForceLoadDataAsync(path, data: Data) =
+        let ext = Path.GetExtension(path)
+
+        match loaders.TryGetValue(ext) with
+        | true, l ->
+            agent.Post(fun () ->
+                try
+                    data.Value <- l path
+                with
+                | e ->
+                    printfn "Error loading %s: %s" path e.Message
+                    data.Event.Set())
+        | _ -> failwithf "Unknown asset type %s" ext
+
     // load asset data by path
     member internal this.LoadDataAsync path =
-        database.Load(path, fun path data ->
-            let ext = Path.GetExtension(path)
-
-            match loaders.TryGetValue(ext) with
-            | true, l ->
-                agent.Post(fun () ->
-                    try
-                        data.Value <- l path
-                    with
-                    | e ->
-                        printfn "Error loading %s: %s" path e.Message
-                        data.Event.Set())
-            | _ -> failwithf "Unknown asset type %s" ext)
+        let mutable data = null
+        if not (database.GetOrAdd(path, &data)) then
+            this.ForceLoadDataAsync(path, data)
+        data
 
     // load asset by path
     member this.LoadAsync path =
@@ -47,6 +53,12 @@ type Loader(database: Database, loaders: LoaderMap) =
         ref.Wait()
         if not ref.IsReady then failwithf "Error loading asset %s" path
         ref
+
+    // try to reload the asset by path
+    member this.TryReload path =
+        let mutable data = null
+        if database.TryFind(path, &data) then
+            this.ForceLoadDataAsync(path, data)
 
 // asset reference
 and Ref<'T> internal(path: string, data: Data) =
@@ -72,20 +84,3 @@ and Ref<'T> internal(path: string, data: Data) =
     member private this.Fixup ctx =
         // $$$ just make a valid empty ref for now
         data <- Data()
-
-(*
-
-    // fixup callback
-    member private this.Fixup ctx =
-        if path <> null then data <- loadInternalCached path
-
-// try to reload asset
-let tryReload path =
-    lock assets (fun () ->
-        match assets.TryGetValue(normalize path) with
-        | true, data ->
-            match data.TryGetTarget() with
-            | true, value -> loadInternal value path
-            | _ -> ()
-        | _ -> ())
-*)
