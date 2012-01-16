@@ -8,10 +8,15 @@ open SlimDX.Direct3D11
 #nowarn "1173" // F# 3.0 compiler regression on ?<- operator as class member
 
 module private ShaderUtil =
+    // dynamically-indexed arrays of arbitrary sizes are declared as Type name[2] in the shader, because name[1]
+    // results in fxc converting dynamic indexing to static; so let's make sure we're uploading at least 2 elements
+    // to keep DXDebug happy
+    let minArraySize = 2
+
     // upload a single object or an object array into a constant buffer
     let uploadConstantData (cbPool: ConstantBufferPool) (context: DeviceContext) (data: obj) =
         let elementSize, upload = Render.ShaderStruct.getUploadDelegate (data.GetType())
-        let size = elementSize * (match data with :? Array as a -> a.Length | _ -> 1)
+        let size = elementSize * (match data with :? Array as a -> max minArraySize a.Length | _ -> 1)
         let cb = cbPool.Acquire size
         let scratch = cb.Scratch
         upload.Invoke(data, scratch.Data.DataPointer, size)
