@@ -57,11 +57,13 @@ type ShaderObject<'T when 'T: null>(bytecode: byte array, parameters: ShaderPara
     let mutable data = null
 
     // fixup callback
-    member private this.Fixup device =
+    member private this.Fixup ctx =
+        let device = Core.Serialization.Fixup.Get<Device>(ctx)
+
         // create shader object
         use stream = new DataStream(bytecode, canRead = true, canWrite = false)
         use bcobj = new SlimDX.D3DCompiler.ShaderBytecode(stream)
-        data <- System.Activator.CreateInstance(typeof<'T>, [|device; box bcobj|]) :?> 'T
+        data <- System.Activator.CreateInstance(typeof<'T>, [|box device; box bcobj|]) :?> 'T
 
         // fixup parameters
         parameters |> Array.iteri (fun i _ -> parameters.[i].Fixup())

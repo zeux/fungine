@@ -9,7 +9,8 @@ type Buffer(bindFlags, contents: byte array) =
     let mutable data = null
 
     // fixup callback
-    member private this.Fixup device =
+    member private this.Fixup ctx =
+        let device = Core.Serialization.Fixup.Get<Device>(ctx)
         use stream = new SlimDX.DataStream(contents, canRead = true, canWrite = false)
         data <- new SlimDX.Direct3D11.Buffer(device, stream, BufferDescription(SizeInBytes = contents.Length, BindFlags = bindFlags))
 

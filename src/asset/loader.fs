@@ -6,10 +6,10 @@ open System.IO
 open System.Threading
 
 // asset loaders
-type LoaderMap = IDictionary<string, string -> obj>
+type LoaderMap = IDictionary<string, string -> Loader -> obj>
 
 // asset loader
-type Loader(database: Database, loaders: LoaderMap) =
+and Loader(database: Database, loaders: LoaderMap) =
     let agent =
         MailboxProcessor.Start(fun inbox ->
             let rec loop () = async {
@@ -27,7 +27,7 @@ type Loader(database: Database, loaders: LoaderMap) =
         | true, l ->
             agent.Post(fun () ->
                 try
-                    data.Value <- l path
+                    data.Value <- l path this
                 with
                 | e ->
                     printfn "Error loading %s: %s" path e.Message
@@ -82,5 +82,4 @@ and Ref<'T> internal(path: string, data: Data) =
 
     // asset fixup
     member private this.Fixup ctx =
-        // $$$ just make a valid empty ref for now
-        data <- Data()
+        data <- Core.Serialization.Fixup.Get<Loader>(ctx).LoadDataAsync(path)

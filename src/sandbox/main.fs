@@ -43,12 +43,13 @@ form.SizeChanged.Add(fun args ->
 
 // setup asset loaders
 let assetDB = Asset.Database()
+let fixupContext loader = Core.Serialization.Fixup.Create (device.Device, loader)
 let loader =
     Asset.Loader(assetDB,
         dict [
-            ".dds", Render.TextureLoader.load device.Device >> box
-            ".mesh", fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Mesh |> box
-            ".shader", fun path -> (Core.Serialization.Load.fromFileEx path device.Device) :?> Render.Shader |> box
+            ".dds", fun path l -> Render.TextureLoader.load device.Device path |> box
+            ".mesh", fun path l -> (Core.Serialization.Load.fromFileEx path (fixupContext l)) :?> Render.Mesh |> box
+            ".shader", fun path l -> (Core.Serialization.Load.fromFileEx path (fixupContext l)) :?> Render.Shader |> box
         ])
 
 // start asset watcher
