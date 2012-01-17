@@ -10,6 +10,7 @@ type LoaderMap = IDictionary<string, string -> Loader -> obj>
 
 // asset loader
 and Loader(database: Database, loaders: LoaderMap) =
+    // background loading agent
     let agent =
         MailboxProcessor.Start(fun inbox ->
             let rec loop () = async {
@@ -19,20 +20,23 @@ and Loader(database: Database, loaders: LoaderMap) =
     
             loop ())
 
+    // execute asset operation with exception capture
+    let protectOp path (data: Asset) op =
+        try
+            op ()
+        with e ->
+            printfn "Error loading %s: %s" path e.Message
+            data.SetException(e)
+
     // force load asset data by path
-    member private this.ForceLoadDataAsync(path, data: Data) =
+    member private this.ForceLoadDataAsync(path, data: Asset) =
         let ext = Path.GetExtension(path)
 
         match loaders.TryGetValue(ext) with
         | true, l ->
-            agent.Post(fun () ->
-                try
-                    data.Value <- l path this
-                with
-                | e ->
-                    printfn "Error loading %s: %s" path e.Message
-                    data.Event.Set())
-        | _ -> failwithf "Unknown asset type %s" ext
+            agent.Post(fun () -> protectOp path data (fun () -> data.SetResult(l path this)))
+        | _ ->
+            protectOp path data (fun () -> failwithf "Unknown asset type %s" ext)
 
     // load asset data by path
     member internal this.LoadDataAsync path =
@@ -51,7 +55,6 @@ and Loader(database: Database, loaders: LoaderMap) =
     member this.Load path =
         let ref = this.LoadAsync path
         ref.Wait()
-        if not ref.IsReady then failwithf "Error loading asset %s" path
         ref
 
     // try to reload the asset by path
@@ -61,7 +64,7 @@ and Loader(database: Database, loaders: LoaderMap) =
             this.ForceLoadDataAsync(path, data)
 
 // asset reference
-and Ref<'T> internal(path: string, data: Data) =
+and Ref<'T> internal(path: string, data: Asset) =
     [<NonSerialized>]
     let mutable data = data
 
@@ -69,10 +72,12 @@ and Ref<'T> internal(path: string, data: Data) =
     new (path) = Ref(path, null)
 
     // is asset loaded?
-    member this.IsReady = data.Value <> null
+    member this.IsReady = data.IsReady
 
     // wait for asset to be ready
-    member this.Wait () = data.Event.Wait()
+    member this.Wait () : unit =
+        data.Event.Wait()
+        ignore data.Value // throw pending exceptions if any
 
     // value accessor
     member this.Value = data.Value :?> 'T

@@ -5,37 +5,21 @@ open System.Collections.Generic
 open System.IO
 open System.Threading
 
-// asset data
-[<AllowNullLiteral>]
-type internal Data() =
-    let event = new ManualResetEventSlim()
-    let mutable value: obj = null
-
-    // asset load completion event
-    member this.Event = event
-
-    // asset value
-    member this.Value
-        with get () = value
-        and set v =
-            value <- v
-            event.Set()
-
 // asset database
 type Database() =
-    let assets = Dictionary<string, WeakReference<Data>>()
+    let assets = Dictionary<string, WeakReference<Asset>>()
 
     // normalize path
     let normalize path = Path.GetFullPath(path).ToLowerInvariant()
 
     // fetch strong pointer to asset data from cache by path; assume single-threaded access
-    member private this.TryGetUnsafe(path, data: byref<Data>) =
+    member private this.TryGetUnsafe(path, data: byref<Asset>) =
         let mutable wrdata = null
         assets.TryGetValue(path, &wrdata) && wrdata.TryGetTarget(&data)
 
     // get existing asset or add a new one by path, try both raw and normalized paths; assume single-threaded access
     // returns true if the asset was found
-    member private this.GetOrAddUnsafe(path, data: byref<Data>) =
+    member private this.GetOrAddUnsafe(path, data: byref<Asset>) =
         // try raw path
         if this.TryGetUnsafe(path, &data) then true
         else
@@ -44,10 +28,10 @@ type Database() =
 
             if this.TryGetUnsafe(npath, &data) then true
             else
-                data <- Data()
+                data <- Asset()
 
                 // insert new entry for both raw and normalized paths
-                let wr = WeakReference<Data>(data)
+                let wr = WeakReference<Asset>(data)
 
                 assets.[path] <- wr
                 assets.[npath] <- wr
@@ -56,7 +40,7 @@ type Database() =
 
     // get existing asset or add a new one by path, try both raw and normalized paths; assume single-threaded access
     // returns true if the asset was found
-    member internal this.GetOrAdd(path, data: byref<Data>) =
+    member internal this.GetOrAdd(path, data: byref<Asset>) =
         Monitor.Enter(assets)
         try
             this.GetOrAddUnsafe(path, &data)
@@ -64,7 +48,7 @@ type Database() =
             Monitor.Exit(assets)
 
     // get existing asset
-    member internal this.TryFind(path, data: byref<Data>) =
+    member internal this.TryFind(path, data: byref<Asset>) =
         Monitor.Enter(assets)
         try
             this.TryGetUnsafe(normalize path, &data)

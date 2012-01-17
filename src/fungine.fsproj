@@ -33,6 +33,7 @@
     <Compile Include="math\types.fs" />
     <Compile Include="math\camera.fs" />
     <Compile Include="math\pack.fs" />
+    <Compile Include="asset\asset.fs" />
     <Compile Include="asset\database.fs" />
     <Compile Include="asset\loader.fs" />
     <Compile Include="render\format.fs" />
