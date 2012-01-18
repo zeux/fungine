@@ -507,6 +507,7 @@ MessagePump.Run(form, fun () ->
         with
     | Some rt ->
         shaderContext?colorMap <- rt.View
+        shaderContext?blitUnpackDepth <- box (dbgDebugTarget.Value = DebugTarget.Depth)
 
         renderFullScreenTri context shaderContext postfxBlit.Value
     | None -> ()

@@ -1,6 +1,11 @@
+#include <auto_Camera.h>
+
 SamplerState defaultSampler;
 
 Texture2D<float4> colorMap;
+
+cbuffer blitUnpackDepth { bool blitUnpackDepth; }
+cbuffer camera { Camera camera; };
 
 struct PS_IN
 {
@@ -23,6 +28,19 @@ PS_IN vsMain(uint id: SV_VertexID)
 float4 psMain(PS_IN I): SV_Target
 {
     float3 color = colorMap.Sample(defaultSampler, I.uv).rgb;
+
+    if (blitUnpackDepth)
+    {
+        float depth = color.x;
+        float4x4 proj = camera.projection;
+
+        float zn = -proj._34 / proj._33;
+        float zf = (proj._33 * zn) / (proj._33 - 1);
+
+        float z = proj._34 / (depth * proj._43 - proj._33);
+
+        color = sqrt(saturate((z - zn) / (zf - zn)));
+    }
 
     return float4(color, 1);
 }
