@@ -173,7 +173,7 @@ type Camera(view: Matrix34, projection: Matrix44) =
     member this.Projection = projection
     member this.ViewProjection = projection * Matrix44(view)
     member this.ViewProjectionInverse = Matrix44.Inverse(this.ViewProjection)
-    member this.EyePosition = view.Column 3
+    member this.EyePosition = Matrix34.InverseAffine(view).Column 3
 
 [<Render.ShaderStruct>]
 type SpotLight(position: Vector3, direction: Vector3, outerAngle: float32, innerAngle: float32, radius: float32, color: Vector3) =
