@@ -142,7 +142,7 @@ module ShaderStruct =
         let objLocal = gen.DeclareLocal(typ)
 
         gen.Emit(OpCodes.Ldarg_0)
-        gen.Emit(OpCodes.Castclass, typ)
+        gen.Emit(OpCodes.Unbox_Any, typ)
         gen.Emit(OpCodes.Stloc, objLocal)
 
         // write a single element (object has one element, array has several elements)
