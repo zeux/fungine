@@ -13,14 +13,23 @@ type MouseButton =
 // mouse state
 type private MouseState =
     { axisDeltas: int array // relative movement for mouse axes (x, y, wheel)
+      cursorPosition: int array // mouse cursor position
       buttonsDown: bool array // mouse button state
     }
 
     // clone
-    member this.Clone () = { new MouseState with axisDeltas = Array.copy this.axisDeltas and buttonsDown = Array.copy this.buttonsDown }
+    member this.Clone () =
+        { new MouseState
+            with axisDeltas = Array.copy this.axisDeltas
+            and cursorPosition = Array.copy this.cursorPosition
+            and buttonsDown = Array.copy this.buttonsDown }
 
     // default ctor
-    static member Default = { new MouseState with axisDeltas = Array.create 3 0 and buttonsDown = Array.create 3 false }
+    static member Default =
+        { new MouseState
+            with axisDeltas = Array.create 3 0
+            and cursorPosition = Array.create 2 0
+            and buttonsDown = Array.create 3 false }
 
 // mouse input device
 type Mouse(control: Control) =
@@ -45,6 +54,7 @@ type Mouse(control: Control) =
 
         control.MouseDown.Add(fun args -> for b in buttons args.Button do current.buttonsDown.[int b] <- true)
         control.MouseUp.Add(fun args -> for b in buttons args.Button do current.buttonsDown.[int b] <- false)
+        control.MouseMove.Add(fun args -> current.cursorPosition.[0] <- args.X; current.cursorPosition.[1] <- args.Y)
 
     // reset data to default if focus is lost
     do
@@ -59,6 +69,10 @@ type Mouse(control: Control) =
     member this.AxisX = updated.axisDeltas.[0]
     member this.AxisY = updated.axisDeltas.[1]
     member this.AxisWheel = updated.axisDeltas.[2]
+
+    // mouse cursor
+    member this.CursorX = updated.cursorPosition.[0]
+    member this.CursorY = updated.cursorPosition.[1]
 
     // mouse buttons
     member this.ButtonDown (button: MouseButton) = updated.buttonsDown.[int button]
