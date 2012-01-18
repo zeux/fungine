@@ -61,6 +61,7 @@ let lightDirectional = loader.Load<Render.Shader> ".build/src/shaders/lighting/d
 let lightSpot = loader.Load<Render.Shader> ".build/src/shaders/lighting/spot.shader"
 let postfxTonemap = loader.Load<Render.Shader> ".build/src/shaders/postfx/tonemap.shader"
 let postfxFxaa = loader.Load<Render.Shader> ".build/src/shaders/postfx/fxaa.shader"
+let postfxBlit = loader.Load<Render.Shader> ".build/src/shaders/postfx/blit.shader"
 
 let vertexSize = (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).size
 let layout = new InputLayout(device.Device, gbufferFill.Value.VertexSignature.Resource, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
@@ -83,13 +84,16 @@ let mouse = Input.Mouse(form)
 let keyboard = Input.Keyboard(form)
 let cameraController = Camera.CameraController(mouse, keyboard, Position = Vector3(-7.100705f, 47.303590f, 22.963710f), Yaw = -1.3f, Pitch = 0.15f)
 
-let scene = List<Asset.Ref<Render.Mesh> * Matrix34>()
+let scene = List<Asset.Ref<Render.Mesh> * Matrix34 ref>()
 
-let placeMesh path parent =
+let placeMeshRef path parent =
     try
         let mesh = loader.LoadAsync (".build/art/" + System.IO.Path.ChangeExtension(path, ".mesh"))
         scene.Add((mesh, parent))
     with e -> printfn "%s" e.Message
+
+let placeMesh path parent =
+    placeMeshRef path (ref parent)
 
 let placeFile path parent =
     let nodes =
@@ -137,13 +141,15 @@ let placeFile path parent =
 let sceneName = "heaven"
 // placeFile (sprintf "art/%s/%s.world" sceneName sceneName) Matrix34.Identity
 
-placeMesh "slave_driver/cc_slave_driver.mesh" (Matrix34.Translation(10.f-6.f, 10.f-2.f, 0.f) * Matrix34.Scaling(0.07f, 0.07f, 0.07f))
+let gizmoRef = ref (Matrix34.Translation(10.f-6.f, 10.f-2.f, 0.f) * Matrix34.Scaling(0.07f, 0.07f, 0.07f))
+
+placeMeshRef "slave_driver/cc_slave_driver.mesh" gizmoRef
 placeMesh "heaven/meshes/buildings/lab.mesh" Matrix34.Identity
 placeMesh "heaven/meshes/buildings/lab_gears.mesh" Matrix34.Identity
 
 let rng = System.Random()
 
-let size = 50
+let size = 10
 for x = -size to size do
     for y = -size to size do
         placeMesh (sprintf "floor/floor%02d.mesh" (rng.Next(1, 15))) (Matrix34.Translation(float32 x * 2.f, float32 y * 2.f, 0.f))
@@ -205,10 +211,12 @@ let renderScene (context: DeviceContext) (shaderContext: Render.ShaderContext) (
     shaderContext?camera <- camera
     shaderContext?defaultSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbgTexfilter.Value, MaximumAnisotropy = 16, MaximumLod = infinityf))
 
-    for mesh, instances in scene |> Seq.choose (fun (mesh, transform) -> if mesh.IsReady then Some (mesh.Value, transform) else None) |> Seq.groupByRef (fun (mesh, transform) -> mesh) do
+    let sceneCopy = lock scene (fun () -> scene.ToArray())
+
+    for mesh, instances in sceneCopy |> Seq.choose (fun (mesh, transform) -> if mesh.IsReady then Some (mesh.Value, transform) else None) |> Seq.groupByRef (fun (mesh, transform) -> mesh) do
         if dbgNulldraw.Value then () else
 
-        shaderContext?transforms <- instances |> Array.map (fun (mesh, transform) -> transform)
+        shaderContext?transforms <- instances |> Array.map (fun (mesh, transform) -> !transform)
 
         for fragment in mesh.fragments do
             let texture (tex: Asset.Ref<Render.Texture> option) dummy = if tex.IsSome && tex.Value.IsReady then tex.Value.Value.View else dummy
@@ -267,8 +275,6 @@ form.KeyUp.Add(fun args ->
         w.KeyUp.Add (fun args -> if args.Key = System.Windows.Input.Key.Escape then w.Close())
         w.Show())
 
-let frameTimer = Diagnostics.Stopwatch.StartNew()
-
 let dbgSpotOffset = Core.DbgVar(30.f, "spot/offset")
 let dbgSpotHeight = Core.DbgVar(30.f, "spot/height")
 let dbgSpotInnercone = Core.DbgVar(19.f, "spot/inner cone")
@@ -276,19 +282,88 @@ let dbgSpotOutercone = Core.DbgVar(20.f, "spot/outer cone")
 let dbgSpotRadius = Core.DbgVar(100.f, "spot/radius")
 let dbgSpotIntensity = Core.DbgVar(8.f, "spot/intensity")
 let dbgSpotSeed = Core.DbgVar(1, "spot/seed")
-let dbgSpotCount = Core.DbgVar(3, "spot/count")
+let dbgSpotCount = Core.DbgVar(1, "spot/count")
 
-let frameTimes = Array.zeroCreate 32
-let frameTimeIndex = ref 0
+type DebugTarget =
+    | None = 0
+    | Albedo = 1
+    | Normal = 2
+    | Specular = 3
+    | Depth = 4
+
+let dbgDebugTarget = Core.DbgVar(DebugTarget.None, "render/debug target")
+
+type Timer() =
+    let timer = Diagnostics.Stopwatch()
+    let times = Array.create 32 0.f
+    let mutable index = 0
+
+    member this.Start() =
+        index <- (index + 1) % times.Length
+        timer.Restart()
+
+    member this.Stop() =
+        timer.Stop()
+        times.[index] <- float32 timer.Elapsed.TotalSeconds
+
+    member this.Current = times.[index]
+
+    member this.Average = Array.average times
+    member this.Min = Array.min times
+    member this.Max = Array.max times
+
+    override this.ToString() = sprintf "%.2f ms [%.2f..%.2f]" (1000.f * this.Average) (1000.f * this.Min) (1000.f * this.Max)
+
+// mesh reloader, bwuhahaha
+let dbgReloadMeshes = Core.DbgVar(false, "reload meshes")
+
+Async.Start <| async {
+    let files = BuildSystem.Node.Glob ".build/**.mesh"
+
+    for i in Seq.initInfinite id do
+        while not dbgReloadMeshes.Value do
+            do! Async.Sleep 100
+        try
+            let mesh = loader.Load files.[i % files.Length].Path
+            lock scene (fun () -> scene.RemoveAt(scene.Count - 1); scene.Add((mesh, ref (Matrix34.Translation(10.f, 10.f, 0.f)))))
+        with e ->
+            printfn "%s" e.Message
+}
+
+let frameTimer = Timer()
+let bodyTimer = Timer()
+let presentTimer = Timer()
+
+frameTimer.Start()
+
+let getPerspectiveCorrectLerpFactor (A: float32) (B: float32) (t: float32) =
+    // lerp(A, B, u) = lerp_persp(A, B, t) = 1 / lerp(1 / A, 1 / B, t)
+    // A + (B - A) * u = 1 / (1 / A + (1 / B - 1 / A) * t)
+    // u = (A * t) / (B + (A - B) * t)
+    (A * t) / (B + (A - B) * t)
+
+let getMoveOffset (point: Vector3) (axis: Vector3) (viewProjection: Matrix44) (dx: int) (dy: int) (width: int) (height: int) =
+    let fromClip = Matrix44.Transform(viewProjection, Vector4(point, 1.f))
+    let toClip = Matrix44.Transform(viewProjection, Vector4(point + axis, 1.f))
+
+    let dirClip = toClip.xy / toClip.w - fromClip.xy / fromClip.w
+    let dxdyClip = Vector2(float32 dx / float32 (width - 1) * 2.f, float32 dy / float32 (height - 1) * -2.f)
+
+    let lerpClip = Vector2.Dot(dirClip, dxdyClip) / dirClip.LengthSquared
+    let lerpWorld = getPerspectiveCorrectLerpFactor fromClip.w toClip.w lerpClip
+
+    lerpWorld
+
+let cursorPos = ref (0, 0)
 
 MessagePump.Run(form, fun () ->
-    let dt = float32 frameTimer.Elapsed.TotalSeconds
-    frameTimer.Restart()
+    frameTimer.Stop()
+    let dt = frameTimer.Current
+    frameTimer.Start()
 
-    frameTimes.[!frameTimeIndex] <- dt
-    frameTimeIndex := (!frameTimeIndex + 1) % frameTimes.Length
+    form.Text <- sprintf "frame: %O; body: %O; present: %O" frameTimer bodyTimer presentTimer
 
-    form.Text <- sprintf "frame: %.2f ms [%.2f..%.2f]" (1000.f * Array.average frameTimes) (1000.f * Array.min frameTimes) (1000.f * Array.max frameTimes)
+    bodyTimer.Start()
 
     mouse.Update()
     keyboard.Update()
@@ -302,6 +377,23 @@ MessagePump.Run(form, fun () ->
 
     // main camera
     let camera = Camera(cameraController.ViewMatrix, Math.Camera.projectionPerspective (dbgFov.Value / 180.f * float32 Math.PI) (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 0.1f 1000.f)
+
+    // move gizmo test
+    let dx = mouse.CursorX - fst !cursorPos
+    let dy = mouse.CursorY - snd !cursorPos
+    cursorPos := (mouse.CursorX, mouse.CursorY)
+
+    match
+        match [|Input.Key.X; Input.Key.Y; Input.Key.Z|] |> Array.map keyboard.KeyDown with
+        | [|true; _; _|] -> Some Vector3.UnitX
+        | [|_; true; _|] -> Some Vector3.UnitY
+        | [|_; _; true|] -> Some Vector3.UnitZ
+        | _ -> None
+        with
+    | Some axis ->
+        let offset = getMoveOffset ((!gizmoRef).Column 3) axis camera.ViewProjection dx dy form.ClientSize.Width form.ClientSize.Height
+        gizmoRef := Matrix34.Translation(axis * offset) * !gizmoRef
+    | None -> ()
 
     // fill gbuffer
     use albedoBuffer = rtpool.Acquire("gbuffer/albedo", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
@@ -404,7 +496,28 @@ MessagePump.Run(form, fun () ->
 
     renderFullScreenTri context shaderContext postfxFxaa.Value
 
+    match 
+        match dbgDebugTarget.Value with
+        | DebugTarget.None -> None
+        | DebugTarget.Albedo -> Some albedoBuffer
+        | DebugTarget.Normal -> Some normalBuffer
+        | DebugTarget.Specular -> Some specularBuffer
+        | DebugTarget.Depth -> Some depthBuffer
+        | t -> failwithf "Unknown target value %O" t
+        with
+    | Some rt ->
+        shaderContext?colorMap <- rt.View
+
+        renderFullScreenTri context shaderContext postfxBlit.Value
+    | None -> ()
+
+    bodyTimer.Stop()
+
+    presentTimer.Start()
+
     device.SwapChain.Present(dbgPresentInterval.Value, PresentFlags.None) |> ignore
+
+    presentTimer.Stop()
 
     firsttime.Force() |> ignore)
 
