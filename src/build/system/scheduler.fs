@@ -13,28 +13,38 @@ type private TaskState =
     with static member Create(task) = { task = task; runner = null }
 
 // Threading.TaskScheduler implementation for specified concurrency level; guarantees that inline task execution succeeds
+// Tasks are only added before Start() or from other tasks, so workers can determine when the last task is done and exit
+// Effectively, waiting for workers to exit is equivalent to waiting for the dynamically spawned task tree to be complete
 type private ConcurrentTaskScheduler(jobs) as this =
     inherit Tasks.TaskScheduler()
 
     let tasks = new BlockingCollection<_>(ConcurrentQueue())
     let workers = Array.init jobs (fun _ -> new Tasks.Task(this.Worker, Tasks.TaskCreationOptions.LongRunning))
 
-    interface IDisposable with
-        member this.Dispose() =
-            tasks.CompleteAdding()
-            Tasks.Task.WaitAll(workers)
+    let mutable taskCounter = 0
 
-    member this.Start() =
+    member this.RunAll() =
         for w in workers do w.Start()
+        Tasks.Task.WaitAll(workers)
 
     member this.Worker () =
         let mutable task = Unchecked.defaultof<_>
         while tasks.TryTake(&task, Timeout.Infinite) do
             this.TryExecuteTask(task) |> ignore
 
-    override this.QueueTask(task) = tasks.Add(task)
+            let res = Interlocked.Decrement(&taskCounter)
+            assert (res >= 0)
+
+            // We processed last task, so it's impossible for any more tasks to be added
+            // Mark the task queue as complete so that all workers can fail to take one more task
+            if res = 0 then tasks.CompleteAdding()
+
+    override this.QueueTask(task) =
+        tasks.Add(task)
+        Interlocked.Increment(&taskCounter) |> ignore
+
     override this.TryExecuteTaskInline(task, taskWasPreviouslyQueued) = this.TryExecuteTask(task)
-    override this.GetScheduledTasks() = upcast tasks
+    override this.GetScheduledTasks() = tasks.ToArray() |> Seq.ofArray
     override this.MaximumConcurrencyLevel = jobs
 
 // synchronous task scheduler
@@ -216,21 +226,19 @@ type private TaskScheduler(db: Database) =
 
     // run all tasks
     member this.Run () =
-        use sch = new ConcurrentTaskScheduler(4)
+        let sch = ConcurrentTaskScheduler(4)
 
-        assert (scheduler = null)
-        scheduler <- sch :> Tasks.TaskScheduler
+        try
+            assert (scheduler = null)
+            scheduler <- sch :> Tasks.TaskScheduler
 
-        for t in tasks.ToArray() do
-            if t.runner <> null && t.runner.Status = Tasks.TaskStatus.Created then
-                t.runner.Start(scheduler)
-
-        sch.Start()
-
-        for t in tasks.ToArray() do
-            this.Wait(t)
-
-        scheduler <- null
+            for t in tasks.ToArray() do
+                if t.runner <> null && t.runner.Status = Tasks.TaskStatus.Created then
+                    t.runner.Start(scheduler)
+    
+            sch.RunAll()
+        finally
+            scheduler <- null
 
     // process file updates so that the next run will build the dependent tasks
     member this.UpdateInputs inputs =
