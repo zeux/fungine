@@ -10,7 +10,6 @@ open System.Threading
 type private TaskState =
     { task: Task
       mutable runner: Tasks.Task }
-    with static member Create(task) = { task = task; runner = null }
 
 // Threading.TaskScheduler implementation for specified concurrency level; guarantees that inline task execution succeeds
 // Tasks are only added before Start() or from other tasks, so workers can determine when the last task is done and exit
@@ -209,7 +208,7 @@ type private TaskScheduler(db: Database) =
 
     // add task to processing
     member this.Add (task: Task) =
-        let state = TaskState.Create(task)
+        let state = { new TaskState with task = task and runner = null }
 
         // add task to input -> task map
         for input in task.Sources do
@@ -238,6 +237,7 @@ type private TaskScheduler(db: Database) =
     
             sch.RunAll()
         finally
+            for t in tasks.ToArray() do t.runner <- null
             scheduler <- null
 
     // process file updates so that the next run will build the dependent tasks
@@ -247,10 +247,10 @@ type private TaskScheduler(db: Database) =
             | true, list ->
                 // update all tasks that depend on input
                 list |> Seq.sumBy (fun state ->
-                    if state.runner = null then 0
+                    if state.runner <> null then 0
                     else
                         // mark task as not ready & recursively process outputs
-                        state.runner <- new Tasks.Task(fun _ -> this.Run(state))
+                        this.TryStart(state)
                         1 + (state.task.Targets |> Array.sumBy update))
             | _ -> 0
 
