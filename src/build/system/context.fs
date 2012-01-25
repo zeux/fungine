@@ -1,6 +1,6 @@
 namespace BuildSystem
 
-open System.Collections.Generic
+open System.Collections.Concurrent
 open System.Diagnostics
 open System.IO
 
@@ -13,7 +13,7 @@ type Context(rootPath, buildPath) =
 
     let db = Database(buildPath + "/.builddb")
     let scheduler = TaskScheduler(db)
-    let tasks = Dictionary<string, Task>()
+    let tasks = ConcurrentDictionary<string, Task>()
 
     // get build path
     member this.BuildPath = buildPath
@@ -26,12 +26,11 @@ type Context(rootPath, buildPath) =
     // add task
     member this.Task(task: Task) =
         // check task uniqueness
-        match tasks.TryGetValue(task.Uid) with
-        | true, t ->
-            if task.Sources <> t.Sources || task.Builder <> t.Builder then failwithf "Duplicate task definitions found for task %s" task.Uid
-        | _ ->
-            tasks.Add(task.Uid, task)
+        if tasks.TryAdd(task.Uid, task) then
             scheduler.Add(task)
+        else
+            let t = tasks.[task.Uid]
+            if task.Sources <> t.Sources || task.Builder <> t.Builder then failwithf "Duplicate task definitions found for task %s" task.Uid
 
     // add task with source/target list
     member this.Task(builder, sources: Node array, targets: Node array) =

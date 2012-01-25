@@ -1,31 +1,48 @@
 namespace BuildSystem
 
+open System
 open System.Collections.Generic
+open System.Collections.Concurrent
 open System.IO
-
-// current task status
-type private TaskStatus =
-    | Created = 0
-    | Running = 1
-    | Completed = 2
+open System.Threading
 
 // current task state
-type private TaskState(task: Task) =
-    let mutable status = TaskStatus.Created
+type private TaskState =
+    { task: Task
+      mutable runner: Tasks.Task }
+    with static member Create(task) = { task = task; runner = null }
 
-    // task
-    member this.Task = task
+// Threading.TaskScheduler implementation for specified concurrency level; guarantees that inline task execution succeeds
+type private ConcurrentTaskScheduler(jobs) as this =
+    inherit Tasks.TaskScheduler()
 
-    // task status
-    member this.Status
-        with get () = status
-        and set value = status <- value
+    let tasks = new BlockingCollection<_>(ConcurrentQueue())
+    let workers = Array.init jobs (fun _ -> new Tasks.Task(this.Worker, Tasks.TaskCreationOptions.LongRunning))
+
+    interface IDisposable with
+        member this.Dispose() =
+            tasks.CompleteAdding()
+            Tasks.Task.WaitAll(workers)
+
+    member this.Start() =
+        for w in workers do w.Start()
+
+    member this.Worker () =
+        let mutable task = Unchecked.defaultof<_>
+        while tasks.TryTake(&task, Timeout.Infinite) do
+            this.TryExecuteTask(task) |> ignore
+
+    override this.QueueTask(task) = tasks.Add(task)
+    override this.TryExecuteTaskInline(task, taskWasPreviouslyQueued) = this.TryExecuteTask(task)
+    override this.GetScheduledTasks() = upcast tasks
+    override this.MaximumConcurrencyLevel = jobs
 
 // synchronous task scheduler
 type private TaskScheduler(db: Database) =
-    let taskByOutput = Dictionary<string, TaskState>()
-    let tasksByInput = Dictionary<string, List<TaskState>>()
-    let tasks = List<TaskState>()
+    let taskByOutput = ConcurrentDictionary<string, TaskState>()
+    let tasksByInput = ConcurrentDictionary<string, List<TaskState>>()
+    let tasks = ConcurrentBag<TaskState>()
+    let mutable scheduler = null
 
     // list of differences between two signatures
     member private this.Diff (lhs: TaskSignature, rhs: TaskSignature) =
@@ -103,13 +120,10 @@ type private TaskScheduler(db: Database) =
                 Output.debug Output.Options.DebugExplain (fun e -> e "Building %s: no previous build info" task.Uid)
                 None
 
-    // wait for task to complete, running it inline if necessary
+    // wait for task to complete
     member private this.Wait (state: TaskState) =
-        match state.Status with
-        | TaskStatus.Created -> this.Run state
-        | TaskStatus.Running -> failwithf "Dependency cycle found for task %s" state.Task.Uid
-        | TaskStatus.Completed -> ()
-        | _ -> failwithf "Unknown status %A for task %s" state.Status state.Task.Uid
+        let r = state.runner
+        if r <> null then r.Wait()
 
     // wait for node to be complete
     member private this.Wait (node: Node) =
@@ -119,13 +133,8 @@ type private TaskScheduler(db: Database) =
 
     // add state dependency
     member private this.AddDependency (state, node: Node) =
-        match tasksByInput.TryGetValue(node.Uid) with
-        | true, list ->
-            list.Add(state)
-        | _ ->
-            let list = new List<_>()
-            list.Add(state)
-            tasksByInput.Add(node.Uid, list)
+        let list = tasksByInput.GetOrAdd(node.Uid, fun _ -> new List<_>())
+        lock list (fun _ -> list.Add(state))
 
     // run task with implicit dependency processing
     member private this.RunTaskImplicitDeps (task: Task) =
@@ -142,12 +151,15 @@ type private TaskScheduler(db: Database) =
         finally
             task.Implicit <- oldh
 
+    // prepare task for running and queue to run
+    member private this.TryStart (state: TaskState) =
+        assert (state.runner = null)
+        state.runner <- new Tasks.Task(fun _ -> this.Run(state))
+        if scheduler <> null then state.runner.Start(scheduler)
+
     // run task
     member private this.Run (state: TaskState) =
-        assert (state.Status = TaskStatus.Created)
-        state.Status <- TaskStatus.Running
-
-        let task = state.Task
+        let task = state.task
         let builder = task.Builder
 
         try
@@ -185,11 +197,9 @@ type private TaskScheduler(db: Database) =
         with
         | e -> failwithf "%s: failed to build target:\n%s" task.Uid e.Message
 
-        state.Status <- TaskStatus.Completed
-
     // add task to processing
     member this.Add (task: Task) =
-        let state = TaskState(task)
+        let state = TaskState.Create(task)
 
         // add task to input -> task map
         for input in task.Sources do
@@ -197,19 +207,30 @@ type private TaskScheduler(db: Database) =
 
         // add task to output -> task map
         for output in task.Targets do
-            taskByOutput.Add(output.Uid, state)
+            let r = taskByOutput.TryAdd(output.Uid, state)
+            assert r
 
         tasks.Add(state)
 
+        this.TryStart(state)
+
     // run all tasks
     member this.Run () =
-        // use manual loop instead of foreach because we can add tasks during Run ()
-        let rec loop i =
-            if i < tasks.Count then
-                this.Wait tasks.[i]
-                loop (i + 1)
+        use sch = new ConcurrentTaskScheduler(4)
 
-        loop 0
+        assert (scheduler = null)
+        scheduler <- sch :> Tasks.TaskScheduler
+
+        for t in tasks.ToArray() do
+            if t.runner <> null && t.runner.Status = Tasks.TaskStatus.Created then
+                t.runner.Start(scheduler)
+
+        sch.Start()
+
+        for t in tasks.ToArray() do
+            this.Wait(t)
+
+        scheduler <- null
 
     // process file updates so that the next run will build the dependent tasks
     member this.UpdateInputs inputs =
@@ -217,12 +238,12 @@ type private TaskScheduler(db: Database) =
             match tasksByInput.TryGetValue(input.Uid) with
             | true, list ->
                 // update all tasks that depend on input
-                list |> Seq.sumBy (fun task ->
-                    if task.Status = TaskStatus.Created then 0
+                list |> Seq.sumBy (fun state ->
+                    if state.runner = null then 0
                     else
                         // mark task as not ready & recursively process outputs
-                        task.Status <- TaskStatus.Created
-                        1 + (task.Task.Targets |> Array.sumBy update))
+                        state.runner <- new Tasks.Task(fun _ -> this.Run(state))
+                        1 + (state.task.Targets |> Array.sumBy update))
             | _ -> 0
 
         inputs |> Array.sumBy update
