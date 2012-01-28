@@ -80,11 +80,14 @@ type Database(path) =
             csigs.TryRemove(node.Uid) |> ignore
             Signature()
 
-    // get/set task signature
-    member this.TaskSignature
-        with get uid =
-            match tsigs.TryGetValue(uid) with
-            | true, s -> Some s
-            | _ -> None
-        and set uid value =
-            tsigs.[uid] <- value
+    // get task signature
+    member this.TaskSignature uid =
+        match tsigs.TryGetValue(uid) with
+        | true, s -> Some s
+        | _ -> None
+
+    // update task signature
+    member this.UpdateTaskSignature uid value =
+        match value with
+        | Some v -> tsigs.[uid] <- v
+        | None -> tsigs.TryRemove(uid) |> ignore

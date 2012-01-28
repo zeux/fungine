@@ -54,7 +54,7 @@ type private TaskScheduler(db: Database) =
     let mutable scheduler = null
 
     // list of differences between two signatures
-    member private this.Diff (lhs: TaskSignature, rhs: TaskSignature) =
+    static member private Diff (lhs: TaskSignature, rhs: TaskSignature) =
         // diff two arrays
         let diff left right sortkey add remove change order =
             seq {
@@ -93,7 +93,7 @@ type private TaskScheduler(db: Database) =
         }
 
     // get up-to-date content signature for node
-    member private this.ContentSignature (node: Node) =
+    member private this.CurrentContentSignature (node: Node) =
         this.Wait(node)
         db.ContentSignature(node)
 
@@ -106,13 +106,13 @@ type private TaskScheduler(db: Database) =
             match db.TaskSignature task.Uid with
             | Some s ->
                 // get new signatures for old implicit deps
-                let tsigi = TaskSignature(tsig.Inputs, s.Implicits |> Array.map (fun (uid, _) -> uid, this.ContentSignature(Node uid)), tsig.Version, None)
+                let tsigi = TaskSignature(tsig.Inputs, s.Implicits |> Array.map (fun (uid, _) -> uid, this.CurrentContentSignature(Node uid)), tsig.Version, None)
 
                 if tsigi.Inputs = s.Inputs && tsigi.Implicits = s.Implicits && tsigi.Version = s.Version then
                     Some s
                 else
                     Output.debug Output.Options.DebugExplain (fun e ->
-                        let diffs = this.Diff(s, tsigi) |> Seq.toArray
+                        let diffs = TaskScheduler.Diff(s, tsigi) |> Seq.toArray
                         let reason =
                             match diffs with
                             | [||] -> "for unknown reason"
@@ -154,57 +154,63 @@ type private TaskScheduler(db: Database) =
         // a better solution would be to have a separate mutable taskstate,
         // but it's not clear yet whether other parts of task should be mutable
         try
-            task.Implicit <- fun node -> this.Wait(node); deps.[node.Uid] <- (node.Uid, db.ContentSignature node)
+            task.Implicit <- fun node -> deps.[node.Uid] <- (node.Uid, this.CurrentContentSignature node)
             let result = task.Builder.Build task
             result, Seq.toArray deps.Values
         finally
             task.Implicit <- oldh
 
-    // prepare task for running and queue to run
-    member private this.TryStart (state: TaskState) =
-        assert (state.runner = null)
-        state.runner <- new Tasks.Task(fun _ -> this.Run(state))
-        if scheduler <> null then state.runner.Start(scheduler)
+    // run task
+    member private this.RunTask (task: Task) =
+        // output task description
+        let descr = task.Builder.Description task
+        if descr <> null then Output.echo descr
+
+        // make sure all targets can be created
+        for target in task.Targets do Directory.CreateDirectory(target.Info.DirectoryName) |> ignore
+
+        // build task
+        this.RunTaskImplicitDeps task
 
     // run task
     member private this.Run (state: TaskState) =
         let task = state.task
-        let builder = task.Builder
 
         try
             // compute current signature
-            let tsig = TaskSignature(task.Sources |> Array.map (fun n -> n.Uid, this.ContentSignature n), [||], builder.Version task, None)
+            let tsig = TaskSignature(task.Sources |> Array.map (fun n -> n.Uid, this.CurrentContentSignature n), [||], task.Builder.Version task, None)
 
             // build task if necessary
             let (result, implicits) =
                 match this.UpToDate(task, tsig) with
                 | Some s -> s.Result, s.Implicits
                 | None ->
-                    // output task description
-                    let descr = builder.Description task
-                    if descr <> null then Output.echo descr
-
-                    // make sure all targets can be created
-                    for target in task.Targets do Directory.CreateDirectory(target.Info.DirectoryName) |> ignore
-
                     // build task
-                    let result, implicits = this.RunTaskImplicitDeps task
+                    let result, implicits = this.RunTask task
 
                     // store signature with updated result
-                    db.TaskSignature task.Uid <- TaskSignature(tsig.Inputs, implicits, tsig.Version, result)
+                    db.UpdateTaskSignature task.Uid <| Some (TaskSignature(tsig.Inputs, implicits, tsig.Version, result))
 
                     result, implicits
 
             // run post-build step if necessary
             match result with
-            | Some result -> builder.PostBuild(task, result)
+            | Some result -> task.Builder.PostBuild(task, result)
             | None -> ()
 
             // add implicit dependencies to input -> task map
-            for (input, _) in implicits do
-                this.AddDependency(state, Node input)
-        with
-        | e -> failwithf "%s: failed to build target:\n%s" task.Uid e.Message
+            for (input, _) in implicits do this.AddDependency(state, Node input)
+        with e ->
+            // make sure we'll build this again next time
+            db.UpdateTaskSignature task.Uid None
+
+            failwithf "%s: failed to build target:\n%s" task.Uid e.Message
+
+    // prepare task for running and queue to run
+    member private this.TryStart (state: TaskState) =
+        assert (state.runner = null)
+        state.runner <- new Tasks.Task(fun _ -> this.Run(state))
+        if scheduler <> null then state.runner.Start(scheduler)
 
     // add task to processing
     member this.Add (task: Task) =
