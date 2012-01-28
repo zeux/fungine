@@ -50,7 +50,7 @@ type private ConcurrentTaskScheduler(jobs) as this =
 type private TaskScheduler(db: Database) =
     let taskByOutput = ConcurrentDictionary<string, TaskState>()
     let tasksByInput = ConcurrentDictionary<string, List<TaskState>>()
-    let tasks = ConcurrentBag<TaskState>()
+    let tasks = Dictionary<string, TaskState>()
     let mutable scheduler = None
 
     // list of differences between two signatures
@@ -211,28 +211,40 @@ type private TaskScheduler(db: Database) =
         with e ->
             this.RunTaskError(task, e)
 
-    // prepare task for running and queue to run
-    member private this.TryStart (state: TaskState) =
-        assert (state.runner = null)
-        state.runner <- new Tasks.Task(fun _ -> this.Run(state))
-        if scheduler.IsSome then state.runner.Start(scheduler.Value)
+    // create task runner
+    member private this.CreateTaskRunner (state: TaskState) =
+        new Tasks.Task(fun _ -> this.Run(state))
 
     // add task to processing
     member this.Add (task: Task) =
-        let state = { new TaskState with task = task and runner = null }
+        lock tasks (fun _ ->
+            match tasks.TryGetValue(task.Uid) with
+            | true, state ->
+                let t = state.task
+                if t.Sources <> task.Sources || t.Builder <> task.Builder then failwithf "Duplicate task definitions found for task %s" task.Uid
+            | _ ->
+                let state = { new TaskState with task = task and runner = null }
+                state.runner <- this.CreateTaskRunner(state)
 
-        // add task to input -> task map
-        for input in task.Sources do
-            this.AddDependency(state, input)
+                // add task to input -> task map
+                for input in task.Sources do
+                    this.AddDependency(state, input)
 
-        // add task to output -> task map
-        for output in task.Targets do
-            let r = taskByOutput.TryAdd(output.Uid, state)
-            assert r
+                // add task to output -> task map
+                for output in task.Targets do
+                    match taskByOutput.TryAdd(output.Uid, state) with
+                    | true -> ()
+                    | _ -> failwithf "Duplicate tasks found for output %s" output.Uid
 
-        tasks.Add(state)
+                tasks.Add(task.Uid, state)
 
-        this.TryStart(state)
+                // if we're building tasks, start this one immediately
+                match scheduler with
+                | Some s -> state.runner.Start(s)
+                | _ -> ())
+
+    // get task count
+    member this.TaskCount = tasks.Count
 
     // run all tasks
     member this.Run jobs =
@@ -242,13 +254,13 @@ type private TaskScheduler(db: Database) =
             assert (scheduler.IsNone)
             scheduler <- Some sch
 
-            for t in tasks.ToArray() do
+            for t in lock tasks (fun _ -> tasks.Values |> Seq.toArray) do
                 if t.runner <> null && t.runner.Status = Tasks.TaskStatus.Created then
                     t.runner.Start(sch)
     
             sch.RunAll()
         finally
-            for t in tasks.ToArray() do t.runner <- null
+            for t in tasks.Values do t.runner <- null
             scheduler <- None
 
     // process file updates so that the next run will build the dependent tasks
@@ -261,7 +273,7 @@ type private TaskScheduler(db: Database) =
                     if state.runner <> null then 0
                     else
                         // mark task as not ready & recursively process outputs
-                        this.TryStart(state)
+                        state.runner <- this.CreateTaskRunner state
                         1 + (state.task.Targets |> Array.sumBy update))
             | _ -> 0
 

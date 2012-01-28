@@ -14,7 +14,6 @@ type Context(rootPath, buildPath, ?jobs) =
 
     let db = Database(buildPath + "/.builddb")
     let scheduler = TaskScheduler(db)
-    let tasks = ConcurrentDictionary<string, Task>()
     let jobs = defaultArg jobs Environment.ProcessorCount
 
     // get build path
@@ -27,12 +26,7 @@ type Context(rootPath, buildPath, ?jobs) =
 
     // add task
     member this.Task(task: Task) =
-        // check task uniqueness
-        if tasks.TryAdd(task.Uid, task) then
-            scheduler.Add(task)
-        else
-            let t = tasks.[task.Uid]
-            if task.Sources <> t.Sources || task.Builder <> t.Builder then failwithf "Duplicate task definitions found for task %s" task.Uid
+        scheduler.Add(task)
 
     // add task with source/target list
     member this.Task(builder, sources: Node array, targets: Node array) =
@@ -67,12 +61,12 @@ type Context(rootPath, buildPath, ?jobs) =
 
     // run all tasks
     member this.Run () =
-        Output.echof "*** found %d targets, building... ***" tasks.Count
+        Output.echof "*** found %d targets, building... ***" scheduler.TaskCount
 
         let timer = Stopwatch.StartNew()
         
         match this.RunAll() with
-        | _ -> Output.echof "*** built %d targets in %.2f sec ***" tasks.Count timer.Elapsed.TotalSeconds
+        | _ -> Output.echof "*** built %d targets in %.2f sec ***" scheduler.TaskCount timer.Elapsed.TotalSeconds
 
     // run tasks for updated set of inputs
     member this.RunUpdated inputs =
