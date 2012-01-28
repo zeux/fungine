@@ -51,7 +51,7 @@ type private TaskScheduler(db: Database) =
     let taskByOutput = ConcurrentDictionary<string, TaskState>()
     let tasksByInput = ConcurrentDictionary<string, List<TaskState>>()
     let tasks = ConcurrentBag<TaskState>()
-    let mutable scheduler = null
+    let mutable scheduler = None
 
     // list of differences between two signatures
     static member private Diff (lhs: TaskSignature, rhs: TaskSignature) =
@@ -172,6 +172,14 @@ type private TaskScheduler(db: Database) =
         // build task
         this.RunTaskImplicitDeps task
 
+    // run task failed, output the exception and terminate the build as soon as possible
+    member private this.RunTaskError (task: Task, error: exn) =
+        // make sure we'll build this task again next time
+        db.UpdateTaskSignature task.Uid None
+
+        // print the error (we swallow the exception for now)
+        Output.echof "%s: failed to build target:\n%s" task.Uid error.Message
+
     // run task
     member private this.Run (state: TaskState) =
         let task = state.task
@@ -201,16 +209,13 @@ type private TaskScheduler(db: Database) =
             // add implicit dependencies to input -> task map
             for (input, _) in implicits do this.AddDependency(state, Node input)
         with e ->
-            // make sure we'll build this again next time
-            db.UpdateTaskSignature task.Uid None
-
-            failwithf "%s: failed to build target:\n%s" task.Uid e.Message
+            this.RunTaskError(task, e)
 
     // prepare task for running and queue to run
     member private this.TryStart (state: TaskState) =
         assert (state.runner = null)
         state.runner <- new Tasks.Task(fun _ -> this.Run(state))
-        if scheduler <> null then state.runner.Start(scheduler)
+        if scheduler.IsSome then state.runner.Start(scheduler.Value)
 
     // add task to processing
     member this.Add (task: Task) =
@@ -230,21 +235,21 @@ type private TaskScheduler(db: Database) =
         this.TryStart(state)
 
     // run all tasks
-    member this.Run () =
-        let sch = ConcurrentTaskScheduler(4)
+    member this.Run jobs =
+        let sch = ConcurrentTaskScheduler(jobs)
 
         try
-            assert (scheduler = null)
-            scheduler <- sch :> Tasks.TaskScheduler
+            assert (scheduler.IsNone)
+            scheduler <- Some sch
 
             for t in tasks.ToArray() do
                 if t.runner <> null && t.runner.Status = Tasks.TaskStatus.Created then
-                    t.runner.Start(scheduler)
+                    t.runner.Start(sch)
     
             sch.RunAll()
         finally
             for t in tasks.ToArray() do t.runner <- null
-            scheduler <- null
+            scheduler <- None
 
     // process file updates so that the next run will build the dependent tasks
     member this.UpdateInputs inputs =

@@ -1,11 +1,12 @@
 namespace BuildSystem
 
+open System
 open System.Collections.Concurrent
 open System.Diagnostics
 open System.IO
 
 // build context
-type Context(rootPath, buildPath) =
+type Context(rootPath, buildPath, ?jobs) =
     static let mutable current: Context option = None
 
     // setup node root so that DB paths are stable
@@ -14,6 +15,7 @@ type Context(rootPath, buildPath) =
     let db = Database(buildPath + "/.builddb")
     let scheduler = TaskScheduler(db)
     let tasks = ConcurrentDictionary<string, Task>()
+    let jobs = defaultArg jobs Environment.ProcessorCount
 
     // get build path
     member this.BuildPath = buildPath
@@ -46,17 +48,17 @@ type Context(rootPath, buildPath) =
 
     // run all tasks
     member private this.RunAll () =
-        // set current context for the duration of the build
-        assert (current.IsNone)
-        current <- Some this
-
         // run all tasks
         let result =
-            try scheduler.Run(); None
-            with e -> Some e
+            try
+                // set current context for the duration of the build
+                assert (current.IsNone)
+                current <- Some this
 
-        // reset current context
-        current <- None
+                scheduler.Run(jobs)
+            finally
+                // reset current context
+                current <- None
 
         // save database
         db.Flush()
@@ -70,8 +72,7 @@ type Context(rootPath, buildPath) =
         let timer = Stopwatch.StartNew()
         
         match this.RunAll() with
-        | Some e -> Output.echof "*** error %s" e.Message
-        | None -> Output.echof "*** built %d targets in %.2f sec ***" tasks.Count timer.Elapsed.TotalSeconds
+        | _ -> Output.echof "*** built %d targets in %.2f sec ***" tasks.Count timer.Elapsed.TotalSeconds
 
     // run tasks for updated set of inputs
     member this.RunUpdated inputs =
