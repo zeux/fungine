@@ -23,6 +23,15 @@ module private ShaderUtil =
         context.UpdateSubresource(scratch, cb.Buffer, 0)
         cb
 
+    // update context stage with parameter binding
+    let inline updateBinding (p: Render.ShaderParameter) (value: obj) (stage: 'T) =
+        match p.Binding with
+        | Render.ShaderParameterBinding.None -> ()
+        | Render.ShaderParameterBinding.ConstantBuffer -> (^T: (member SetConstantBuffer: _ -> _ -> _) (stage, value :?> Buffer, p.Register))
+        | Render.ShaderParameterBinding.ShaderResource -> (^T: (member SetShaderResource: _ -> _ -> _) (stage, value :?> ShaderResourceView, p.Register))
+        | Render.ShaderParameterBinding.Sampler -> (^T: (member SetSampler: _ -> _ -> _) (stage, value :?> SamplerState, p.Register))
+        | x -> failwithf "Unexpected binding value %A" x
+
 // shader context; it can be used for setting shaders and shader parameters
 // note: there is no internal queueing of commands - all calls update the device context state immediately
 // this can lead to excessive setup, but removes the need for dirty flags and per-drawcall flush
@@ -47,16 +56,8 @@ type ShaderContext(cbPool: ConstantBufferPool, context: DeviceContext) =
 
     // update device context binding to match slot values
     member private this.ValidateSlot(slot) =
-        let inline bind (p: Render.ShaderParameter) (value: obj) (stage: ^T) =
-            match p.Binding with
-            | Render.ShaderParameterBinding.None -> ()
-            | Render.ShaderParameterBinding.ConstantBuffer -> (^T: (member SetConstantBuffer: _ -> _ -> _) (stage, value :?> Buffer, p.Register))
-            | Render.ShaderParameterBinding.ShaderResource -> (^T: (member SetShaderResource: _ -> _ -> _) (stage, value :?> ShaderResourceView, p.Register))
-            | Render.ShaderParameterBinding.Sampler -> (^T: (member SetSampler: _ -> _ -> _) (stage, value :?> SamplerState, p.Register))
-            | x -> failwithf "Unexpected binding value %A" x
-
-        bind vertexParams.[slot] values.[slot] context.VertexShader
-        bind pixelParams.[slot] values.[slot] context.PixelShader
+        ShaderUtil.updateBinding vertexParams.[slot] values.[slot] context.VertexShader
+        ShaderUtil.updateBinding pixelParams.[slot] values.[slot] context.PixelShader
 
     // set a new value into slot
     member private this.UpdateSlot(slot, value) =
