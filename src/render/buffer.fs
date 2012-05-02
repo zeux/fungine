@@ -3,7 +3,7 @@ namespace Render
 open SlimDX.Direct3D11
 
 // vertex/index buffer
-type Buffer(bindFlags, contents: byte array) =
+type BufferResource(bindFlags, contents: byte array) =
     // buffer object
     [<System.NonSerialized>]
     let mutable data = null
