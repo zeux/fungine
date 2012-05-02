@@ -1,10 +1,12 @@
 module Build.Shader
 
-open BuildSystem
+open System.IO
 
 open SlimDX
 open SlimDX.D3DCompiler
-open System.IO
+
+open BuildSystem
+open Render
 
 // get byte array from data stream
 let private getData (stream: DataStream) =
@@ -51,36 +53,58 @@ let private buildBytecode path entry profile includePaths includeCallback =
     ShaderBytecode.CompileFromFile(path, entry, profile, flags, EffectFlags.None, [||], IncludeHandler(includePaths, includeCallback, path))
 
 // get shader parameters from bytecode
-let private getParameters (code: ShaderBytecode) =
+let private getParameters (code: ShaderBytecode) compute =
     use refl = new ShaderReflection(code)
 
     Array.init refl.Description.BoundResources (fun i ->
         let desc = refl.GetResourceBindingDescription(i)
 
-        if desc.BindCount <> 1 then failwithf "Parameter %s occupies %d slots, array parameters are not supported" desc.Name desc.BindCount
+        if desc.BindCount <> 1 then
+            failwithf "Parameter %s occupies %d slots, array parameters are not supported" desc.Name desc.BindCount
 
         let binding =
             match desc.Type with
-            | ShaderInputType.ConstantBuffer -> Render.ShaderParameterBinding.ConstantBuffer
-            | ShaderInputType.Sampler -> Render.ShaderParameterBinding.Sampler
-            | _ -> Render.ShaderParameterBinding.ShaderResource
+            | ShaderInputType.ConstantBuffer
+                -> ShaderParameterBinding.ConstantBuffer
+            | ShaderInputType.TextureBuffer | ShaderInputType.Texture
+                -> ShaderParameterBinding.ShaderResource
+            | ShaderInputType.Sampler
+                -> ShaderParameterBinding.Sampler
+            | ShaderInputType.Structured | ShaderInputType.RWStructured
+            | ShaderInputType.ByteAddress | ShaderInputType.RWByteAddress
+            | ShaderInputType.AppendStructured | ShaderInputType.ConsumeStructured
+                -> if not compute then failwithf "Parameter %s is an unordered access view; such parameters are restricted to compute shaders" desc.Name
+                   ShaderParameterBinding.UnorderedAccess
+            | t when int t = 4 // SlimDX does not map D3D11_SIT_UAV_RWTYPED to an enum member
+                -> if not compute then failwithf "Parameter %s is an unordered access view; such parameters are restricted to compute shaders" desc.Name
+                   ShaderParameterBinding.UnorderedAccess
+            | t -> failwithf "Parameter %s has unknown type %O" desc.Name t
 
-        Render.ShaderParameter(desc.Name, binding, desc.BindPoint))
+        ShaderParameter(desc.Name, binding, desc.BindPoint))
 
 // build shader
 let private build source target version includePaths includeCallback =
-    let vs = buildBytecode source "vsMain" ("vs_" + version) includePaths includeCallback
-    let vssig = ShaderSignature.GetInputSignature(vs)
+    let compute = File.ReadAllLines(source).[0] = "//# compute"
 
-    let ps = buildBytecode source "psMain" ("ps_" + version) includePaths includeCallback
+    if compute then
+        let cs = buildBytecode source "main" ("cs_" + version) includePaths includeCallback
 
-    let shader =
-        Render.Shader(
-            vertexSignature = Render.ShaderSignature(getData vssig.Data),
-            vertex = Render.ShaderObject(getData vs.Data, getParameters vs),
-            pixel = Render.ShaderObject(getData ps.Data, getParameters ps))
+        let shader = Program(ShaderObject(getData cs.Data, getParameters cs compute))
 
-    Core.Serialization.Save.toFile target shader
+        Core.Serialization.Save.toFile target shader
+    else
+        let vs = buildBytecode source "vsMain" ("vs_" + version) includePaths includeCallback
+        let vssig = ShaderSignature.GetInputSignature(vs)
+
+        let ps = buildBytecode source "psMain" ("ps_" + version) includePaths includeCallback
+
+        let shader =
+            Shader(
+                vertexSignature = ShaderSignature(getData vssig.Data),
+                vertex = ShaderObject(getData vs.Data, getParameters vs compute),
+                pixel = ShaderObject(getData ps.Data, getParameters ps compute))
+
+        Core.Serialization.Save.toFile target shader
 
 // shader builder object
 type Builder(includePaths) =

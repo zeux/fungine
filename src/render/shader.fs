@@ -11,6 +11,7 @@ type ShaderParameterBinding =
     | ConstantBuffer = 1
     | ShaderResource = 2
     | Sampler = 3
+    | UnorderedAccess = 4
 
 // shader parameter registry
 module ShaderParameterRegistry =
@@ -85,7 +86,7 @@ type Shader(vertexSignature: ShaderSignature, vertex: ShaderObject<VertexShader>
     // get input vertex signature
     member this.VertexSignature = vertexSignature
 
-    // set shader to context
-    member this.Set (context: DeviceContext) =
-        context.VertexShader.Set(vertex.Resource)
-        context.PixelShader.Set(pixel.Resource)
+// program
+type Program(shader: ShaderObject<ComputeShader>) =
+    // get compute shader
+    member this.ComputeShader = shader

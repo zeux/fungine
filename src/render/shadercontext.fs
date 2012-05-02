@@ -32,6 +32,12 @@ module private ShaderUtil =
         | Render.ShaderParameterBinding.Sampler -> (^T: (member SetSampler: _ -> _ -> _) (stage, value :?> SamplerState, p.Register))
         | x -> failwithf "Unexpected binding value %A" x
 
+    // update context stage with parameter binding with UA support
+    let inline updateBindingUA (p: Render.ShaderParameter) (value: obj) (stage: 'T) =
+        match p.Binding with
+        | Render.ShaderParameterBinding.UnorderedAccess -> (^T: (member SetUnorderedAccessView: _ -> _ -> _) (stage, value :?> UnorderedAccessView, p.Register))
+        | _ -> updateBinding p value stage
+
 // shader context; it can be used for setting shaders and shader parameters
 // note: there is no internal queueing of commands - all calls update the device context state immediately
 // this can lead to excessive setup, but removes the need for dirty flags and per-drawcall flush
@@ -40,6 +46,7 @@ type ShaderContext(cbPool: ConstantBufferPool, context: DeviceContext) =
     let cbslots = List<ConstantBuffer>()
     let vertexParams = List<Render.ShaderParameter>()
     let pixelParams = List<Render.ShaderParameter>()
+    let computeParams = List<Render.ShaderParameter>()
 
     // disposes of all constant buffers, releasing them into pool
     interface IDisposable with
@@ -53,17 +60,38 @@ type ShaderContext(cbPool: ConstantBufferPool, context: DeviceContext) =
             values.Add(null)
             vertexParams.Add(Render.ShaderParameter())
             pixelParams.Add(Render.ShaderParameter())
+            computeParams.Add(Render.ShaderParameter())
 
     // update device context binding to match slot values
     member private this.ValidateSlot(slot) =
         ShaderUtil.updateBinding vertexParams.[slot] values.[slot] context.VertexShader
         ShaderUtil.updateBinding pixelParams.[slot] values.[slot] context.PixelShader
+        ShaderUtil.updateBindingUA computeParams.[slot] values.[slot] context.ComputeShader
 
     // set a new value into slot
     member private this.UpdateSlot(slot, value) =
         this.EnsureSlot(slot)
         values.[slot] <- value
         this.ValidateSlot(slot)
+
+    // currently bound program object
+    member this.Program
+        with set (value: Render.Program) =
+            context.ComputeShader.Set(value.ComputeShader.Resource)
+
+            // clear all previous bindings of values to parameters ($$ revise: causes excessive setup in case of shared parameters)
+            for slot = 0 to values.Count - 1 do
+                computeParams.[slot] <- Render.ShaderParameter()
+
+            // update comput shader bindings
+            for p in value.ComputeShader.Parameters do
+                this.EnsureSlot(p.Slot)
+                computeParams.[p.Slot] <- p
+
+            // make sure all previously set values are synchronized with device context
+            for slot = 0 to values.Count - 1 do
+                if values.[slot] <> null then
+                    this.ValidateSlot(slot)
 
     // currently bound shader object
     member this.Shader
@@ -96,6 +124,10 @@ type ShaderContext(cbPool: ConstantBufferPool, context: DeviceContext) =
         this.UpdateSlot(slot, value)
 
     // set value to slot by index
+    member this.SetConstant(slot, value: UnorderedAccessView) =
+        this.UpdateSlot(slot, value)
+
+    // set value to slot by index
     member this.SetConstant(slot, value: SamplerState) =
         this.UpdateSlot(slot, value)
 
@@ -115,6 +147,10 @@ type ShaderContext(cbPool: ConstantBufferPool, context: DeviceContext) =
 
     // set value to slot by name
     static member (?<-) (this: ShaderContext, name: string, value: ShaderResourceView) =
+        this.SetConstant(Render.ShaderParameterRegistry.getSlot name, value)
+
+    // set value to slot by name
+    static member (?<-) (this: ShaderContext, name: string, value: UnorderedAccessView) =
         this.SetConstant(Render.ShaderParameterRegistry.getSlot name, value)
 
     // set value to slot by name
