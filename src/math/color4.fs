@@ -12,3 +12,4 @@ type Color4 =
     val a: float32
 
     new (r, g, b, a) = { r = r; g = g; b = b; a = a }
+    new (r, g, b) = { r = r; g = g; b = b; a = 1.f }
