@@ -389,6 +389,8 @@ MessagePump.Run(form, fun () ->
     let context = device.Device.ImmediateContext
     use shaderContext = new Render.ShaderContext(cbPool, context)
 
+    context.ClearState()
+
     let lightGrid = getLightGrid form.ClientSize.Width form.ClientSize.Height
 
     use colorBuffer = rtpool.Acquire("scene/hdr", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_Float)
