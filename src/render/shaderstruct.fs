@@ -12,7 +12,7 @@ type ShaderStructAttribute() = class end
 module ShaderStruct =
     // primitive types
     let private primitiveTypes =
-        [|typeof<float32>; typeof<int>; typeof<bool>; typeof<Vector2>; typeof<Vector3>; typeof<Vector4>; typeof<Matrix34>; typeof<Matrix44>|]
+        [|typeof<float32>; typeof<int>; typeof<bool>; typeof<Vector2>; typeof<Vector3>; typeof<Vector4>; typeof<Matrix34>; typeof<Matrix44>; typeof<Color4>|]
         |> Array.map (fun t -> t, Marshal.SizeOf(t))
         |> dict
 

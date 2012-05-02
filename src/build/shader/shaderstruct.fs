@@ -22,6 +22,7 @@ let private getShaderType (typ: Type) =
     elif typ = typeof<Vector4> then "float4"
     elif typ = typeof<Matrix34> then "float3x4"
     elif typ = typeof<Matrix44> then "float4x4"
+    elif typ = typeof<Color4> then "float4"
     else failwithf "Type %A is not supported in shader code" typ
 
 // get shader struct contents for type
