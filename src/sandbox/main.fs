@@ -186,15 +186,6 @@ type Camera(view: Matrix34, projection: Matrix44) =
     member this.EyePosition = Matrix34.InverseAffine(view).Column 3
 
 [<Render.ShaderStruct>]
-type SpotLight(position: Vector3, direction: Vector3, outerAngle: float32, innerAngle: float32, radius: float32, color: Vector3) =
-    member this.Position = position
-    member this.Direction = direction
-    member this.OuterAngle = outerAngle
-    member this.InnerAngle = innerAngle
-    member this.Radius = radius
-    member this.Color = color
-
-[<Render.ShaderStruct>]
 type Material(roughness: float32, smoothness: float32) =
     member this.Roughness = roughness
     member this.Smoothness = smoothness
@@ -286,7 +277,7 @@ let dbgSpotOutercone = Core.DbgVar(20.f, "spot/outer cone")
 let dbgSpotRadius = Core.DbgVar(100.f, "spot/radius")
 let dbgSpotIntensity = Core.DbgVar(8.f, "spot/intensity")
 let dbgSpotSeed = Core.DbgVar(1, "spot/seed")
-let dbgSpotCount = Core.DbgVar(1, "spot/count")
+let dbgSpotCount = Core.DbgVar(3, "spot/count")
 
 type DebugTarget =
     | None = 0
@@ -448,31 +439,34 @@ MessagePump.Run(form, fun () ->
     let deg2rad = float32 System.Math.PI / 180.f
 
     let colors = [|
-        Vector3(1.f, 0.f, 0.f)
-        Vector3(0.f, 1.f, 0.f)
-        Vector3(0.f, 0.f, 1.f)
-        Vector3(1.f, 0.f, 1.f)
-        Vector3(1.f, 1.f, 0.f)
-        Vector3(0.f, 1.f, 1.f)
-        Vector3(1.f, 1.f, 1.f) |]
+        Math.Color4(1.f, 0.f, 0.f)
+        Math.Color4(0.f, 1.f, 0.f)
+        Math.Color4(0.f, 0.f, 1.f)
+        Math.Color4(1.f, 0.f, 1.f)
+        Math.Color4(1.f, 1.f, 0.f)
+        Math.Color4(0.f, 1.f, 1.f)
+        Math.Color4(1.f, 1.f, 1.f) |]
 
     let rng = System.Random(dbgSpotSeed.Value)
 
-    use shadowBuffer = rtpool.Acquire("lighting/shadow buffer", 1024, 1024, Format.D24_UNorm_S8_UInt)
-
-    for i in 0 .. dbgSpotCount.Value - 1 do
-        // generate procedural spot light
-        let angle = deg2rad * 360.f * (float32 i / float32 dbgSpotCount.Value)
-        let position = Vector3(dbgSpotOffset.Value * sin angle, dbgSpotOffset.Value * cos angle, dbgSpotHeight.Value)
-        let light =
-            SpotLight(
+    let lights =
+        Array.init dbgSpotCount.Value (fun i ->
+            // generate procedural spot light
+            let angle = deg2rad * 360.f * (float32 i / float32 dbgSpotCount.Value)
+            let position = Vector3(dbgSpotOffset.Value * sin angle, dbgSpotOffset.Value * cos angle, dbgSpotHeight.Value)
+            
+            LightData(
                 position,
                 Vector3.Normalize(-position),
+                dbgSpotRadius.Value,
                 cos (deg2rad * dbgSpotOutercone.Value),
                 cos (deg2rad * dbgSpotInnercone.Value),
-                dbgSpotRadius.Value,
-                colors.[i % colors.Length] * dbgSpotIntensity.Value)
+                colors.[i % colors.Length],
+                dbgSpotIntensity.Value))
 
+    use shadowBuffer = rtpool.Acquire("lighting/shadow buffer", 1024, 1024, Format.D24_UNorm_S8_UInt)
+
+    for light in lights do
         // render shadow map
         let lightCamera =
             Camera(
@@ -498,6 +492,7 @@ MessagePump.Run(form, fun () ->
         renderFullScreenTri context shaderContext lightSpot.Value
 
         context.OutputMerger.BlendState <- null
+        shaderContext?shadowMap <- (null: ShaderResourceView)
 
     // tonemap
     use ldrBuffer = rtpool.Acquire("scene/ldr", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)

@@ -1,10 +1,10 @@
 #include <common/gbuffer.h>
 
 #include <auto_Camera.h>
-#include <auto_SpotLight.h>
+#include <auto_LightData.h>
 
 cbuffer camera { Camera camera; };
-cbuffer light { SpotLight light; };
+cbuffer light { LightData light; };
 cbuffer lightCamera { Camera lightCamera; };
 
 Texture2D<float> shadowMap;
@@ -138,5 +138,5 @@ float4 psMain(PS_IN I): SV_Target
     float3 posLs = posLsH.xyz / posLsH.w;
     float shadow = SampleShadowFiltered(posLs.xy * float2(0.5, -0.5) + 0.5,  posLs.z - 1e-5);
 
-	return float4(shadow * light.color * (S.albedo * diffuse + specular * diffuse), 1);
+	return float4(shadow * light.color.rgb * light.intensity * (S.albedo * diffuse + specular * diffuse), 1);
 }
