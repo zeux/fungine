@@ -50,6 +50,7 @@
     <Compile Include="render\material.fs" />
     <Compile Include="render\skeleton.fs" />
     <Compile Include="render\mesh.fs" />
+    <Compile Include="render\lighting\lightgrid.fs" />
     <Compile Include="input\keyboard.fs" />
     <Compile Include="input\mouse.fs" />
     <Compile Include="winui\propertygrid.fs" />

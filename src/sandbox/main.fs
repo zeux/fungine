@@ -12,6 +12,8 @@ open SlimDX.Direct3D11
 
 open Core.Data
 
+open Render.Lighting
+
 [<STAThread>]
 do()
 
@@ -49,7 +51,7 @@ let loader =
         dict [
             ".dds", fun path l -> Render.TextureLoader.load device.Device path |> box
             ".mesh", fun path l -> (Core.Serialization.Load.fromFileEx path (fixupContext l)) :?> Render.Mesh |> box
-            ".shader", fun path l -> (Core.Serialization.Load.fromFileEx path (fixupContext l)) :?> Render.Shader |> box
+            ".shader", fun path l -> Core.Serialization.Load.fromFileEx path (fixupContext l) |> box
         ])
 
 // start asset watcher
@@ -62,6 +64,8 @@ let lightSpot = loader.Load<Render.Shader> ".build/src/shaders/lighting/spot.sha
 let postfxTonemap = loader.Load<Render.Shader> ".build/src/shaders/postfx/tonemap.shader"
 let postfxFxaa = loader.Load<Render.Shader> ".build/src/shaders/postfx/fxaa.shader"
 let postfxBlit = loader.Load<Render.Shader> ".build/src/shaders/postfx/blit.shader"
+let lightGridDebug = loader.Load<Render.Shader> ".build/src/shaders/lighting/lightgrid_debug.shader"
+let lightGridFill = loader.Load<Render.Program> ".build/src/shaders/lighting/lightgrid_fill.shader"
 
 let vertexSize = (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).size
 let layout = new InputLayout(device.Device, gbufferFill.Value.VertexSignature.Resource, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
@@ -356,6 +360,19 @@ let getMoveOffset (point: Vector3) (axis: Vector3) (viewProjection: Matrix44) (d
 
 let cursorPos = ref (0, 0)
 
+let getLightGrid =
+    let cache = ref (None: LightGrid option)
+    let matches sizePixels tileCount tileSize =
+        tileCount = (sizePixels + tileSize - 1) / tileSize
+
+    fun width height ->
+        match !cache with
+        | Some grid when matches width grid.Width grid.CellSize && matches height grid.Height grid.CellSize -> grid
+        | _ ->
+            let grid = LightGrid(device, width, height, 16, 128)
+            cache := Some grid
+            grid
+
 MessagePump.Run(form, fun () ->
     frameTimer.Stop()
     let dt = frameTimer.Current
@@ -371,6 +388,8 @@ MessagePump.Run(form, fun () ->
 
     let context = device.Device.ImmediateContext
     use shaderContext = new Render.ShaderContext(cbPool, context)
+
+    let lightGrid = getLightGrid form.ClientSize.Width form.ClientSize.Height
 
     use colorBuffer = rtpool.Acquire("scene/hdr", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_Float)
     use depthBuffer = rtpool.Acquire("gbuffer/depth", form.ClientSize.Width, form.ClientSize.Height, Format.D24_UNorm_S8_UInt)
@@ -495,6 +514,25 @@ MessagePump.Run(form, fun () ->
     shaderContext?colorMap <- ldrBuffer.View
 
     renderFullScreenTri context shaderContext postfxFxaa.Value
+
+    // fill lightgrid
+    shaderContext?lightGridBufferUA <- lightGrid.UnorderedView
+    shaderContext?lightGrid <- lightGrid
+
+    shaderContext.Program <- lightGridFill.Value
+    context.Dispatch(lightGrid.Width, lightGrid.Height, 1)
+
+    shaderContext?lightGridBufferUA <- (null: UnorderedAccessView)
+
+    // blend lightgrid debug output over
+    shaderContext?lightGridBuffer <- lightGrid.View
+    shaderContext?lightGrid <- lightGrid
+
+    context.OutputMerger.BlendState <- BlendState.FromDescription(device.Device, blendon)
+
+    renderFullScreenTri context shaderContext lightGridDebug.Value
+
+    context.OutputMerger.BlendState <- null
 
     match 
         match dbgDebugTarget.Value with
