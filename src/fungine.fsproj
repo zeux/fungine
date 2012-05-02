@@ -8,6 +8,7 @@
   <Import Project="fungine.targets" />
   <ItemGroup>
     <Compile Include="..\sdks\fastprintf\fastprintf.fs" />
+    <Compile Include="core\common.fs" />
     <Compile Include="core\test.fs" />
     <Compile Include="core\cache.fs" />
     <Compile Include="core\compression.fs" />
