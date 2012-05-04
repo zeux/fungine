@@ -1,5 +1,5 @@
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef COMMON_GAMMA_H
+#define COMMON_GAMMA_H
 
 static const float kGamma = 2.2;
 
