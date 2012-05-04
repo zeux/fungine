@@ -2,8 +2,8 @@ namespace Render
 
 open System
 open System.Collections.Generic
-open SlimDX
-open SlimDX.Direct3D11
+
+open SharpDX.Direct3D11
 
 // MSAA type
 type MSAA =
@@ -97,7 +97,7 @@ and RenderTargetPool(device) =
         let resource = new Texture2D(device, rdesc)
 
         // create views
-        let view = new ShaderResourceView(device, resource, ShaderResourceViewDescription(Format = shaderFormat, MipLevels = desc.MipLevels, Dimension = shaderDimension))
+        let view = new ShaderResourceView(device, resource, ShaderResourceViewDescription(Format = shaderFormat, Dimension = shaderDimension, Texture2D = ShaderResourceViewDescription.Texture2DResource(MipLevels = desc.MipLevels)))
         let depthView = new DepthStencilView(device, resource, DepthStencilViewDescription(Format = desc.Format, Dimension = depthDimension))
 
         // create target object
@@ -124,7 +124,7 @@ and RenderTargetPool(device) =
     member this.Acquire (owner, width, height, format, ?miplevels, ?samples) =
         let bindFlags = BindFlags.ShaderResource ||| (if Formats.isDepth format then BindFlags.DepthStencil else BindFlags.RenderTarget)
         let desc = Texture2DDescription(Width = width, Height = height, MipLevels = defaultArg miplevels 1, ArraySize = 1, Format = format,
-                    SampleDescription = DXGI.SampleDescription(int (defaultArg samples MSAA.None), 0), Usage = ResourceUsage.Default, BindFlags = bindFlags)
+                    SampleDescription = SampleDescription(int (defaultArg samples MSAA.None), 0), Usage = ResourceUsage.Default, BindFlags = bindFlags)
         this.Acquire(owner, desc)
 
     // release target

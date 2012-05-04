@@ -122,8 +122,8 @@ let private build source target =
 
     // build merged vertex & index buffers
     let (vertices, indices, meshData) = mergeMeshGeometry (meshes |> Array.map (fun (_, mesh, _) -> mesh))
-    let vertexBuffer = Render.BufferResource(SlimDX.Direct3D11.BindFlags.VertexBuffer, vertices)
-    let indexBuffer = Render.BufferResource(SlimDX.Direct3D11.BindFlags.IndexBuffer, indices)
+    let vertexBuffer = Render.VertexBuffer(vertices)
+    let indexBuffer = Render.IndexBuffer(indices)
 
     // build materials
     let materials = meshes |> Array.map (fun (_, _, material) -> allMaterials.Get material)

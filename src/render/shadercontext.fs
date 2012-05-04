@@ -3,7 +3,8 @@ namespace Render
 open System
 open System.Collections.Generic
 
-open SlimDX.Direct3D11
+open SharpDX.Data
+open SharpDX.Direct3D11
 
 #nowarn "1173" // F# 3.0 compiler regression on ?<- operator as class member
 
@@ -19,23 +20,23 @@ module private ShaderUtil =
         let size = elementSize * (match data with :? Array as a -> max minArraySize a.Length | _ -> 1)
         let cb = cbPool.Acquire size
         let scratch = cb.Scratch
-        upload.Invoke(data, scratch.Data.DataPointer, size)
-        context.UpdateSubresource(scratch, cb.Buffer, 0)
+        upload.Invoke(data, scratch.DataPointer, size)
+        context.UpdateSubresource(DataBox(scratch.DataPointer), cb.Buffer, 0)
         cb
 
     // update context stage with parameter binding
-    let inline updateBinding (p: Render.ShaderParameter) (value: obj) (stage: 'T) =
+    let updateBinding (p: Render.ShaderParameter) (value: obj) (stage: CommonShaderStage) =
         match p.Binding with
         | Render.ShaderParameterBinding.None -> ()
-        | Render.ShaderParameterBinding.ConstantBuffer -> (^T: (member SetConstantBuffer: _ -> _ -> _) (stage, value :?> Buffer, p.Register))
-        | Render.ShaderParameterBinding.ShaderResource -> (^T: (member SetShaderResource: _ -> _ -> _) (stage, value :?> ShaderResourceView, p.Register))
-        | Render.ShaderParameterBinding.Sampler -> (^T: (member SetSampler: _ -> _ -> _) (stage, value :?> SamplerState, p.Register))
+        | Render.ShaderParameterBinding.ConstantBuffer -> stage.SetConstantBuffer(p.Register, unbox value)
+        | Render.ShaderParameterBinding.ShaderResource -> stage.SetShaderResource(p.Register, unbox value)
+        | Render.ShaderParameterBinding.Sampler -> stage.SetSampler(p.Register, unbox value)
         | x -> failwithf "Unexpected binding value %A" x
 
     // update context stage with parameter binding with UA support
-    let inline updateBindingUA (p: Render.ShaderParameter) (value: obj) (stage: 'T) =
+    let updateBindingUA (p: Render.ShaderParameter) (value: obj) (stage: ComputeShaderStage) =
         match p.Binding with
-        | Render.ShaderParameterBinding.UnorderedAccess -> (^T: (member SetUnorderedAccessView: _ -> _ -> _) (stage, value :?> UnorderedAccessView, p.Register))
+        | Render.ShaderParameterBinding.UnorderedAccess -> stage.SetUnorderedAccessView(p.Register, unbox value)
         | _ -> updateBinding p value stage
 
 // shader context; it can be used for setting shaders and shader parameters

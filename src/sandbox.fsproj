@@ -14,15 +14,13 @@
   <ItemGroup>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
-    <Reference Include="SlimDX">
-      <HintPath>../sdks/SlimDX/SlimDX.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xaml" />
     <Reference Include="WindowsBase" />
   </ItemGroup>
+  <Import Project="..\sdks\SharpDX\SharpDX.proj" />
   <ItemGroup>
     <ProjectReference Include="..\src\fungine.build.fsproj">
       <Name>fungine.build</Name>

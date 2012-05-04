@@ -1,11 +1,11 @@
 namespace Render
 
-open SlimDX
-open SlimDX.Direct3D11
-
 open System
 open System.IO
 open System.Runtime.InteropServices
+
+open SharpDX.Data
+open SharpDX.Direct3D11
 
 #nowarn "9" // Uses of this construct may result in the generation of unverifiable .NET IL code
 
@@ -18,25 +18,35 @@ type Texture(resource: Resource, view: ShaderResourceView) =
     member this.View = view
 
 // D3DX texture loader
+#if D3DX
 module private TextureLoaderD3DX =
     // load texture from file
-    let load device path =
-        // create load information for the entire mip chain
+    let load device path = // create load information for the entire mip chain
         let image = ImageInformation.FromFile(path)
-        let mutable info = ImageLoadInformation.FromDefaults()
-        info.MipLevels <- image.Value.MipLevels
+        let info =
+            ImageLoadInformation(
+                Usage = ResourceUsage.Default,
+                BindFlags = BindFlags.ShaderResource,
+                Width = image.Value.Width,
+                Height = image.Value.Height,
+                Depth = image.Value.Depth,
+                MipLevels = image.Value.MipLevels,
+                Filter = FilterFlags.None,
+                Format = image.Value.Format,
+                OptionFlags = image.Value.OptionFlags)
 
         // load texture
         let resource =
-            match image.Value.Dimension with
-            | ResourceDimension.Texture2D -> Texture2D.FromFile(device, path, info) :> Resource
-            | ResourceDimension.Texture3D -> Texture3D.FromFile(device, path, info) :> Resource
+            match image.Value.ResourceDimension with
+            | ResourceDimension.Texture2D -> Texture2D.FromFile(device, path, info)
+            | ResourceDimension.Texture3D -> Texture3D.FromFile(device, path, info)
             | d -> failwithf "Unsupported image dimension %A" d
 
         // create default view
         let view = new ShaderResourceView(device, resource)
 
         Texture(resource, view)
+#endif
 
 // DDS texture loader
 module private TextureLoaderDDS =
@@ -134,12 +144,7 @@ module private TextureLoaderDDS =
 
     // get row pitch
     let getRowPitch format width =
-        let bits = Formats.getSizeBits format
-
-        if Formats.isBlockCompressed format then
-            ((width + 3) / 4) * bits * (16 / 8) // convert size of pixel in bits to size of 4x4 block in bytes
-        else
-            width * bits / 8
+        (if Formats.isBlockCompressed format then (width + 3) / 4 else width) * Formats.getSizeBits format / 8
 
     // get slice pitch
     let getSlicePitch format width height =
@@ -164,21 +169,21 @@ module private TextureLoaderDDS =
         | ResourceDimension.Texture2D ->
             let asmult = if header10.flags.HasFlag(ResourceOptionFlags.TextureCube) then 6 else 1
             let desc = Texture2DDescription(Width = header.width, Height = header.height, MipLevels = miplevels, ArraySize = header10.arraySize * asmult,
-                        Format = header10.format, SampleDescription = DXGI.SampleDescription(1, 0), Usage = ResourceUsage.Immutable, BindFlags = BindFlags.ShaderResource,
+                        Format = header10.format, SampleDescription = SampleDescription(1, 0), Usage = ResourceUsage.Immutable, BindFlags = BindFlags.ShaderResource,
                         OptionFlags = header10.flags)
-            let conv rowPitch slicePitch size offset = DataRectangle(rowPitch, streamc offset size)
+            let conv rowPitch slicePitch size offset = DataRectangle(streamc offset size, rowPitch)
             new Texture2D(device, desc, getLayout desc.Format desc.Width desc.Height 1 desc.MipLevels desc.ArraySize conv) :> Resource
         | ResourceDimension.Texture3D ->
             let desc = Texture3DDescription(Width = header.width, Height = header.height, Depth = header.depth, MipLevels = miplevels,
                         Format = header10.format, Usage = ResourceUsage.Immutable, BindFlags = BindFlags.ShaderResource)
-            let conv rowPitch slicePitch size offset = DataBox(rowPitch, slicePitch, streamc offset size)
+            let conv rowPitch slicePitch size offset = DataBox(streamc offset size, rowPitch, slicePitch)
             new Texture3D(device, desc, getLayout desc.Format desc.Width desc.Height desc.Depth desc.MipLevels 1 conv) :> Resource
         | d -> failwithf "Unsupported image dimension %A" d
 
     // load file in memory
     let loadFile path =
         use file = File.OpenRead(path)
-        let data = new SlimDX.DataStream(file.Length, canRead = true, canWrite = true)
+        let data = new DataStream(int file.Length, canRead = true, canWrite = true)
         file.CopyTo(data)
         data.Position <- 0L
         data
@@ -198,7 +203,7 @@ module private TextureLoaderDDS =
 
         let streamc offset size =
             if int64 (dataOffset + offset + size) > data.Length then failwith "Error reading image data: file is truncated"
-            new DataStream(data.DataPointer + nativeint (dataOffset + offset), int64 size, canRead = true, canWrite = false)
+            data.DataPointer + nativeint (dataOffset + offset)
 
         // create texture resource
         let resource = createTexture device header header10 streamc

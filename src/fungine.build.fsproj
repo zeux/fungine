@@ -39,14 +39,16 @@
       <Link>nvtt.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\sdks\DirectX\d3dcompiler_44.dll">
+      <Link>d3dcompiler_44.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="SlimDX">
-      <HintPath>../sdks/SlimDX/SlimDX.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Xml" />
   </ItemGroup>
+  <Import Project="..\sdks\SharpDX\SharpDX.proj" />
   <ItemGroup>
     <ProjectReference Include="..\src\fungine.fsproj">
       <Name>fungine</Name>

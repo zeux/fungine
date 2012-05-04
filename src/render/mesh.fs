@@ -31,8 +31,8 @@ type MeshFragment =
 // mesh
 type Mesh =
     { fragments: MeshFragment array
-      vertices: BufferResource
-      indices: BufferResource
+      vertices: VertexBuffer
+      indices: IndexBuffer
       skeleton: SkeletonInstance
     }
 

@@ -22,25 +22,31 @@ type private ConcurrentTaskScheduler(jobs) as this =
 
     let mutable taskCounter = 0
 
-    member this.RunAll() =
-        for w in workers do w.Start()
-        Tasks.Task.WaitAll(workers)
-
-    member this.Worker () =
-        let mutable task = Unchecked.defaultof<_>
-        while tasks.TryTake(&task, Timeout.Infinite) do
-            this.TryExecuteTask(task) |> ignore
-
+    member private this.TryExecuteTask(task) =
+        if base.TryExecuteTask(task) then
             let res = Interlocked.Decrement(&taskCounter)
             assert (res >= 0)
 
             // We processed last task, so it's impossible for any more tasks to be added
             // Mark the task queue as complete so that all workers can fail to take one more task
             if res = 0 then tasks.CompleteAdding()
+            true
+        else
+            false
+
+    member this.RunAll() =
+        if taskCounter > 0 then
+            for w in workers do w.Start()
+            Tasks.Task.WaitAll(workers)
+
+    member this.Worker () =
+        let mutable task = Unchecked.defaultof<_>
+        while tasks.TryTake(&task, Timeout.Infinite) do
+            this.TryExecuteTask(task) |> ignore
 
     override this.QueueTask(task) =
-        tasks.Add(task)
         Interlocked.Increment(&taskCounter) |> ignore
+        tasks.Add(task)
 
     override this.TryExecuteTaskInline(task, taskWasPreviouslyQueued) = this.TryExecuteTask(task)
     override this.GetScheduledTasks() = tasks.ToArray() |> Seq.ofArray

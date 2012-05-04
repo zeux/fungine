@@ -2,8 +2,9 @@ namespace Render
 
 open System.Collections.Generic
 
-open SlimDX
-open SlimDX.Direct3D11
+open SharpDX.Data
+open SharpDX.D3DCompiler
+open SharpDX.Direct3D11
 
 // shader parameter binding
 type ShaderParameterBinding =
@@ -44,9 +45,9 @@ type ShaderSignature(contents: byte array) =
     let mutable data = null
 
     // fixup callback
-    member private this.Fixup device =
-        let stream = new DataStream(contents, canRead = true, canWrite = false)
-        data <- new SlimDX.D3DCompiler.ShaderSignature(stream)
+    member private this.Fixup ctx =
+        use stream = DataStream.Create(contents, canRead = true, canWrite = false, makeCopy = false)
+        data <- new SharpDX.D3DCompiler.ShaderSignature(stream)
 
     // resource accessor
     member this.Resource = data
@@ -62,8 +63,8 @@ type ShaderObject<'T when 'T: null>(bytecode: byte array, parameters: ShaderPara
         let device = Core.Serialization.Fixup.Get<Device>(ctx)
 
         // create shader object
-        use stream = new DataStream(bytecode, canRead = true, canWrite = false)
-        use bcobj = new SlimDX.D3DCompiler.ShaderBytecode(stream)
+        use stream = DataStream.Create(bytecode, canRead = true, canWrite = false, makeCopy = false)
+        use bcobj = new ShaderBytecode(stream)
         data <- System.Activator.CreateInstance(typeof<'T>, [|box device; box bcobj|]) :?> 'T
 
         // fixup parameters

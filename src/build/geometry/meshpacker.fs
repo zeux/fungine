@@ -2,6 +2,8 @@ namespace Build.Geometry
 
 open System.Collections.Generic
 
+open SharpDX.Data
+
 // an indexed mesh with compressed vertex data
 type PackedMesh =
     { compressionInfo: Render.MeshCompressionInfo
@@ -56,7 +58,7 @@ module MeshPacker =
 
         // prepare a stream for writing
         let result : byte array = Array.zeroCreate (vertices.Length * vertexSize)
-        use stream = new SlimDX.DataStream(result, canRead = false, canWrite = true)
+        use stream = DataStream.Create(result, canRead = false, canWrite = true, makeCopy = false)
 
         // get position and texcoord bounds for compression
         let (posOffset, posScale) = getComponentBounds vertices (fun v -> v.position) Vector3.Minimize Vector3.Maximize

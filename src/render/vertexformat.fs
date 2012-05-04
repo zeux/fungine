@@ -1,6 +1,6 @@
 namespace Render
 
-open SlimDX.Direct3D11
+open SharpDX.Direct3D11
 
 // layout of the vertex data
 type VertexLayout =

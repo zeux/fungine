@@ -1,8 +1,8 @@
 namespace Input
 
 open System.Windows.Forms
-open SlimDX.RawInput
-open SlimDX.Multimedia
+open SharpDX.RawInput
+open SharpDX.Multimedia
 
 // mouse button
 type MouseButton =
@@ -39,7 +39,7 @@ type Mouse(control: Control) =
 
     // grab mouse axis data via WM_INPUT (more precise, not related to mouse cursor position)
     do
-        Device.RegisterDevice(UsagePage.Generic, UsageId.Mouse, DeviceFlags.None)
+        Device.RegisterDevice(UsagePage.Generic, UsageId.GenericMouse, DeviceFlags.None)
         Device.MouseInput.Add(fun args ->
             if control.Focused then
                 [| args.X; args.Y; args.WheelDelta |] |> Array.iteri (fun i d -> current.axisDeltas.[i] <- current.axisDeltas.[i] + d))

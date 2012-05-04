@@ -2,9 +2,8 @@ namespace Render
 
 open System.Windows.Forms
 
-open SlimDX
-open SlimDX.DXGI
-open SlimDX.Direct3D11
+open SharpDX.DXGI
+open SharpDX.Direct3D11
 
 // device
 type Device(output: nativeint) =
@@ -24,7 +23,7 @@ type Device(output: nativeint) =
     let (_, device, swapchain) = Device.CreateWithSwapChain(DriverType.Hardware, DeviceCreationFlags.None, desc)
 
     // disable Alt+Enter handling
-    do swapchain.GetParent<Factory>().SetWindowAssociation(output, WindowAssociationFlags.IgnoreAltEnter) |> ignore
+    do swapchain.GetParent<Factory>().MakeWindowAssociation(output, WindowAssociationFlags.IgnoreAltEnter) |> ignore
 
     // get back buffer
     let getBackBuffer () =

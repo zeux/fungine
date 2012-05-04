@@ -37,9 +37,10 @@
     <Compile Include="asset\asset.fs" />
     <Compile Include="asset\database.fs" />
     <Compile Include="asset\loader.fs" />
+    <Compile Include="render\sharpdx.fs" />
     <Compile Include="render\format.fs" />
     <Compile Include="render\vertexformat.fs" />
-    <Compile Include="render\buffer.fs" />
+    <Compile Include="render\geometrybuffer.fs" />
     <Compile Include="render\constantbuffer.fs" />
     <Compile Include="render\shader.fs" />
     <Compile Include="render\shaderstruct.fs" />
@@ -62,9 +63,6 @@
   <ItemGroup>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
-    <Reference Include="SlimDX">
-      <HintPath>../sdks/SlimDX/SlimDX.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
@@ -72,4 +70,5 @@
     <Reference Include="WindowsBase" />
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
+  <Import Project="..\sdks\SharpDX\SharpDX.proj" />
 </Project>

@@ -1,6 +1,6 @@
 namespace Render.Lighting
 
-open SlimDX.Direct3D11
+open SharpDX.Direct3D11
 
 open Render
 
@@ -31,11 +31,13 @@ type LightGrid(device: Device, widthPixels, heightPixels, cellSize, maxLightsPer
 
     let view =
         new ShaderResourceView(device.Device, buffer,
-            ShaderResourceViewDescription(Format = format, Dimension = ShaderResourceViewDimension.Buffer, ElementWidth = indexCount))
+            ShaderResourceViewDescription(Format = format, Dimension = ShaderResourceViewDimension.Buffer, Buffer =
+                ShaderResourceViewDescription.BufferResource(ElementCount = indexCount)))
 
     let uaView =
         new UnorderedAccessView(device.Device, buffer,
-            UnorderedAccessViewDescription(Format = format, Dimension = UnorderedAccessViewDimension.Buffer, ElementCount = indexCount))
+            UnorderedAccessViewDescription(Format = format, Dimension = UnorderedAccessViewDimension.Buffer, Buffer =
+                UnorderedAccessViewDescription.BufferResource(ElementCount = indexCount)))
 
     // get grid dimensions
     member this.Width = width

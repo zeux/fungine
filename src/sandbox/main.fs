@@ -5,14 +5,17 @@ open System.Collections.Generic
 open System.Drawing
 open System.IO
 open System.Windows.Forms
-open SlimDX
-open SlimDX.DXGI
-open SlimDX.Windows
-open SlimDX.Direct3D11
+
+open SharpDX.Data
+open SharpDX.DXGI
+open SharpDX.Windows
+open SharpDX.Direct3D11
 
 open Core.Data
 
 open Render.Lighting
+
+type PixHelper = SharpDX.Direct3D.PixHelper
 
 [<STAThread>]
 do()
@@ -71,12 +74,12 @@ let vertexSize = (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone
 let layout = new InputLayout(device.Device, gbufferFill.Value.VertexSignature.Resource, (Render.VertexLayouts.get Render.VertexFormat.Pos_TBN_Tex1_Bone4_Packed).elements)
 
 let createDummyTexture color =
-    let stream = new DataStream(4L, canRead = false, canWrite = true)
+    let stream = new DataStream(4, canRead = false, canWrite = true)
     stream.WriteRange(color)
     stream.Position <- 0L
 
     let desc = Texture2DDescription(Width = 1, Height = 1, Format = Format.R8G8B8A8_UNorm, ArraySize = 1, MipLevels = 1, SampleDescription = SampleDescription(1, 0), BindFlags = BindFlags.ShaderResource)
-    let texture = new Texture2D(device.Device, desc, DataRectangle(4, stream))
+    let texture = new Texture2D(device.Device, desc, DataRectangle(stream.DataPointer, 4))
 
     new ShaderResourceView(device.Device, texture)
 
@@ -193,10 +196,10 @@ type Material(roughness: float32, smoothness: float32) =
 let cbPool = Render.ConstantBufferPool(device.Device)
 
 let renderScene (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) (shader: Render.Shader) =
-    context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.Less))
+    context.OutputMerger.DepthStencilState <- new DepthStencilState(device.Device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.Less))
 
     let fillMode = if dbgWireframe.Value then FillMode.Wireframe else FillMode.Solid
-    context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.Back, FillMode = fillMode, IsFrontCounterclockwise = true))
+    context.Rasterizer.State <- new RasterizerState(device.Device, RasterizerStateDescription(CullMode = CullMode.Back, FillMode = fillMode, IsFrontCounterClockwise = true))
 
     context.InputAssembler.InputLayout <- layout
     context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
@@ -204,7 +207,7 @@ let renderScene (context: DeviceContext) (shaderContext: Render.ShaderContext) (
     shaderContext.Shader <- shader
 
     shaderContext?camera <- camera
-    shaderContext?defaultSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbgTexfilter.Value, MaximumAnisotropy = 16, MaximumLod = infinityf))
+    shaderContext?defaultSampler <- new SamplerState(device.Device, SamplerStateDescription(AddressU = TextureAddressMode.Wrap, AddressV = TextureAddressMode.Wrap, AddressW = TextureAddressMode.Wrap, Filter = dbgTexfilter.Value, MaximumAnisotropy = 16, MaximumLod = infinityf))
 
     let sceneCopy = lock scene (fun () -> scene.ToArray())
 
@@ -235,9 +238,9 @@ let fillGBuffer (context: DeviceContext) (shaderContext: Render.ShaderContext) (
     context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
     context.OutputMerger.SetTargets(depthBuffer.DepthView, [|albedoBuffer; specBuffer; normalBuffer|] |> Array.map (fun rt -> rt.ColorView))
 
-    Performance.BeginEvent(Color4(), "gbuffer") |> ignore
+    PixHelper.BeginEvent(Color.Black, "gbuffer") |> ignore
     renderScene context shaderContext camera gbufferFill.Value
-    Performance.EndEvent() |> ignore
+    PixHelper.EndEvent() |> ignore
 
 let fillShadowBuffer (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) (shadowBuffer: Render.RenderTarget) =
     let texture = shadowBuffer.Resource :?> Texture2D
@@ -245,19 +248,19 @@ let fillShadowBuffer (context: DeviceContext) (shaderContext: Render.ShaderConte
 
     use dummyBuffer = rtpool.Acquire("dummy", texture.Description.Width, texture.Description.Height, Format.R8G8B8A8_UNorm)
 
-    context.ClearRenderTargetView(dummyBuffer.ColorView, Color4())
+    context.ClearRenderTargetView(dummyBuffer.ColorView, SharpDX.Color4())
 
     context.OutputMerger.SetTargets(shadowBuffer.DepthView, [||])
 
-    Performance.BeginEvent(Color4(), "shadowbuffer") |> ignore
+    PixHelper.BeginEvent(Color.Black, "shadowbuffer") |> ignore
     renderScene context shaderContext camera depthFill.Value
-    Performance.EndEvent() |> ignore
+    PixHelper.EndEvent() |> ignore
 
 let renderFullScreenTri (context: DeviceContext) (shaderContext: Render.ShaderContext) (shader: Render.Shader) =
     context.InputAssembler.InputLayout <- null
     context.InputAssembler.PrimitiveTopology <- PrimitiveTopology.TriangleList
-    context.OutputMerger.DepthStencilState <- DepthStencilState.FromDescription(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
-    context.Rasterizer.State <- RasterizerState.FromDescription(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
+    context.OutputMerger.DepthStencilState <- new DepthStencilState(device.Device, DepthStencilStateDescription(IsDepthEnabled = false))
+    context.Rasterizer.State <- new RasterizerState(device.Device, RasterizerStateDescription(CullMode = CullMode.None, FillMode = FillMode.Solid))
 
     shaderContext.Shader <- shader
 
@@ -274,7 +277,7 @@ let dbgSpotOffset = Core.DbgVar(30.f, "spot/offset")
 let dbgSpotHeight = Core.DbgVar(30.f, "spot/height")
 let dbgSpotInnercone = Core.DbgVar(19.f, "spot/inner cone")
 let dbgSpotOutercone = Core.DbgVar(20.f, "spot/outer cone")
-let dbgSpotRadius = Core.DbgVar(100.f, "spot/radius")
+let dbgSpotRadius = Core.DbgVar(40.f, "spot/radius")
 let dbgSpotIntensity = Core.DbgVar(8.f, "spot/intensity")
 let dbgSpotSeed = Core.DbgVar(1, "spot/seed")
 let dbgSpotCount = Core.DbgVar(3, "spot/count")
@@ -364,7 +367,7 @@ let getLightGrid =
             cache := Some grid
             grid
 
-MessagePump.Run(form, fun () ->
+RenderLoop.Run(form, fun () ->
     frameTimer.Stop()
     let dt = frameTimer.Current
     frameTimer.Start()
@@ -412,9 +415,9 @@ MessagePump.Run(form, fun () ->
     use specularBuffer = rtpool.Acquire("gbuffer/specular", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
     use normalBuffer = rtpool.Acquire("gbuffer/normal", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_UNorm)
 
-    context.ClearRenderTargetView(albedoBuffer.ColorView, SlimDX.Color4 Color.Gray)
-    context.ClearRenderTargetView(specularBuffer.ColorView, SlimDX.Color4 Color.Black)
-    context.ClearRenderTargetView(normalBuffer.ColorView, SlimDX.Color4 Color.Black)
+    context.ClearRenderTargetView(albedoBuffer.ColorView, SharpDX.Color4 0xff808080)
+    context.ClearRenderTargetView(specularBuffer.ColorView, SharpDX.Color4 0)
+    context.ClearRenderTargetView(normalBuffer.ColorView, SharpDX.Color4 0)
     context.ClearDepthStencilView(depthBuffer.DepthView, DepthStencilClearFlags.Depth, 1.f, 0uy)
 
     fillGBuffer context shaderContext camera albedoBuffer specularBuffer normalBuffer depthBuffer
@@ -424,7 +427,7 @@ MessagePump.Run(form, fun () ->
     // light & shade
     context.OutputMerger.SetTargets(colorBuffer.ColorView)
 
-    shaderContext?gbufSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
+    shaderContext?gbufSampler <- new SamplerState(device.Device, SamplerStateDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
     shaderContext?gbufAlbedo <- albedoBuffer.View
     shaderContext?gbufSpecular <- specularBuffer.View
     shaderContext?gbufNormal <- normalBuffer.View
@@ -434,7 +437,7 @@ MessagePump.Run(form, fun () ->
 
     // add some spot lights!
     let mutable blendon = BlendStateDescription()
-    Array.fill blendon.RenderTargets 0 8 (RenderTargetBlendDescription(BlendEnable = true, SourceBlend = BlendOption.One, DestinationBlend = BlendOption.One, BlendOperation = BlendOperation.Add, SourceBlendAlpha = BlendOption.One, DestinationBlendAlpha = BlendOption.Zero, BlendOperationAlpha = BlendOperation.Add, RenderTargetWriteMask = ColorWriteMaskFlags.All))
+    Array.fill blendon.RenderTarget 0 8 (RenderTargetBlendDescription(IsBlendEnabled = true, SourceBlend = BlendOption.One, DestinationBlend = BlendOption.One, BlendOperation = BlendOperation.Add, SourceAlphaBlend = BlendOption.One, DestinationAlphaBlend = BlendOption.Zero, AlphaBlendOperation = BlendOperation.Add, RenderTargetWriteMask = ColorWriteMaskFlags.All))
 
     let deg2rad = float32 System.Math.PI / 180.f
 
@@ -485,9 +488,9 @@ MessagePump.Run(form, fun () ->
         shaderContext?light <- light
         shaderContext?lightCamera <- lightCamera
         shaderContext?shadowMap <- shadowBuffer.View
-        shaderContext?shadowSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.ComparisonMinMagMipLinear, ComparisonFunction = Comparison.Less))
+        shaderContext?shadowSampler <- new SamplerState(device.Device, SamplerStateDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.ComparisonMinMagMipLinear, ComparisonFunction = Comparison.Less))
 
-        context.OutputMerger.BlendState <- BlendState.FromDescription(device.Device, blendon)
+        context.OutputMerger.BlendState <- new BlendState(device.Device, blendon)
 
         renderFullScreenTri context shaderContext lightSpot.Value
 
@@ -499,7 +502,7 @@ MessagePump.Run(form, fun () ->
 
     context.OutputMerger.SetTargets(ldrBuffer.ColorView)
 
-    shaderContext?defaultSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
+    shaderContext?defaultSampler <- new SamplerState(device.Device, SamplerStateDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
     shaderContext?colorMap <- colorBuffer.View
 
     renderFullScreenTri context shaderContext postfxTonemap.Value
@@ -507,7 +510,7 @@ MessagePump.Run(form, fun () ->
     // fxaa blit
     context.OutputMerger.SetTargets(device.BackBuffer.ColorView)
 
-    shaderContext?defaultSampler <- SamplerState.FromDescription(device.Device, SamplerDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
+    shaderContext?defaultSampler <- new SamplerState(device.Device, SamplerStateDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
     shaderContext?colorMap <- ldrBuffer.View
 
     renderFullScreenTri context shaderContext postfxFxaa.Value
@@ -515,6 +518,10 @@ MessagePump.Run(form, fun () ->
     // fill lightgrid
     shaderContext?lightGridBufferUA <- lightGrid.UnorderedView
     shaderContext?lightGrid <- lightGrid
+    shaderContext?lightData <- lights
+    shaderContext?lightCount <- box lights.Length
+    shaderContext?depthBuffer <- depthBuffer.View
+    shaderContext?camera <- camera
 
     shaderContext.Program <- lightGridFill.Value
     context.Dispatch(lightGrid.Width, lightGrid.Height, 1)
@@ -525,7 +532,7 @@ MessagePump.Run(form, fun () ->
     shaderContext?lightGridBuffer <- lightGrid.View
     shaderContext?lightGrid <- lightGrid
 
-    context.OutputMerger.BlendState <- BlendState.FromDescription(device.Device, blendon)
+    context.OutputMerger.BlendState <- new BlendState(device.Device, blendon)
 
     renderFullScreenTri context shaderContext lightGridDebug.Value
 

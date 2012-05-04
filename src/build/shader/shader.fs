@@ -1,9 +1,10 @@
 module Build.Shader
 
+open System
 open System.IO
 
-open SlimDX
-open SlimDX.D3DCompiler
+open SharpDX.Data
+open SharpDX.D3DCompiler
 
 open BuildSystem
 open Render
@@ -15,9 +16,11 @@ let private getData (stream: DataStream) =
 
 // include handler
 type private IncludeHandler(includePaths, callback, rootFile) =
+    inherit SharpDX.CallbackBase()
+
     interface Include with
         // open included file
-        override this.Open(typ, file, parent, stream) =
+        member this.Open(typ, file, parent) =
             // get parent file name
             let parentFile =
                 match parent with
@@ -33,24 +36,24 @@ type private IncludeHandler(includePaths, callback, rootFile) =
                 | _ -> failwithf "Internal error: unknown include type %A" typ
 
             // get a stream for the first file found; leave dependencies on all files so that we correctly rebuild if files get added
-            stream <-
-                paths |> Array.pick (fun p ->
-                    let path = Path.Combine(p, file)
-                    callback path
-                    try
-                        // additional exists check to avoid exceptions under normal circumstances
-                        if File.Exists(path) then Some (File.OpenRead(path))
-                        else None
-                    with e -> None)
+            paths |> Array.pick (fun p ->
+                let path = Path.Combine(p, file)
+                callback path
+                try
+                    // additional exists check to avoid exceptions under normal circumstances
+                    if File.Exists(path) then Some (File.OpenRead(path) :> Stream)
+                    else None
+                with e -> None)
 
         // close included file
-        override this.Close(stream) =
+        member this.Close(stream) =
             stream.Close()
 
 // build single bytecode instance
 let private buildBytecode path entry profile includePaths includeCallback =
     let flags = ShaderFlags.PackMatrixRowMajor ||| ShaderFlags.WarningsAreErrors
-    ShaderBytecode.CompileFromFile(path, entry, profile, flags, EffectFlags.None, [||], IncludeHandler(includePaths, includeCallback, path))
+    let result = ShaderBytecode.CompileFromFile(path, entry, profile, flags, EffectFlags.None, [||], new IncludeHandler(includePaths, includeCallback, path))
+    result.Bytecode
 
 // get shader parameters from bytecode
 let private getParameters (code: ShaderBytecode) compute =
@@ -70,12 +73,12 @@ let private getParameters (code: ShaderBytecode) compute =
                 -> ShaderParameterBinding.ShaderResource
             | ShaderInputType.Sampler
                 -> ShaderParameterBinding.Sampler
-            | ShaderInputType.Structured | ShaderInputType.RWStructured
-            | ShaderInputType.ByteAddress | ShaderInputType.RWByteAddress
-            | ShaderInputType.AppendStructured | ShaderInputType.ConsumeStructured
-                -> if not compute then failwithf "Parameter %s is an unordered access view; such parameters are restricted to compute shaders" desc.Name
-                   ShaderParameterBinding.UnorderedAccess
-            | t when int t = 4 // SlimDX does not map D3D11_SIT_UAV_RWTYPED to an enum member
+            | ShaderInputType.UnorderedAccessViewAppendStructured
+            | ShaderInputType.UnorderedAccessViewConsumeStructured
+            | ShaderInputType.UnorderedAccessViewRWByteAddress
+            | ShaderInputType.UnorderedAccessViewRwstructured
+            | ShaderInputType.UnorderedAccessViewRwstructuredWithCounter
+            | ShaderInputType.UnorderedAccessViewRwtyped
                 -> if not compute then failwithf "Parameter %s is an unordered access view; such parameters are restricted to compute shaders" desc.Name
                    ShaderParameterBinding.UnorderedAccess
             | t -> failwithf "Parameter %s has unknown type %O" desc.Name t
