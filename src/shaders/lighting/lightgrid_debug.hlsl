@@ -1,9 +1,11 @@
+#include <common/common.h>
+
 #include <auto_LightGrid.h>
 
 SamplerState defaultSampler;
 
 Buffer<uint> lightGridBuffer;
-cbuffer lightGrid { LightGrid lightGrid; }
+CBUF(LightGrid, lightGrid);
 
 struct PS_IN
 {
@@ -25,13 +27,19 @@ PS_IN vsMain(uint id: SV_VertexID)
 
 float4 psMain(PS_IN I): SV_Target
 {
+    if ((uint)I.pos.x % lightGrid.cellSize == 0)
+        return float4(0.f.xxx, 1.0);
+
+    if ((uint)I.pos.y % lightGrid.cellSize == 0)
+        return float4(0.f.xxx, 1.0);
+
     int gridOffset = (int)(I.pos.y / lightGrid.cellSize) * lightGrid.stride + (int)(I.pos.x / lightGrid.cellSize) * lightGrid.tileSize;
 
     int count = 0;
 
     for (int i = 0; i < lightGrid.tileSize; ++i)
     {
-        int index = lightGridBuffer.Load(gridOffset + i);
+        int index = lightGridBuffer[gridOffset + i];
         if (index == 0) break;
         count++;
     }

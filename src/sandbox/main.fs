@@ -183,7 +183,9 @@ module Seq =
 [<Render.ShaderStruct>]
 type Camera(view: Matrix34, projection: Matrix44) =
     member this.View = view
+    member this.ViewInverse = Matrix34.InverseAffine(view)
     member this.Projection = projection
+    member this.ProjectionInverse = Matrix44.Inverse(projection)
     member this.ViewProjection = projection * Matrix44(view)
     member this.ViewProjectionInverse = Matrix44.Inverse(this.ViewProjection)
     member this.EyePosition = Matrix34.InverseAffine(view).Column 3
