@@ -30,6 +30,12 @@ let private getShaderType (typ: Type) =
 let private getShaderStructContents (typ: Type) =
     let sb = StringBuilder()
 
+    for p in typ.GetProperties(BindingFlags.Public ||| BindingFlags.Static) do
+        if p.PropertyType = typeof<int> then
+            sb.AppendFormat("#define {0} {1}\n", (typ.Name + "_" + p.Name).ToUpper(), p.GetValue(null)) |> ignore
+    
+    if sb.Length > 0 then sb.AppendLine() |> ignore
+
     sb.AppendFormat("struct {0}\n{1}\n", getShaderType typ, "{") |> ignore
 
     for p in Render.ShaderStruct.getProperties typ do
