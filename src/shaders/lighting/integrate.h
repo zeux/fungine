@@ -12,7 +12,6 @@ struct LightInput
 {
     float3 direction;
     float3 color;
-    float attenuation;
 };
 
 LightInput getLightInput(LightData light, float3 position)
@@ -27,8 +26,7 @@ LightInput getLightInput(LightData light, float3 position)
 
     LightInput result;
     result.direction = L;
-    result.color = light.color.rgb * light.intensity;
-    result.attenuation = atten;
+    result.color = light.color.rgb * (light.intensity * atten);
 
     return result;
 }
