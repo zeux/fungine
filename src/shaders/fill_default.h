@@ -4,19 +4,15 @@
 #include <common/common.h>
 #include <common/gamma.h>
 
+#include <lighting/integrate.h>
+
 #include <auto_Camera.h>
 #include <auto_Material.h>
 #include <auto_MeshCompressionInfo.h>
-#include <auto_LightData.h>
-#include <auto_LightGrid.h>
 
 CBUF(Camera, camera);
 CBUF(MeshCompressionInfo, meshCompressionInfo);
 CBUF(Material, material);
-
-Buffer<uint> lightGridBuffer;
-CBUF(LightGrid, lightGrid);
-CBUF_ARRAY(LightData, lightData);
 
 cbuffer mesh
 {
@@ -123,36 +119,20 @@ PS_OUT psMain(PS_IN I)
 
     float3 view = normalize(camera.eyePosition - I.position);
 
-    int gridOffset = (int)(I.pos.y / LIGHTGRID_CELLSIZE) * lightGrid.stride + (int)(I.pos.x / LIGHTGRID_CELLSIZE) * lightGrid.tileSize;
-
     float3 diffuse = 0, specular = 0;
 
-    for (int i = 0; i < lightGrid.tileSize; ++i)
-    {
-        int index = lightGridBuffer[gridOffset + i];
-        if (index == 0) break;
+    IntegrateBRDF(I.pos, I.position,
+        float diff = saturate(dot(normal, L.direction)) * L.attenuation;
 
-        LightData light = lightData[index - 1];
-
-        float3 lightUn = light.position - I.position;
-        float3 L = normalize(lightUn);
-        float attenDist = saturate(1 - length(lightUn) / light.radius);
-        float attenCone = pow(saturate((dot(-L, light.direction) - light.outerAngle) / (light.innerAngle - light.outerAngle)), 4);
-
-        float diff = saturate(dot(normal, L)) * attenDist * (light.type == LIGHTTYPE_SPOT ? attenCone : 1);
-
-        float3 hvec = normalize(L + view);
-
+        float3 hvec = normalize(L.direction + view);
         float cosnh = saturate(dot(hvec, normal));
 
         // Normalized Blinn-Phong
         float specpower = pow(2, material.roughness * 10);
 
-        float3 lightcolor = light.color.rgb * light.intensity;
-
-        diffuse += lightcolor * diff;
-        specular += lightcolor * diff * pow(cosnh, specpower) * ((specpower + 8) / 8);
-    }
+        diffuse += L.color * diff;
+        specular += L.color * diff * pow(cosnh, specpower) * ((specpower + 8) / 8);
+    );
 
     O.color = float4(albedo.rgb * diffuse + spec * specular * diffuse, albedo.a);
 #endif
