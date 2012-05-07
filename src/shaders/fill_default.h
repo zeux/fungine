@@ -1,13 +1,22 @@
 #ifndef FILL_DEFAULT_H
 #define FILL_DEFAULT_H
 
+#include <common/common.h>
+#include <common/gamma.h>
+
 #include <auto_Camera.h>
 #include <auto_Material.h>
 #include <auto_MeshCompressionInfo.h>
+#include <auto_LightData.h>
+#include <auto_LightGrid.h>
 
-cbuffer camera { Camera camera; };
-cbuffer meshCompressionInfo { MeshCompressionInfo meshCompressionInfo; };
-cbuffer material { Material material; };
+CBUF(Camera, camera);
+CBUF(MeshCompressionInfo, meshCompressionInfo);
+CBUF(Material, material);
+
+Buffer<uint> lightGridBuffer;
+CBUF(LightGrid, lightGrid);
+CBUF_ARRAY(LightData, lightData);
 
 cbuffer mesh
 {
@@ -45,6 +54,8 @@ struct PS_IN
 	float2 uv0: TEXCOORD0;
 
 #if !DEPTH_ONLY
+    float3 position: POSITION;
+
     float3 tangent: TANGENT;
     float3 bitangent: BITANGENT;
     float3 normal: NORMAL;
@@ -54,9 +65,7 @@ struct PS_IN
 struct PS_OUT
 {
 #if !DEPTH_ONLY
-    float4 albedo: SV_Target0;
-    float4 specular: SV_Target1;
-    float4 normal: SV_Target2;
+    float4 color: SV_Target0;
 #endif
 };
 
@@ -81,6 +90,7 @@ PS_IN vsMain(uint instance: SV_InstanceId, VS_IN I)
     O.uv0 = I.uv0 * meshCompressionInfo.uvScale + meshCompressionInfo.uvOffset;
 
 #if !DEPTH_ONLY
+    O.position = posWs;
     O.normal = normalize(mul((float3x3)offsets[instance], mul((float3x3)transform, I.normal * 2 - 1)));
     O.tangent = normalize(mul((float3x3)offsets[instance], mul((float3x3)transform, I.tangent.xyz * 2 - 1)));
     O.bitangent = cross(O.normal, O.tangent) * (I.tangent.w * 2 - 1);
@@ -99,7 +109,7 @@ float3 sampleNormal(Texture2D<float2> map, float2 uv)
 
 PS_OUT psMain(PS_IN I)
 {
-    float4 albedo = albedoMap.Sample(defaultSampler, I.uv0);
+    float4 albedo = degamma(albedoMap.Sample(defaultSampler, I.uv0));
 
     if (albedo.a < 0.5) discard;
 
@@ -109,11 +119,42 @@ PS_OUT psMain(PS_IN I)
     float3 normalTs = sampleNormal(normalMap, I.uv0);
     float3 normal = normalize(normalTs.x * I.tangent + normalTs.y * I.bitangent + normalTs.z * I.normal);
 
-    float3 spec = specularMap.Sample(defaultSampler, I.uv0);
+    float3 spec = degamma(specularMap.Sample(defaultSampler, I.uv0));
 
-    O.albedo = albedo;
-    O.specular = float4(spec, material.roughness);
-    O.normal = float4(normal * 0.5 + 0.5, 0);
+    float3 view = normalize(camera.eyePosition - I.position);
+
+    int gridOffset = (int)(I.pos.y / lightGrid.cellSize) * lightGrid.stride + (int)(I.pos.x / lightGrid.cellSize) * lightGrid.tileSize;
+
+    float3 diffuse = 0, specular = 0;
+
+    for (int i = 0; i < lightGrid.tileSize; ++i)
+    {
+        int index = lightGridBuffer[gridOffset + i];
+        if (index == 0) break;
+
+        LightData light = lightData[index - 1];
+
+        float3 lightUn = light.position - I.position;
+        float3 L = normalize(lightUn);
+        float attenDist = saturate(1 - length(lightUn) / light.radius);
+        float attenCone = pow(saturate((dot(-L, light.direction) - light.outerAngle) / (light.innerAngle - light.outerAngle)), 4);
+
+        float diff = saturate(dot(normal, L)) * attenDist;
+
+        float3 hvec = normalize(L + view);
+
+        float cosnh = saturate(dot(hvec, normal));
+
+        // Normalized Blinn-Phong
+        float specpower = pow(2, material.roughness * 10);
+
+        float3 lightcolor = light.color.rgb * light.intensity;
+
+        diffuse += lightcolor * diff;
+        specular += lightcolor * diff * pow(cosnh, specpower) * ((specpower + 8) / 8);
+    }
+
+    O.color = float4(albedo.rgb * diffuse + specular * diffuse, albedo.a);
 #endif
 
 	return O;

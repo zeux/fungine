@@ -18,7 +18,9 @@ open Render.Lighting
 type PixHelper = SharpDX.Direct3D.PixHelper
 
 [<STAThread>]
-do()
+do ()
+
+SharpDX.Configuration.EnableReleaseOnFinalizer <- true
 
 let firsttime = lazy ((System.DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime).TotalSeconds |> printfn "--- first frame latency: %.2f sec")
 
@@ -62,8 +64,6 @@ let _ = assets.assetWatcher loader
 
 let gbufferFill = loader.Load<Render.Shader> ".build/src/shaders/gbuffer_fill_default.shader"
 let depthFill = loader.Load<Render.Shader> ".build/src/shaders/depth_fill_default.shader"
-let lightDirectional = loader.Load<Render.Shader> ".build/src/shaders/lighting/directional.shader"
-let lightSpot = loader.Load<Render.Shader> ".build/src/shaders/lighting/spot.shader"
 let postfxTonemap = loader.Load<Render.Shader> ".build/src/shaders/postfx/tonemap.shader"
 let postfxFxaa = loader.Load<Render.Shader> ".build/src/shaders/postfx/fxaa.shader"
 let postfxBlit = loader.Load<Render.Shader> ".build/src/shaders/postfx/blit.shader"
@@ -198,7 +198,7 @@ type Material(roughness: float32, smoothness: float32) =
 let cbPool = Render.ConstantBufferPool(device.Device)
 
 let renderScene (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) (shader: Render.Shader) =
-    context.OutputMerger.DepthStencilState <- new DepthStencilState(device.Device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.Less))
+    context.OutputMerger.DepthStencilState <- new DepthStencilState(device.Device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.LessEqual))
 
     let fillMode = if dbgWireframe.Value then FillMode.Wireframe else FillMode.Solid
     context.Rasterizer.State <- new RasterizerState(device.Device, RasterizerStateDescription(CullMode = CullMode.Back, FillMode = fillMode, IsFrontCounterClockwise = true))
@@ -236,26 +236,12 @@ let renderScene (context: DeviceContext) (shaderContext: Render.ShaderContext) (
             context.InputAssembler.SetIndexBuffer(mesh.indices.Resource, fragment.indexFormat, fragment.indexOffset)
             context.DrawIndexedInstanced(fragment.indexCount, instances.Length, 0, 0, 0)
 
-let fillGBuffer (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) (albedoBuffer: Render.RenderTarget) (specBuffer: Render.RenderTarget) (normalBuffer: Render.RenderTarget) (depthBuffer: Render.RenderTarget) =
-    context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
-    context.OutputMerger.SetTargets(depthBuffer.DepthView, [|albedoBuffer; specBuffer; normalBuffer|] |> Array.map (fun rt -> rt.ColorView))
+let renderPass (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) (depthBuffer: Render.RenderTarget) (colorBuffers: Render.RenderTarget array) (viewport: Viewport) (shader: Render.Shader) =
+    context.Rasterizer.SetViewports(viewport)
+    context.OutputMerger.SetTargets(depthBuffer.DepthView, colorBuffers |> Array.map (fun rt -> rt.ColorView))
 
-    PixHelper.BeginEvent(Color.Black, "gbuffer") |> ignore
-    renderScene context shaderContext camera gbufferFill.Value
-    PixHelper.EndEvent() |> ignore
-
-let fillShadowBuffer (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) (shadowBuffer: Render.RenderTarget) =
-    let texture = shadowBuffer.Resource :?> Texture2D
-    context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 texture.Description.Width, float32 texture.Description.Height))
-
-    use dummyBuffer = rtpool.Acquire("dummy", texture.Description.Width, texture.Description.Height, Format.R8G8B8A8_UNorm)
-
-    context.ClearRenderTargetView(dummyBuffer.ColorView, SharpDX.Color4())
-
-    context.OutputMerger.SetTargets(shadowBuffer.DepthView, [||])
-
-    PixHelper.BeginEvent(Color.Black, "shadowbuffer") |> ignore
-    renderScene context shaderContext camera depthFill.Value
+    PixHelper.BeginEvent(Color.Black, "scene render") |> ignore
+    renderScene context shaderContext camera shader
     PixHelper.EndEvent() |> ignore
 
 let renderFullScreenTri (context: DeviceContext) (shaderContext: Render.ShaderContext) (shader: Render.Shader) =
@@ -286,10 +272,7 @@ let dbgSpotCount = Core.DbgVar(3, "spot/count")
 
 type DebugTarget =
     | None = 0
-    | Albedo = 1
-    | Normal = 2
-    | Specular = 3
-    | Depth = 4
+    | Depth = 1
 
 let dbgDebugTarget = Core.DbgVar(DebugTarget.None, "render/debug target")
 
@@ -389,9 +372,6 @@ RenderLoop.Run(form, fun () ->
 
     let lightGrid = getLightGrid form.ClientSize.Width form.ClientSize.Height
 
-    use colorBuffer = rtpool.Acquire("scene/hdr", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_Float)
-    use depthBuffer = rtpool.Acquire("gbuffer/depth", form.ClientSize.Width, form.ClientSize.Height, Format.D24_UNorm_S8_UInt)
-
     // main camera
     let camera = Camera(cameraController.ViewMatrix, Math.Camera.projectionPerspective (dbgFov.Value / 180.f * float32 Math.PI) (float32 form.ClientSize.Width / float32 form.ClientSize.Height) 0.1f 1000.f)
 
@@ -412,35 +392,16 @@ RenderLoop.Run(form, fun () ->
         gizmoRef := Matrix34.Translation(axis * offset) * !gizmoRef
     | None -> ()
 
-    // fill gbuffer
-    use albedoBuffer = rtpool.Acquire("gbuffer/albedo", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
-    use specularBuffer = rtpool.Acquire("gbuffer/specular", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
-    use normalBuffer = rtpool.Acquire("gbuffer/normal", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_UNorm)
+    let viewport = Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height)
 
-    context.ClearRenderTargetView(albedoBuffer.ColorView, SharpDX.Color4 0xff808080)
-    context.ClearRenderTargetView(specularBuffer.ColorView, SharpDX.Color4 0)
-    context.ClearRenderTargetView(normalBuffer.ColorView, SharpDX.Color4 0)
+    // fill depth buffer
+    use depthBuffer = rtpool.Acquire("gbuffer/depth", form.ClientSize.Width, form.ClientSize.Height, Format.D24_UNorm_S8_UInt)
+
     context.ClearDepthStencilView(depthBuffer.DepthView, DepthStencilClearFlags.Depth, 1.f, 0uy)
 
-    fillGBuffer context shaderContext camera albedoBuffer specularBuffer normalBuffer depthBuffer
+    renderPass context shaderContext camera depthBuffer [||] viewport depthFill.Value
 
-    context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
-
-    // light & shade
-    context.OutputMerger.SetTargets(colorBuffer.ColorView)
-
-    shaderContext?gbufSampler <- new SamplerState(device.Device, SamplerStateDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.MinMagMipLinear))
-    shaderContext?gbufAlbedo <- albedoBuffer.View
-    shaderContext?gbufSpecular <- specularBuffer.View
-    shaderContext?gbufNormal <- normalBuffer.View
-    shaderContext?gbufDepth <- depthBuffer.View
-
-    renderFullScreenTri context shaderContext lightDirectional.Value
-
-    // add some spot lights!
-    let mutable blendon = BlendStateDescription()
-    Array.fill blendon.RenderTarget 0 8 (RenderTargetBlendDescription(IsBlendEnabled = true, SourceBlend = BlendOption.One, DestinationBlend = BlendOption.One, BlendOperation = BlendOperation.Add, SourceAlphaBlend = BlendOption.One, DestinationAlphaBlend = BlendOption.Zero, AlphaBlendOperation = BlendOperation.Add, RenderTargetWriteMask = ColorWriteMaskFlags.All))
-
+    // create lights
     let deg2rad = float32 System.Math.PI / 180.f
 
     let colors = [|
@@ -469,6 +430,30 @@ RenderLoop.Run(form, fun () ->
                 colors.[i % colors.Length],
                 dbgSpotIntensity.Value))
 
+    context.OutputMerger.SetTargets(null, [||])
+
+    // fill lightgrid
+    shaderContext?lightGridBufferUA <- lightGrid.UnorderedView
+    shaderContext?lightGrid <- lightGrid
+    shaderContext?lightData <- lights
+    shaderContext?lightCount <- box lights.Length
+    shaderContext?depthBuffer <- depthBuffer.View
+    shaderContext?camera <- camera
+
+    shaderContext.Program <- lightGridFill.Value
+    context.Dispatch(lightGrid.Width, lightGrid.Height, 1)
+
+    shaderContext?lightGridBufferUA <- (null: UnorderedAccessView)
+    shaderContext?lightGridBuffer <- lightGrid.View
+
+    // fill color buffer
+    use colorBuffer = rtpool.Acquire("scene/hdr", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_Float)
+
+    context.ClearRenderTargetView(colorBuffer.ColorView, SharpDX.Color4 0xff808080)
+
+    renderPass context shaderContext camera depthBuffer [|colorBuffer|] viewport gbufferFill.Value
+
+    (*
     use shadowBuffer = rtpool.Acquire("lighting/shadow buffer", 1024, 1024, Format.D24_UNorm_S8_UInt)
 
     for light in lights do
@@ -481,23 +466,7 @@ RenderLoop.Run(form, fun () ->
         context.ClearDepthStencilView(shadowBuffer.DepthView, DepthStencilClearFlags.Depth, 1.f, 0uy)
 
         fillShadowBuffer context shaderContext lightCamera shadowBuffer
-
-        // draw spot light
-        context.Rasterizer.SetViewports(new Viewport(0.f, 0.f, float32 form.ClientSize.Width, float32 form.ClientSize.Height))
-        context.OutputMerger.SetTargets(colorBuffer.ColorView)
-
-        shaderContext?camera <- camera
-        shaderContext?light <- light
-        shaderContext?lightCamera <- lightCamera
-        shaderContext?shadowMap <- shadowBuffer.View
-        shaderContext?shadowSampler <- new SamplerState(device.Device, SamplerStateDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.ComparisonMinMagMipLinear, ComparisonFunction = Comparison.Less))
-
-        context.OutputMerger.BlendState <- new BlendState(device.Device, blendon)
-
-        renderFullScreenTri context shaderContext lightSpot.Value
-
-        context.OutputMerger.BlendState <- null
-        shaderContext?shadowMap <- (null: ShaderResourceView)
+    *)
 
     // tonemap
     use ldrBuffer = rtpool.Acquire("scene/ldr", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
@@ -517,22 +486,11 @@ RenderLoop.Run(form, fun () ->
 
     renderFullScreenTri context shaderContext postfxFxaa.Value
 
-    // fill lightgrid
-    shaderContext?lightGridBufferUA <- lightGrid.UnorderedView
-    shaderContext?lightGrid <- lightGrid
-    shaderContext?lightData <- lights
-    shaderContext?lightCount <- box lights.Length
-    shaderContext?depthBuffer <- depthBuffer.View
-    shaderContext?camera <- camera
-
-    shaderContext.Program <- lightGridFill.Value
-    context.Dispatch(lightGrid.Width, lightGrid.Height, 1)
-
-    shaderContext?lightGridBufferUA <- (null: UnorderedAccessView)
-
     // blend lightgrid debug output over
-    shaderContext?lightGridBuffer <- lightGrid.View
     shaderContext?lightGrid <- lightGrid
+
+    let mutable blendon = BlendStateDescription()
+    Array.fill blendon.RenderTarget 0 8 (RenderTargetBlendDescription(IsBlendEnabled = true, SourceBlend = BlendOption.One, DestinationBlend = BlendOption.One, BlendOperation = BlendOperation.Add, SourceAlphaBlend = BlendOption.One, DestinationAlphaBlend = BlendOption.Zero, AlphaBlendOperation = BlendOperation.Add, RenderTargetWriteMask = ColorWriteMaskFlags.All))
 
     context.OutputMerger.BlendState <- new BlendState(device.Device, blendon)
 
@@ -543,9 +501,6 @@ RenderLoop.Run(form, fun () ->
     match 
         match dbgDebugTarget.Value with
         | DebugTarget.None -> None
-        | DebugTarget.Albedo -> Some albedoBuffer
-        | DebugTarget.Normal -> Some normalBuffer
-        | DebugTarget.Specular -> Some specularBuffer
         | DebugTarget.Depth -> Some depthBuffer
         | t -> failwithf "Unknown target value %O" t
         with
