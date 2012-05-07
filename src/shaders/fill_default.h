@@ -123,7 +123,7 @@ PS_OUT psMain(PS_IN I)
 
     float3 view = normalize(camera.eyePosition - I.position);
 
-    int gridOffset = (int)(I.pos.y / lightGrid.cellSize) * lightGrid.stride + (int)(I.pos.x / lightGrid.cellSize) * lightGrid.tileSize;
+    int gridOffset = (int)(I.pos.y / LIGHTGRID_CELLSIZE) * lightGrid.stride + (int)(I.pos.x / LIGHTGRID_CELLSIZE) * lightGrid.tileSize;
 
     float3 diffuse = 0, specular = 0;
 

@@ -27,8 +27,8 @@ float4x4 getTileFrustum(int x, int y, float2 zrange)
     float zscale = 1 / (zrange.y - zrange.x + 1e-10);
 
     float4x4 crop = float4x4(
-        width/lightGrid.cellSize, 0, 0, -x,
-        0, height/lightGrid.cellSize, 0, -y,
+        width/LIGHTGRID_CELLSIZE, 0, 0, -x,
+        0, height/LIGHTGRID_CELLSIZE, 0, -y,
         0, 0, zscale, -zrange.x * zscale,
         0, 0, 0, 1);
 
@@ -117,7 +117,7 @@ groupshared uint2 gsZRange;
 groupshared uint3 gsConeRange;
 groupshared uint gsLightCount;
 
-[numthreads(16, 16, 1)]
+[numthreads(LIGHTGRID_CELLSIZE, LIGHTGRID_CELLSIZE, 1)]
 void main(
     uint groupIndex: SV_GroupIndex,
     uint2 groupId: SV_GroupID,
@@ -142,8 +142,8 @@ void main(
     cone.direction =
         normalize(
             getWorldPosition(
-                (groupId.x + 0.5) * lightGrid.cellSize / (float)width,
-                (groupId.y + 0.5) * lightGrid.cellSize / (float)height,
+                (groupId.x + 0.5) * LIGHTGRID_CELLSIZE / (float)width,
+                (groupId.y + 0.5) * LIGHTGRID_CELLSIZE / (float)height,
                 1) - cone.origin);
 
     // compute z range

@@ -22,7 +22,9 @@ type LightData(typ: LightType, position: Vector3, direction: Vector3, radius: fl
 
 // light grid with an array of 2-byte light indices per tile
 [<ShaderStruct>]
-type LightGrid(device: Device, widthPixels, heightPixels, cellSize, maxLightsPerTile) =
+type LightGrid(device: Device, widthPixels, heightPixels, maxLightsPerTile) =
+    static let cellSize = 16 // cell size is a fixed value because of CS restrictions
+
     let width = (widthPixels + cellSize - 1) / cellSize
     let height = (heightPixels + cellSize - 1) / cellSize
 
@@ -46,9 +48,10 @@ type LightGrid(device: Device, widthPixels, heightPixels, cellSize, maxLightsPer
                 UnorderedAccessViewDescription.BufferResource(ElementCount = indexCount)))
 
     // get grid dimensions
+    static member CellSize = cellSize
+
     member this.Width = width
     member this.Height = height
-    member this.CellSize = cellSize
     member this.TileSize = maxLightsPerTile
 
     // get grid stride in elements

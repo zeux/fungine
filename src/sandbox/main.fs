@@ -346,9 +346,9 @@ let getLightGrid =
 
     fun width height ->
         match !cache with
-        | Some grid when matches width grid.Width grid.CellSize && matches height grid.Height grid.CellSize -> grid
+        | Some grid when matches width grid.Width LightGrid.CellSize && matches height grid.Height LightGrid.CellSize -> grid
         | _ ->
-            let grid = LightGrid(device, width, height, 16, 128)
+            let grid = LightGrid(device, width, height, 128)
             cache := Some grid
             grid
 
