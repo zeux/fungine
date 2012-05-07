@@ -139,7 +139,7 @@ PS_OUT psMain(PS_IN I)
         float attenDist = saturate(1 - length(lightUn) / light.radius);
         float attenCone = pow(saturate((dot(-L, light.direction) - light.outerAngle) / (light.innerAngle - light.outerAngle)), 4);
 
-        float diff = saturate(dot(normal, L)) * attenDist;
+        float diff = saturate(dot(normal, L)) * attenDist * (light.type == LIGHTTYPE_SPOT ? attenCone : 1);
 
         float3 hvec = normalize(L + view);
 

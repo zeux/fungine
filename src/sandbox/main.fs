@@ -422,6 +422,7 @@ RenderLoop.Run(form, fun () ->
             let position = Vector3(dbgSpotOffset.Value * sin angle, dbgSpotOffset.Value * cos angle, dbgSpotHeight.Value)
             
             LightData(
+                (if i % 2 = 0 then LightType.Point else LightType.Spot),
                 position,
                 Vector3.Normalize(-position),
                 dbgSpotRadius.Value,

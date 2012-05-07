@@ -5,7 +5,13 @@ open SharpDX.Direct3D11
 open Render
 
 [<ShaderStruct>]
-type LightData(position: Vector3, direction: Vector3, radius: float32, outerAngle: float32, innerAngle: float32, color: Color4, intensity: float32) =
+type LightType =
+    | Point = 0
+    | Spot = 1
+
+[<ShaderStruct>]
+type LightData(typ: LightType, position: Vector3, direction: Vector3, radius: float32, outerAngle: float32, innerAngle: float32, color: Color4, intensity: float32) =
+    member this.Type = typ
     member this.Position = position
     member this.Direction = direction
     member this.Radius = radius
