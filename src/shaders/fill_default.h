@@ -154,7 +154,7 @@ PS_OUT psMain(PS_IN I)
         specular += lightcolor * diff * pow(cosnh, specpower) * ((specpower + 8) / 8);
     }
 
-    O.color = float4(albedo.rgb * diffuse + specular * diffuse, albedo.a);
+    O.color = float4(albedo.rgb * diffuse + spec * specular * diffuse, albedo.a);
 #endif
 
 	return O;

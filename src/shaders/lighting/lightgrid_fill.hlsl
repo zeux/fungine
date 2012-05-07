@@ -115,6 +115,7 @@ float distancePointToConeConservative(float3 p, Cone cone)
 
 groupshared uint2 gsZRange;
 groupshared uint3 gsConeRange;
+groupshared uint gsLightCount;
 
 [numthreads(16, 16, 1)]
 void main(
@@ -127,6 +128,7 @@ void main(
     {
         gsZRange = uint2(0x7f7fffff, 0); // FLT_MAX, 0
         gsConeRange = uint3(0x7f7fffff, 0, 0); // FLT_MAX, 0, 0
+        gsLightCount = 0;
     }
 
     GroupMemoryBarrierWithGroupSync();
@@ -186,19 +188,23 @@ void main(
 
     // cull lights
     int gridOffset = groupId.y * lightGrid.stride + groupId.x * lightGrid.tileSize;
+    int gridLimit = lightGrid.tileSize - 1;
 
-    if (groupIndex == 0)
+    for (int i = groupIndex; i < lightCount; i += 256)
     {
-        for (int i = 0; i < lightCount; ++i)
+    #if CULL_METHOD == 1
+        if (distancePointToConeConservative(lightData[i].position, cone) < lightData[i].radius)
+    #else
+        if (isSphereVisible(planes, lightData[i].position, lightData[i].radius))
+    #endif
         {
-        #if CULL_METHOD == 1
-            if (distancePointToConeConservative(lightData[i].position, cone) < lightData[i].radius)
-        #else
-            if (isSphereVisible(planes, lightData[i].position, lightData[i].radius))
-        #endif
-                lightGridBufferUA[gridOffset++] = i + 1;
+            uint idx;
+            InterlockedAdd(gsLightCount, 1, idx);
+            lightGridBufferUA[gridOffset + min(idx, gridLimit)] = i + 1;
         }
-
-        lightGridBufferUA[gridOffset] = 0;
     }
+
+    GroupMemoryBarrierWithGroupSync();
+
+    lightGridBufferUA[gridOffset + min(gsLightCount, gridLimit)] = 0;
 }
