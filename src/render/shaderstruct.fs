@@ -30,7 +30,12 @@ module ShaderStruct =
     let rec private getPropertyOffsets (typ: Type) =
         // get all reflected properties & their sizes
         let props = getProperties typ
-        let sizes = props |> Array.map (fun p -> let pt = p.PropertyType in if pt.IsClass then snd (getPropertyOffsets pt) else primitiveTypes.[pt])
+        let sizes =
+            props |> Array.map (fun p ->
+                let pt = p.PropertyType
+                if pt.IsClass then snd (getPropertyOffsets pt)
+                elif pt.IsEnum then primitiveTypes.[typeof<int>]
+                else primitiveTypes.[pt])
 
         // for each property, get the property *end* offset by applying HLSL packing rules
         let offsets =
@@ -121,6 +126,8 @@ module ShaderStruct =
         let props, offsets, size =
             if primitiveTypes.ContainsKey(vtyp) then
                 None, [|0|], round16 primitiveTypes.[vtyp]
+            elif vtyp.IsEnum then
+                None, [|0|], round16 primitiveTypes.[typeof<int>]
             else
                 let offsets, size = getPropertyOffsets vtyp
                 Some (getProperties vtyp), offsets, size

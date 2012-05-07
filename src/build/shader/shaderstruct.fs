@@ -14,6 +14,7 @@ let private getShaderName (name: string) =
 // convert type to shader type name
 let private getShaderType (typ: Type) =
     if typ.IsClass then typ.Name
+    elif typ.IsEnum then "int"
     elif typ = typeof<float32> then "float"
     elif typ = typeof<int> then "int"
     elif typ = typeof<bool> then "bool"
@@ -36,6 +37,15 @@ let private getShaderStructContents (typ: Type) =
 
     sb.AppendLine("};").ToString()
 
+// get shader enum contents for type
+let private getShaderEnumContents (typ: Type) =
+    let sb = StringBuilder()
+
+    for (n, v) in Array.zip $ typ.GetEnumNames() $ [| for v in typ.GetEnumValues() -> v :?> int |] do
+        sb.AppendFormat("#define {0} {1}\n", (typ.Name + "_" + n).ToUpper(), v) |> ignore
+
+    sb.ToString()
+
 // header file builder
 let builder =
     { new Builder("ShaderStruct") with
@@ -48,9 +58,11 @@ let builder =
 
         for p in Render.ShaderStruct.getProperties typ do
             let pt = p.PropertyType
-            if pt.IsClass then sb.AppendFormat("#include \"auto_{0}.h\"\n", pt.Name) |> ignore
+            if pt.IsClass || pt.IsEnum then sb.AppendFormat("#include \"auto_{0}.h\"\n", pt.Name) |> ignore
 
-        sb.AppendFormat("\n{0}\n#endif\n", getShaderStructContents typ) |> ignore
+        let contents = if typ.IsEnum then getShaderEnumContents typ else getShaderStructContents typ
+
+        sb.AppendFormat("\n{0}\n#endif\n", contents) |> ignore
         
         File.WriteAllText(task.Targets.[0].Path, sb.ToString())
         None
