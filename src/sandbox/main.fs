@@ -416,6 +416,7 @@ RenderLoop.Run(form, fun () ->
     let rng = System.Random(dbgSpotSeed.Value)
 
     let lights =
+        Array.append [|LightData(LightType.Directional, Vector3.Zero, Vector3.Normalize (Vector3(-1.f, -1.f, -1.f)), 0.f, 0.f, 0.f, Color4(1.f, 1.f, 0.f), 1.f)|] $
         Array.init dbgSpotCount.Value (fun i ->
             // generate procedural spot light
             let angle = deg2rad * 360.f * (float32 i / float32 dbgSpotCount.Value)

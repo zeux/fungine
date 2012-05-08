@@ -22,16 +22,16 @@ LightInput getLightInput(LightData light, float3 position)
     float attenDist = saturate(1 - length(lightUn) / light.radius);
     float attenCone = pow(saturate((dot(-L, light.direction) - light.outerAngle) / (light.innerAngle - light.outerAngle)), 4);
 
-    float atten = attenDist * (light.type == LIGHTTYPE_SPOT ? attenCone : 1);
+    float atten = (light.type == LIGHTTYPE_DIRECTIONAL ? 1 : attenDist) * (light.type == LIGHTTYPE_SPOT ? attenCone : 1);
 
     LightInput result;
-    result.direction = L;
+    result.direction = light.type == LIGHTTYPE_DIRECTIONAL ? -light.direction : L;
     result.color = light.color.rgb * (light.intensity * atten);
 
     return result;
 }
 
-#define IntegrateBRDF(hpos, position, brdf) { \
+#define integrateBRDF(hpos, position, brdf) { \
     int gridOffset = (int)(hpos.y / LIGHTGRID_CELLSIZE) * lightGrid.stride + (int)(hpos.x / LIGHTGRID_CELLSIZE) * lightGrid.tileSize; \
     \
     for (int lightIter = 0; lightIter < lightGrid.tileSize; ++lightIter) { \

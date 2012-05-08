@@ -190,13 +190,18 @@ void main(
     int gridOffset = groupId.y * lightGrid.stride + groupId.x * lightGrid.tileSize;
     int gridLimit = lightGrid.tileSize - 1;
 
-    for (int i = groupIndex; i < lightCount; i += 256)
+    for (int i = groupIndex; i < lightCount; i += LIGHTGRID_CELLSIZE * LIGHTGRID_CELLSIZE)
     {
+        LightData light = lightData[i];
+
+        // +1 to change bytecode so that AMD driver works with cbuffer [2]
+        if (light.type + 1 == LIGHTTYPE_DIRECTIONAL + 1 ||
     #if CULL_METHOD == 1
-        if (distancePointToConeConservative(lightData[i].position, cone) < lightData[i].radius)
+        distancePointToConeConservative(light.position, cone) < light.radius
     #else
-        if (isSphereVisible(planes, lightData[i].position, lightData[i].radius))
+        isSphereVisible(planes, light.position, light.radius)
     #endif
+        )
         {
             uint idx;
             InterlockedAdd(gsLightCount, 1, idx);

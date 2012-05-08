@@ -6,8 +6,9 @@ open Render
 
 [<ShaderStruct>]
 type LightType =
-    | Point = 0
-    | Spot = 1
+    | Directional = 0
+    | Point = 1
+    | Spot = 2
 
 [<ShaderStruct>]
 type LightData(typ: LightType, position: Vector3, direction: Vector3, radius: float32, outerAngle: float32, innerAngle: float32, color: Color4, intensity: float32) =

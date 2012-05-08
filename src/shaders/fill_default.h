@@ -121,7 +121,7 @@ PS_OUT psMain(PS_IN I)
 
     float3 diffuse = 0, specular = 0;
 
-    IntegrateBRDF(I.pos, I.position,
+    integrateBRDF(I.pos, I.position,
         float diff = saturate(dot(normal, L.direction));
 
         float3 hvec = normalize(L.direction + view);
