@@ -52,6 +52,11 @@ let private getShaderEnumContents (typ: Type) =
 
     sb.ToString()
 
+// get shader contents for type
+let private getShaderContents (typ: Type) =
+    if typ.IsEnum then getShaderEnumContents typ
+    else getShaderStructContents typ
+
 // header file builder
 let builder =
     { new Builder("ShaderStruct") with
@@ -66,14 +71,12 @@ let builder =
             let pt = p.PropertyType
             if pt.IsClass || pt.IsEnum then sb.AppendFormat("#include \"auto_{0}.h\"\n", pt.Name) |> ignore
 
-        let contents = if typ.IsEnum then getShaderEnumContents typ else getShaderStructContents typ
-
-        sb.AppendFormat("\n{0}\n#endif\n", contents) |> ignore
+        sb.AppendFormat("\n{0}\n#endif\n", getShaderContents typ) |> ignore
         
         File.WriteAllText(task.Targets.[0].Path, sb.ToString())
         None
 
     override this.Version task =
         let typ = Type.GetType(task.Sources.[0].Path)
-        getShaderStructContents typ
+        getShaderContents typ
     }
