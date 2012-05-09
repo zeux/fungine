@@ -2,7 +2,7 @@
 #include <common/common.h>
 
 #include <auto_LightGrid.h>
-#include <auto_LightData.h>
+#include <auto_LightCullData.h>
 #include <auto_Camera.h>
 
 // 0 - use usual frustum planes
@@ -13,7 +13,7 @@ RWBuffer<uint> lightGridBufferUA;
 Texture2D<float> depthBuffer;
 
 CBUF(LightGrid, lightGrid);
-CBUF_ARRAY(LightData, lightData);
+CBUF_ARRAY(LightCullData, lightCullData);
 CBUF(int, lightCount);
 CBUF(Camera, camera);
 
@@ -192,7 +192,7 @@ void main(
 
     for (int i = groupIndex; i < lightCount; i += LIGHTGRID_CELLSIZE * LIGHTGRID_CELLSIZE)
     {
-        LightData light = lightData[i];
+        LightCullData light = lightCullData[i];
 
         // +1 to change bytecode so that AMD driver works with cbuffer [2]
         if (light.type + 1 == LIGHTTYPE_DIRECTIONAL + 1 ||

@@ -416,28 +416,46 @@ RenderLoop.Run(form, fun () ->
     let rng = System.Random(dbgSpotSeed.Value)
 
     let lights =
-        Array.append [|LightData(LightType.Directional, Vector3.Zero, Vector3.Normalize (Vector3(-1.f, -1.f, -1.f)), 0.f, 0.f, 0.f, Color4(1.f, 1.f, 0.f), 1.f)|] $
+        Array.append [|DirectionalLight { direction = Vector3.Normalize (Vector3(-1.f, -1.f, -1.f)); color = Color4(1.f, 1.f, 0.f); intensity = 1.f }|] $
         Array.init dbgSpotCount.Value (fun i ->
             // generate procedural spot light
             let angle = deg2rad * 360.f * (float32 i / float32 dbgSpotCount.Value)
             let position = Vector3(dbgSpotOffset.Value * sin angle, dbgSpotOffset.Value * cos angle, dbgSpotHeight.Value)
-            
-            LightData(
-                (if i % 2 = 0 then LightType.Point else LightType.Spot),
-                position,
-                Vector3.Normalize(-position),
-                dbgSpotRadius.Value,
-                cos (deg2rad * dbgSpotOutercone.Value),
-                cos (deg2rad * dbgSpotInnercone.Value),
-                colors.[i % colors.Length],
-                dbgSpotIntensity.Value))
+
+            if i % 2 = 0 then
+                PointLight {
+                    position = position
+                    radius = dbgSpotRadius.Value
+                    color = colors.[i % colors.Length]
+                    intensity = dbgSpotIntensity.Value }
+            else
+                SpotLight {
+                    position = position
+                    direction = Vector3.Normalize(-position)
+                    radius = dbgSpotRadius.Value
+                    innerAngle = deg2rad * dbgSpotInnercone.Value
+                    outerAngle = deg2rad * dbgSpotOutercone.Value
+                    color = colors.[i % colors.Length]
+                    intensity = dbgSpotIntensity.Value })
+
+    let lightCullData =
+        lights |> Array.map (function
+        | DirectionalLight l -> LightCullData(LightType.Directional, Vector3.Zero, 0.f)
+        | PointLight l -> LightCullData(LightType.Point, l.position, l.radius)
+        | SpotLight l -> LightCullData(LightType.Spot, l.position, l.radius))
+
+    let lightData =
+        lights |> Array.map (function
+        | DirectionalLight l -> LightData(LightType.Directional, Vector3.Zero, l.direction, 0.f, 0.f, 0.f, l.color, l.intensity)
+        | PointLight l -> LightData(LightType.Point, l.position, Vector3.Zero, l.radius, 0.f, 0.f, l.color, l.intensity)
+        | SpotLight l -> LightData(LightType.Spot, l.position, l.direction, l.radius, cos l.outerAngle, cos l.innerAngle, l.color, l.intensity))
 
     context.OutputMerger.SetTargets(null, [||])
 
     // fill lightgrid
     shaderContext?lightGridBufferUA <- lightGrid.UnorderedView
     shaderContext?lightGrid <- lightGrid
-    shaderContext?lightData <- lights
+    shaderContext?lightCullData <- lightCullData
     shaderContext?lightCount <- box lights.Length
     shaderContext?depthBuffer <- depthBuffer.View
     shaderContext?camera <- camera
@@ -447,6 +465,7 @@ RenderLoop.Run(form, fun () ->
 
     shaderContext?lightGridBufferUA <- (null: UnorderedAccessView)
     shaderContext?lightGridBuffer <- lightGrid.View
+    shaderContext?lightData <- lightData
 
     // fill color buffer
     use colorBuffer = rtpool.Acquire("scene/hdr", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_Float)
