@@ -54,6 +54,7 @@
     <Compile Include="render\lighting\lightgrid.fs" />
     <Compile Include="render\lighting\lightdata.fs" />
     <Compile Include="render\lighting\lights.fs" />
+    <Compile Include="render\lighting\lightdatabuilder.fs" />
     <Compile Include="input\keyboard.fs" />
     <Compile Include="input\mouse.fs" />
     <Compile Include="winui\propertygrid.fs" />

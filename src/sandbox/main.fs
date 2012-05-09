@@ -438,17 +438,9 @@ RenderLoop.Run(form, fun () ->
                     color = colors.[i % colors.Length]
                     intensity = dbgSpotIntensity.Value })
 
-    let lightCullData =
-        lights |> Array.map (function
-        | DirectionalLight l -> LightCullData(LightType.Directional, Vector3.Zero, 0.f)
-        | PointLight l -> LightCullData(LightType.Point, l.position, l.radius)
-        | SpotLight l -> LightCullData(LightType.Spot, l.position, l.radius))
-
-    let lightData =
-        lights |> Array.map (function
-        | DirectionalLight l -> LightData(LightType.Directional, Vector3.Zero, l.direction, 0.f, 0.f, 0.f, l.color, l.intensity)
-        | PointLight l -> LightData(LightType.Point, l.position, Vector3.Zero, l.radius, 0.f, 0.f, l.color, l.intensity)
-        | SpotLight l -> LightData(LightType.Spot, l.position, l.direction, l.radius, cos l.outerAngle, cos l.innerAngle, l.color, l.intensity))
+    let shadowAtlasWidth = 4096
+    let shadowAtlasHeight = 4096
+    let lightCullData, lightData = LightDataBuilder.build lights shadowAtlasWidth shadowAtlasHeight
 
     context.OutputMerger.SetTargets(null, [||])
 
@@ -465,7 +457,29 @@ RenderLoop.Run(form, fun () ->
 
     shaderContext?lightGridBufferUA <- (null: UnorderedAccessView)
     shaderContext?lightGridBuffer <- lightGrid.View
+
     shaderContext?lightData <- lightData
+
+    // render shadows
+    use shadowBuffer = rtpool.Acquire("lighting/shadow buffer", shadowAtlasWidth, shadowAtlasHeight, Format.D24_UNorm_S8_UInt)
+
+    context.ClearDepthStencilView(shadowBuffer.DepthView, DepthStencilClearFlags.Depth, 1.f, 0uy)
+
+    for light in lightData do
+        let shadow = light.ShadowData
+
+        if shadow.AtlasScale.LengthSquared > 0.f then
+            // render shadow map
+            let camera = Camera(Matrix34.Identity, shadow.Transform)
+            let viewport =
+                Viewport(
+                    shadow.AtlasOffset.x * float32 shadowAtlasWidth, shadow.AtlasOffset.y * float32 shadowAtlasHeight, 
+                    shadow.AtlasScale.x * float32 shadowAtlasWidth, shadow.AtlasScale.y * float32 shadowAtlasHeight)
+
+            renderPass context shaderContext camera shadowBuffer [||] viewport depthFill.Value
+
+    shaderContext?shadowMap <- shadowBuffer.View
+    shaderContext?shadowSampler <- new SamplerState(device.Device, SamplerStateDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.ComparisonMinMagMipLinear, ComparisonFunction = Comparison.Less))
 
     // fill color buffer
     use colorBuffer = rtpool.Acquire("scene/hdr", form.ClientSize.Width, form.ClientSize.Height, Format.R16G16B16A16_Float)
@@ -473,21 +487,6 @@ RenderLoop.Run(form, fun () ->
     context.ClearRenderTargetView(colorBuffer.ColorView, SharpDX.Color4 0xff808080)
 
     renderPass context shaderContext camera depthBuffer [|colorBuffer|] viewport gbufferFill.Value
-
-    (*
-    use shadowBuffer = rtpool.Acquire("lighting/shadow buffer", 1024, 1024, Format.D24_UNorm_S8_UInt)
-
-    for light in lights do
-        // render shadow map
-        let lightCamera =
-            Camera(
-                Math.Camera.lookAt light.Position (light.Position + light.Direction) (if abs light.Direction.x < 0.7f then Vector3.UnitX else Vector3.UnitY),
-                Math.Camera.projectionPerspective (deg2rad * dbgSpotOutercone.Value * 2.f) 1.f 0.1f light.Radius)
-
-        context.ClearDepthStencilView(shadowBuffer.DepthView, DepthStencilClearFlags.Depth, 1.f, 0uy)
-
-        fillShadowBuffer context shaderContext lightCamera shadowBuffer
-    *)
 
     // tonemap
     use ldrBuffer = rtpool.Acquire("scene/ldr", form.ClientSize.Width, form.ClientSize.Height, Format.R8G8B8A8_UNorm)
