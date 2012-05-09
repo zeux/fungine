@@ -72,7 +72,7 @@ module ShaderStruct =
         gen.Emit(OpCodes.Sub)
 
         // call upload method
-        gen.Emit(OpCodes.Call, typeof<UploadMethodHost>.GetMethod("upload " + p.PropertyType.Name))
+        gen.Emit(OpCodes.Call, Type.GetType("Render.ShaderStruct").GetMethod("uploadStub", BindingFlags.NonPublic ||| BindingFlags.Static))
 
     // convert value to shader-ready type
     let private emitConvertValue (gen: ILGenerator) typ =
@@ -190,3 +190,8 @@ module ShaderStruct =
 
     // public accessor for upload delegate cache
     let getUploadDelegate typ = uploadDelegateCache.Get typ
+
+    // private upload stub for reference roundtripping (not very optimal, but will do for now)
+    let private uploadStub (obj: obj) (addr: nativeint) (size: int) =
+        let size, upload = getUploadDelegate $ obj.GetType()
+        upload.Invoke(obj, addr, size)
