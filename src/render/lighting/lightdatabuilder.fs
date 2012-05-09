@@ -32,7 +32,7 @@ let private getShadowData light =
     match light with
     | DirectionalLight l ->
         let view = Math.Camera.lookAt Vector3.Zero l.direction (if abs l.direction.x < 0.7f then Vector3.UnitX else Vector3.UnitY)
-        let proj = Math.Matrix44(Math.Matrix34.Scaling(1.f / 100.f) * Math.Matrix34.Translation(0.f, 0.f, -100.f))
+        let proj = Math.Camera.projectionOrtho 100.f 100.f -100.f 100.f
         Some (1024, (proj * Matrix44(view)))
     | PointLight l ->
         None

@@ -83,7 +83,7 @@ float sampleShadowFXAA(float2 uv, float depth)
 
 float sampleShadowFiltered(float2 uv, float depth)
 {
-    return sampleShadowFXAA(uv, depth);
+    return sampleShadowPoisson(uv, depth, 8);
 }
 
 #endif

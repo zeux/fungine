@@ -18,12 +18,16 @@ struct LightInput
 
 float getLightShadow(LightData light, float3 position)
 {
+    if (light.type == LIGHTTYPE_POINT) return 1;
+
     float4 p = mul(light.shadowData.transform, float4(position, 1));
     p.xyz /= p.w;
     p.xy = saturate(p.xy * float2(0.5, -0.5) + 0.5);
     p.xy = p.xy * light.shadowData.atlasScale + light.shadowData.atlasOffset;
 
-    return sampleShadowFiltered(p.xy, p.z - 1e-6);
+    float zbias = light.type == LIGHTTYPE_DIRECTIONAL ? 1e-3 : 1e-6;
+
+    return sampleShadowFiltered(p.xy, p.z - zbias);
 }
 
 LightInput getLightInput(LightData light, float3 position)
