@@ -28,12 +28,41 @@ let private getCullData light =
     | SpotLight l -> LightCullData(LightType.Spot, l.position, l.radius)
 
 // get shadow data for a light
-let private getShadowData light =
+let private getShadowData light viewProjection =
     match light with
     | DirectionalLight l ->
+        let smSize = 1024
+
+        let viewProjectionInverse = Matrix44.Inverse(viewProjection)
+        let points = Array.init 8 (fun i ->
+            Vector4(
+                (if i &&& 1 = 0 then -1.f else 1.f),
+                (if i &&& 2 = 0 then -1.f else 1.f),
+                (if i &&& 4 = 0 then 0.f else 1.f),
+                1.f))
+
         let view = Math.Camera.lookAt Vector3.Zero l.direction (if abs l.direction.x < 0.7f then Vector3.UnitX else Vector3.UnitY)
-        let proj = Math.Camera.projectionOrtho 100.f 100.f -100.f 100.f
-        Some (1024, (proj * Matrix44(view)))
+
+        let pointsView = points |> Array.map (fun p -> Matrix34.TransformPosition(view, Matrix44.TransformPerspective(viewProjectionInverse, p)))
+        let pointsMin = pointsView |> Array.reduce (fun a b -> Vector3.Minimize(a, b))
+        let pointsMax = pointsView |> Array.reduce (fun a b -> Vector3.Maximize(a, b))
+
+        let sphereCenter = Array.sum pointsView / 8.f
+        let sphereRadius = pointsView |> Array.map (fun p -> (sphereCenter - p).Length) |> Array.max
+
+        let texsize = sphereRadius * 2.f / float32 smSize
+        let roundtex v = round (v / texsize) * texsize
+
+        let proj =
+            Math.Camera.projectionOrthoOffCenter
+                $ roundtex (sphereCenter.x - sphereRadius)
+                $ roundtex (sphereCenter.x + sphereRadius)
+                $ roundtex (sphereCenter.y - sphereRadius)
+                $ roundtex (sphereCenter.y + sphereRadius)
+                $ roundtex (sphereCenter.z - sphereRadius)
+                $ roundtex (sphereCenter.z + sphereRadius)
+
+        Some (smSize, (proj * Matrix44(view)))
     | PointLight l ->
         None
     | SpotLight l ->
@@ -49,7 +78,7 @@ let private getRenderData light shadow =
     | SpotLight l -> LightData(LightType.Spot, l.position, l.direction, l.radius, cos l.outerAngle, cos l.innerAngle, l.color, l.intensity, shadow)
 
 // build light data
-let build lights shadowAtlasWidth shadowAtlasHeight =
+let build lights shadowAtlasWidth shadowAtlasHeight viewProjection =
     // get culling info
     let cullData = lights |> Array.map getCullData
 
@@ -59,7 +88,7 @@ let build lights shadowAtlasWidth shadowAtlasHeight =
     let shadowDataDummy = LightShadowData(Matrix44.Identity, Vector2.Zero, Vector2.Zero)
     let shadowData =
         lights
-        |> Array.map getShadowData
+        |> Array.map (fun l -> getShadowData l viewProjection)
         |> Array.map (function
             | Some (size, matrix) ->
                 match packer.Pack(size, size) with

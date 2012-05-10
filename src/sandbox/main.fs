@@ -273,6 +273,7 @@ let dbgSpotCount = Core.DbgVar(3, "spot/count")
 type DebugTarget =
     | None = 0
     | Depth = 1
+    | Shadow = 2
 
 let dbgDebugTarget = Core.DbgVar(DebugTarget.None, "render/debug target")
 
@@ -440,7 +441,7 @@ RenderLoop.Run(form, fun () ->
 
     let shadowAtlasWidth = 4096
     let shadowAtlasHeight = 4096
-    let lightCullData, lightData = LightDataBuilder.build lights shadowAtlasWidth shadowAtlasHeight
+    let lightCullData, lightData = LightDataBuilder.build lights shadowAtlasWidth shadowAtlasHeight camera.ViewProjection
 
     context.OutputMerger.SetTargets(null, [||])
 
@@ -522,11 +523,12 @@ RenderLoop.Run(form, fun () ->
         match dbgDebugTarget.Value with
         | DebugTarget.None -> None
         | DebugTarget.Depth -> Some depthBuffer
+        | DebugTarget.Shadow -> Some shadowBuffer
         | t -> failwithf "Unknown target value %O" t
         with
     | Some rt ->
         shaderContext?colorMap <- rt.View
-        shaderContext?blitUnpackDepth <- box (dbgDebugTarget.Value = DebugTarget.Depth)
+        shaderContext?blitUnpackDepth <- box (Render.Formats.isDepth rt.View.Description.Format)
 
         renderFullScreenTri context shaderContext postfxBlit.Value
     | None -> ()
