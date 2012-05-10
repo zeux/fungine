@@ -2,14 +2,14 @@ module Math.Camera
 
 // get an orthographic projection matrix
 let projectionOrthoOffCenter left right bottom top znear zfar =
-    let xs = 2.f / (right - left)
-    let ys = 2.f / (top - bottom)
+    let xs = 1.f / (right - left)
+    let ys = 1.f / (top - bottom)
     let zs = 1.f / (zfar - znear)
 
-    Matrix44(xs,  0.f, 0.f, -xs * (left + right),
-             0.f, ys,  0.f, -ys * (top + bottom),
-             0.f, 0.f, zs,  -zs * znear,
-             0.f, 0.f, 0.f, 1.f)
+    Matrix44(2.f * xs, 0.f,      0.f, -xs * (left + right),
+             0.f,      2.f * ys, 0.f, -ys * (top + bottom),
+             0.f,      0.f,      zs,  -zs * znear,
+             0.f,      0.f,      0.f, 1.f)
 
 // get a symmetrical orthographic projection matrix
 let projectionOrtho width height znear zfar =
