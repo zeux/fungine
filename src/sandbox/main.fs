@@ -145,19 +145,19 @@ let placeFile path parent =
 
     placeNode nodes.[root + "_" + root] parent
 
-let sceneName = "heaven"
-// placeFile (sprintf "art/%s/%s.world" sceneName sceneName) Matrix34.Identity
-
 let gizmoRef = ref (Matrix34.Translation(10.f-6.f, 10.f-2.f, 0.f) * Matrix34.Scaling(0.07f, 0.07f, 0.07f))
 
-placeMeshRef "slave_driver/cc_slave_driver.mesh" gizmoRef
-placeMesh "heaven/meshes/buildings/lab.mesh" Matrix34.Identity
-placeMesh "heaven/meshes/buildings/lab_gears.mesh" Matrix34.Identity
+if false then
+    placeFile "art/heaven/heaven.world" Matrix34.Identity
+else
+    placeMeshRef "slave_driver/cc_slave_driver.mesh" gizmoRef
+    placeMesh "heaven/meshes/buildings/lab.mesh" Matrix34.Identity
+    placeMesh "heaven/meshes/buildings/lab_gears.mesh" Matrix34.Identity
 
-let rng = System.Random()
+    let rng = System.Random()
 
-let size = 10
-for x = -size to size do
+    let size = 10
+    for x = -size to size do
     for y = -size to size do
         placeMesh (sprintf "floor/floor%02d.mesh" (rng.Next(1, 15))) (Matrix34.Translation(float32 x * 2.f, float32 y * 2.f, 0.f))
 
@@ -197,6 +197,8 @@ type Material(roughness: float32, smoothness: float32) =
 
 let cbPool = Render.ConstantBufferPool(device.Device)
 
+let tricount = ref 0
+
 let renderScene (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) (shader: Render.Shader) =
     context.OutputMerger.DepthStencilState <- new DepthStencilState(device.Device, DepthStencilStateDescription(IsDepthEnabled = true, DepthWriteMask = DepthWriteMask.All, DepthComparison = Comparison.LessEqual))
 
@@ -235,6 +237,8 @@ let renderScene (context: DeviceContext) (shaderContext: Render.ShaderContext) (
             context.InputAssembler.SetVertexBuffers(0, VertexBufferBinding(mesh.vertices.Resource, vertexSize, fragment.vertexOffset))
             context.InputAssembler.SetIndexBuffer(mesh.indices.Resource, fragment.indexFormat, fragment.indexOffset)
             context.DrawIndexedInstanced(fragment.indexCount, instances.Length, 0, 0, 0)
+
+            tricount := !tricount + instances.Length * fragment.indexCount / 3
 
 let renderPass (context: DeviceContext) (shaderContext: Render.ShaderContext) (camera: Camera) (depthBuffer: Render.RenderTarget) (colorBuffers: Render.RenderTarget array) (viewport: Viewport) (shader: Render.Shader) =
     context.Rasterizer.SetViewports(viewport)
@@ -358,7 +362,8 @@ RenderLoop.Run(form, fun () ->
     let dt = frameTimer.Current
     frameTimer.Start()
 
-    form.Text <- sprintf "frame: %O; body: %O; present: %O" frameTimer bodyTimer presentTimer
+    form.Text <- sprintf "frame: %O; body: %O; present: %O; %d triangles" frameTimer bodyTimer presentTimer !tricount
+    tricount := 0
 
     bodyTimer.Start()
 
@@ -441,7 +446,7 @@ RenderLoop.Run(form, fun () ->
 
     let shadowAtlasWidth = 4096
     let shadowAtlasHeight = 4096
-    let lightCullData, lightData = LightDataBuilder.build lights shadowAtlasWidth shadowAtlasHeight camera.ViewProjection
+    let lightCullData, lightData = LightDataBuilder.build lights shadowAtlasWidth shadowAtlasHeight (Matrix44(camera.View)) camera.Projection
 
     context.OutputMerger.SetTargets(null, [||])
 
@@ -469,15 +474,25 @@ RenderLoop.Run(form, fun () ->
     for light in lightData do
         let shadow = light.ShadowData
 
-        if shadow.AtlasScale.LengthSquared > 0.f then
-            // render shadow map
-            let camera = Camera(Matrix34.Identity, shadow.Transform)
-            let viewport =
-                Viewport(
-                    shadow.AtlasOffset.x * float32 shadowAtlasWidth, shadow.AtlasOffset.y * float32 shadowAtlasHeight, 
-                    shadow.AtlasScale.x * float32 shadowAtlasWidth, shadow.AtlasScale.y * float32 shadowAtlasHeight)
+        let cascades =
+            [|
+                shadow.CascadeDistances.x, shadow.CascadeInfo0
+                shadow.CascadeDistances.y, shadow.CascadeInfo1
+                shadow.CascadeDistances.z, shadow.CascadeInfo2
+                shadow.CascadeDistances.w, shadow.CascadeInfo3
+            |]
 
-            renderPass context shaderContext camera shadowBuffer [||] viewport depthFill.Value
+        for distance, cascade in cascades do
+            if distance < infinityf then
+                // render shadow map
+                let transform = Matrix34.Translation(Vector3(cascade.TransformOffset, 0.f)) * Matrix34.Scaling(Vector3(cascade.TransformScale, 1.f))
+                let camera = Camera(Matrix34.Identity, Matrix44(transform) * shadow.Transform)
+                let viewport =
+                    Viewport(
+                        cascade.AtlasOffset.x * float32 shadowAtlasWidth, cascade.AtlasOffset.y * float32 shadowAtlasHeight, 
+                        cascade.AtlasScale.x * float32 shadowAtlasWidth, cascade.AtlasScale.y * float32 shadowAtlasHeight)
+
+                renderPass context shaderContext camera shadowBuffer [||] viewport depthFill.Value
 
     shaderContext?shadowMap <- shadowBuffer.View
     shaderContext?shadowSampler <- new SamplerState(device.Device, SamplerStateDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.ComparisonMinMagMipLinear, ComparisonFunction = Comparison.Less))

@@ -20,12 +20,23 @@ float getLightShadow(LightData light, float3 position)
 {
     if (light.type == LIGHTTYPE_POINT) return 1;
 
+    float dist = distance(position, camera.eyePosition);
+    bool4 mask = dist > light.shadowData.cascadeDistances;
+    int cascadeIndex = dot(mask, 1);
+
+    LightShadowCascade cascade = light.shadowData.cascadeInfo3;
+
+    if (cascadeIndex == 0) cascade = light.shadowData.cascadeInfo0;
+    if (cascadeIndex == 1) cascade = light.shadowData.cascadeInfo1;
+    if (cascadeIndex == 2) cascade = light.shadowData.cascadeInfo2;
+
     float4 p = mul(light.shadowData.transform, float4(position, 1));
     p.xyz /= p.w;
+    p.xy = p.xy * cascade.transformScale + cascade.transformOffset;
     p.xy = saturate(p.xy * float2(0.5, -0.5) + 0.5);
-    p.xy = p.xy * light.shadowData.atlasScale + light.shadowData.atlasOffset;
+    p.xy = p.xy * cascade.atlasScale + cascade.atlasOffset;
 
-    float zbias = light.type == LIGHTTYPE_DIRECTIONAL ? 1e-3 : 1e-6;
+    float zbias = light.type == LIGHTTYPE_DIRECTIONAL ? 1e-4 : 1e-6;
 
     return sampleShadowFiltered(p.xy, p.z - zbias);
 }

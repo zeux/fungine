@@ -4,8 +4,6 @@
 #include <common/common.h>
 #include <common/gamma.h>
 
-#include <lighting/integrate.h>
-
 #include <auto_Camera.h>
 #include <auto_Material.h>
 #include <auto_MeshCompressionInfo.h>
@@ -13,6 +11,8 @@
 CBUF(Camera, camera);
 CBUF(MeshCompressionInfo, meshCompressionInfo);
 CBUF(Material, material);
+
+#include <lighting/integrate.h>
 
 cbuffer mesh
 {
