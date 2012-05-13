@@ -82,7 +82,7 @@ let private getStableBoundingSphere view projection znear zfar smView smSize =
     let texsize = sphereRadius * 2.f / float32 smSize
     let roundtex v = round (v / texsize) * texsize
 
-    roundtex sphereRadius, Vector3(roundtex sphereCenter.x, roundtex sphereCenter.y, roundtex sphereCenter.z)
+    sphereRadius, Vector3(roundtex sphereCenter.x, roundtex sphereCenter.y, roundtex sphereCenter.z)
 
 // get cascade split distance
 let private getSplitDistance znear zfar llcoeff split splitCount =
