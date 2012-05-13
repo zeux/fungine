@@ -7,7 +7,14 @@ open System.Runtime.InteropServices
 
 // attribute for types that should be mapped to shader structs
 [<AttributeUsage(AttributeTargets.Class ||| AttributeTargets.Struct)>]
-type ShaderStructAttribute() = class end
+type ShaderStructAttribute() =
+    inherit Attribute()
+
+// attribute for properties that should be mapped to shader arrays
+[<AttributeUsage(AttributeTargets.Property)>]
+type ShaderArrayAttribute(length) =
+    inherit Attribute()
+    member this.Length = length
 
 module ShaderStruct =
     // primitive types
@@ -19,9 +26,12 @@ module ShaderStruct =
     // get all properties than should be reflected to shader
     let getProperties (typ: Type) =
         typ.GetProperties(BindingFlags.Instance ||| BindingFlags.Public)
-        |> Array.filter (fun p ->
-            let pt = p.PropertyType
-            p.CanRead && (primitiveTypes.ContainsKey(pt) || pt.IsDefined(typeof<ShaderStructAttribute>, false)))
+        |> Array.choose (fun p ->
+            let pt = if p.GetCustomAttribute(typeof<ShaderArrayAttribute>) <> null then p.PropertyType.GetElementType() else p.PropertyType
+            if p.CanRead && (primitiveTypes.ContainsKey(pt) || pt.IsDefined(typeof<ShaderStructAttribute>, false)) then
+                Some (p, pt)
+            else
+                None)
 
     // round a value up to 16 bytes
     let private round16 v = (v + 15) &&& ~~~15
@@ -31,11 +41,15 @@ module ShaderStruct =
         // get all reflected properties & their sizes
         let props = getProperties typ
         let sizes =
-            props |> Array.map (fun p ->
-                let pt = p.PropertyType
-                if pt.IsClass then snd (getPropertyOffsets pt)
-                elif pt.IsEnum then primitiveTypes.[typeof<int>]
-                else primitiveTypes.[pt])
+            props |> Array.map (fun (p, pt) ->
+                let elementSize =
+                    if pt.IsClass then snd (getPropertyOffsets pt)
+                    elif pt.IsEnum then primitiveTypes.[typeof<int>]
+                    else primitiveTypes.[pt]
+
+                match p.GetCustomAttribute(typeof<ShaderArrayAttribute>) with
+                | :? ShaderArrayAttribute as attr -> attr.Length * round16 elementSize
+                | _ -> elementSize)
 
         // for each property, get the property *end* offset by applying HLSL packing rules
         let offsets =
@@ -155,7 +169,7 @@ module ShaderStruct =
         // write a single element (object has one element, array has several elements)
         let emitElement gen objemit =
             match props with
-            | Some pl -> pl |> Array.iteri (fun i p -> (if p.PropertyType.IsClass then emitUploadPropertyReference else emitUploadPropertyValue) gen objemit p offsets.[i])
+            | Some pl -> pl |> Array.iteri (fun i (p, pt) -> (if p.PropertyType.IsClass then emitUploadPropertyReference else emitUploadPropertyValue) gen objemit p offsets.[i])
             | None -> emitUploadValue gen objemit vtyp offsets.[0]
 
         // write the entire object
@@ -193,5 +207,5 @@ module ShaderStruct =
 
     // private upload stub for reference roundtripping (not very optimal, but will do for now)
     let private uploadStub (obj: obj) (addr: nativeint) (size: int) =
-        let size, upload = getUploadDelegate $ obj.GetType()
+        let _, upload = getUploadDelegate $ obj.GetType()
         upload.Invoke(obj, addr, size)

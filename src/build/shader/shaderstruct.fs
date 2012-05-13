@@ -26,6 +26,12 @@ let private getShaderType (typ: Type) =
     elif typ = typeof<Color4> then "float4"
     else failwithf "Type %A is not supported in shader code" typ
 
+// get shader array length from property
+let private getShaderArrayLength (p: PropertyInfo) =
+    match p.GetCustomAttribute(typeof<Render.ShaderArrayAttribute>) with
+    | :? Render.ShaderArrayAttribute as attr -> sprintf "[%d]" attr.Length
+    | _ -> ""
+
 // get shader struct contents for type
 let private getShaderStructContents (typ: Type) =
     let sb = StringBuilder()
@@ -38,8 +44,8 @@ let private getShaderStructContents (typ: Type) =
 
     sb.AppendFormat("struct {0}\n{1}\n", getShaderType typ, "{") |> ignore
 
-    for p in Render.ShaderStruct.getProperties typ do
-        sb.AppendFormat("\t{0} {1};\n", getShaderType p.PropertyType, getShaderName p.Name) |> ignore
+    for (p, pt) in Render.ShaderStruct.getProperties typ do
+        sb.AppendFormat("\t{0} {1}{2};\n", getShaderType pt, getShaderName p.Name, getShaderArrayLength p) |> ignore
 
     sb.AppendLine("};").ToString()
 
@@ -67,8 +73,7 @@ let builder =
 
         sb.AppendFormat("#ifndef AUTO_SHADERSTRUCT_{0}_H\n#define AUTO_SHADERSTRUCT_{0}_H\n\n", typ.Name.ToUpper()) |> ignore
 
-        for p in Render.ShaderStruct.getProperties typ do
-            let pt = p.PropertyType
+        for (p, pt) in Render.ShaderStruct.getProperties typ do
             if pt.IsClass || pt.IsEnum then sb.AppendFormat("#include \"auto_{0}.h\"\n", pt.Name) |> ignore
 
         sb.AppendFormat("\n{0}\n#endif\n", getShaderContents typ) |> ignore
