@@ -31,22 +31,53 @@ let private getCullData light =
 let private getClipZ projection z =
     Matrix44.TransformPerspective(projection, Vector4(0.f, 0.f, z, 1.f)).z
 
+// get bounding sphere radius for a set of points with a known center
+let private getBoundingSphereRadius center (points: Vector3 array) =
+    let fp = points |> Array.maxBy (fun p -> (center - p).LengthSquared)
+    (center - fp).Length
+
+// get bounding sphere for a set of points
+let private getBoundingSphere (points: Vector3 array) =
+    let center = (points |> Array.sum) / float32 points.Length
+    center, getBoundingSphereRadius center points
+
+// get bounding sphere for a set of points with a center on a known segment
+let private getBoundingSphereWithCenterOnSegment (sbeg: Vector3) (send: Vector3) (points: Vector3 array) =
+    let inline radius t = getBoundingSphereRadius $ Vector3.Lerp(sbeg, send, t) $ points
+
+    let rec loop mint minr maxt maxr =
+        if maxt - mint < 1e-4f then mint
+        else
+            let halft = (mint + maxt) / 2.f
+            let halfr = radius halft
+            if minr < maxr then
+                loop mint minr halft halfr
+            else
+                loop halft halfr maxt maxr
+
+    let t = loop 0.f (radius 0.f) 1.f (radius 1.f)
+
+    radius t, Vector3.Lerp(sbeg, send, t)
+
 // get stable bounding sphere for a frustum region
 let private getStableBoundingSphere view projection znear zfar smView smSize =
-    let viewProjectionInverse = Matrix44(Matrix34.InverseAffine(view)) * Matrix44.Inverse(projection)
+    let clipToLight = Matrix44(smView * Matrix34.InverseAffine(view)) * Matrix44.Inverse(projection)
+
+    let clipNear = getClipZ projection znear
+    let clipFar = getClipZ projection zfar
+
     let points = Array.init 8 (fun i ->
         Vector4(
             (if i &&& 1 = 0 then -1.f else 1.f),
             (if i &&& 2 = 0 then -1.f else 1.f),
-            getClipZ projection (if i &&& 4 = 0 then znear else zfar),
+            (if i &&& 4 = 0 then clipNear else clipFar),
             1.f))
 
-    let pointsView = points |> Array.map (fun p -> Matrix34.TransformPosition(smView, Matrix44.TransformPerspective(viewProjectionInverse, p)))
-    let pointsMin = pointsView |> Array.reduce (fun a b -> Vector3.Minimize(a, b))
-    let pointsMax = pointsView |> Array.reduce (fun a b -> Vector3.Maximize(a, b))
+    let pointsView = points |> Array.map (fun p -> Matrix44.TransformPerspective(clipToLight, p))
+    let pointsCenterBeg = Matrix44.TransformPerspective(clipToLight, Vector4(0.f, 0.f, clipNear, 1.f))
+    let pointsCenterEnd = Matrix44.TransformPerspective(clipToLight, Vector4(0.f, 0.f, clipFar, 1.f))
 
-    let sphereCenter = Array.sum pointsView / 8.f
-    let sphereRadius = pointsView |> Array.map (fun p -> (sphereCenter - p).Length) |> Array.max
+    let sphereRadius, sphereCenter = getBoundingSphereWithCenterOnSegment pointsCenterBeg pointsCenterEnd pointsView
 
     let texsize = sphereRadius * 2.f / float32 smSize
     let roundtex v = round (v / texsize) * texsize
