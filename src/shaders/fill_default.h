@@ -135,6 +135,8 @@ PS_OUT psMain(PS_IN I)
     );
 
     O.color = float4(albedo.rgb * diffuse + spec * specular, albedo.a);
+
+    if (_Debug) O.color = _DebugResult;
 #endif
 
 	return O;
