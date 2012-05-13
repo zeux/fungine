@@ -33,7 +33,7 @@ let private getClipZ projection z =
 
 // get stable bounding sphere for a frustum region
 let private getStableBoundingSphere view projection znear zfar smView smSize =
-    let viewProjectionInverse = Matrix44.Inverse(projection * view)
+    let viewProjectionInverse = Matrix44(Matrix34.InverseAffine(view)) * Matrix44.Inverse(projection)
     let points = Array.init 8 (fun i ->
         Vector4(
             (if i &&& 1 = 0 then -1.f else 1.f),

@@ -446,7 +446,7 @@ RenderLoop.Run(form, fun () ->
 
     let shadowAtlasWidth = 4096
     let shadowAtlasHeight = 4096
-    let lightCullData, lightData = LightDataBuilder.build lights shadowAtlasWidth shadowAtlasHeight (Matrix44(camera.View)) camera.Projection
+    let lightCullData, lightData = LightDataBuilder.build lights shadowAtlasWidth shadowAtlasHeight camera.View camera.Projection
 
     context.OutputMerger.SetTargets(null, [||])
 
