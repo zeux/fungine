@@ -474,15 +474,10 @@ RenderLoop.Run(form, fun () ->
     for light in lightData do
         let shadow = light.ShadowData
 
-        let cascades =
-            [|
-                shadow.CascadeDistances.x, shadow.CascadeInfo0
-                shadow.CascadeDistances.y, shadow.CascadeInfo1
-                shadow.CascadeDistances.z, shadow.CascadeInfo2
-                shadow.CascadeDistances.w, shadow.CascadeInfo3
-            |]
+        shadow.CascadeInfo
+        |> Array.iteri (fun i cascade ->
+            let distance = shadow.CascadeDistances.[i]
 
-        for distance, cascade in cascades do
             if distance < infinityf then
                 // render shadow map
                 let transform = Matrix34.Translation(Vector3(cascade.TransformOffset, 0.f)) * Matrix34.Scaling(Vector3(cascade.TransformScale, 1.f))
@@ -492,7 +487,7 @@ RenderLoop.Run(form, fun () ->
                         cascade.AtlasOffset.x * float32 shadowAtlasWidth, cascade.AtlasOffset.y * float32 shadowAtlasHeight, 
                         cascade.AtlasScale.x * float32 shadowAtlasWidth, cascade.AtlasScale.y * float32 shadowAtlasHeight)
 
-                renderPass context shaderContext camera shadowBuffer [||] viewport depthFill.Value
+                renderPass context shaderContext camera shadowBuffer [||] viewport depthFill.Value)
 
     shaderContext?shadowMap <- shadowBuffer.View
     shaderContext?shadowSampler <- new SamplerState(device.Device, SamplerStateDescription(AddressU = TextureAddressMode.Clamp, AddressV = TextureAddressMode.Clamp, AddressW = TextureAddressMode.Clamp, Filter = Filter.ComparisonMinMagMipLinear, ComparisonFunction = Comparison.Less))

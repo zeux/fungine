@@ -24,11 +24,7 @@ float getLightShadow(LightData light, float3 position)
     bool4 mask = dist > light.shadowData.cascadeDistances;
     int cascadeIndex = dot(mask, 1);
 
-    LightShadowCascade cascade = light.shadowData.cascadeInfo3;
-
-    if (cascadeIndex == 0) cascade = light.shadowData.cascadeInfo0;
-    if (cascadeIndex == 1) cascade = light.shadowData.cascadeInfo1;
-    if (cascadeIndex == 2) cascade = light.shadowData.cascadeInfo2;
+    LightShadowCascade cascade = light.shadowData.cascadeInfo[cascadeIndex];
 
     float4 p = mul(light.shadowData.transform, float4(position, 1));
     p.xyz /= p.w;
