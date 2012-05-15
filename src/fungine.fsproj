@@ -54,6 +54,7 @@
     <Compile Include="render\material.fs" />
     <Compile Include="render\skeleton.fs" />
     <Compile Include="render\mesh.fs" />
+    <Compile Include="render\debugrenderer.fs" />
     <Compile Include="render\lighting\lightgrid.fs" />
     <Compile Include="render\lighting\lightdata.fs" />
     <Compile Include="render\lighting\lights.fs" />
