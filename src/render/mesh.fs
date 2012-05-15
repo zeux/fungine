@@ -4,6 +4,10 @@ namespace Render
 type SkinBinding(bones: int array, invBindPose: Matrix34 array) =
     do assert (bones.Length = invBindPose.Length)
 
+    // get binding data
+    member this.Bones = bones
+    member this.InvBindPose = invBindPose
+
     // compute bone-space transforms from the skeleton
     member this.ComputeBoneTransforms (skeleton: SkeletonInstance) =
         Array.map2 (fun bone invBind -> (skeleton.AbsoluteTransform bone) * invBind) bones invBindPose
@@ -16,6 +20,12 @@ type MeshCompressionInfo =
       uvOffset: Vector2
       uvScale: Vector2 }
 
+// mesh bound information
+[<Struct>]
+type MeshBoundsInfo(bone: int, localBounds: Math.AABB) =
+    member this.Bone = bone
+    member this.LocalBounds = localBounds
+
 // mesh fragment; represents one draw call
 type MeshFragment =
     { material: Material
@@ -26,6 +36,7 @@ type MeshFragment =
       vertexOffset: int
       indexOffset: int
       indexCount: int
+      bounds: MeshBoundsInfo array
     }
 
 // mesh
@@ -34,6 +45,7 @@ type Mesh =
       vertices: VertexBuffer
       indices: IndexBuffer
       skeleton: SkeletonInstance
+      bounds: MeshBoundsInfo array
     }
 
 // mesh instance

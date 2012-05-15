@@ -61,6 +61,42 @@ let private mergeMeshGeometry (meshes: PackedMesh array) =
 
     mergedVertices, mergedIndices, meshData
 
+// build bounding box information for a mesh
+let private buildMeshBounds (mesh: FatMesh) =
+    let update (box: Math.AABB) v = Math.AABB(Vector3.Minimize(box.Min, v), Vector3.Maximize(box.Max, v))
+    let finish (box: Math.AABB) = if box.Min.x > box.Max.x then Math.AABB() else box
+    let dummyBox = let v = Vector3(infinityf, infinityf, infinityf) in Math.AABB(v, -v)
+
+    let mutable box = dummyBox
+    let bones, invBindPose =
+        match mesh.skin with
+        | Some sb -> sb.Bones |> Array.map (fun b -> Render.MeshBoundsInfo(b, dummyBox)), sb.InvBindPose
+        | _ -> [||], [||]
+
+    for v in mesh.vertices do
+        box <- update box v.position
+
+        if v.bones <> null then
+            for bi in v.bones do
+                let bone = bones.[bi.index]
+                bones.[bi.index] <- Render.MeshBoundsInfo(bone.Bone, update bone.LocalBounds $ Matrix34.TransformPosition(invBindPose.[bi.index], v.position))
+
+    finish box, bones |> Array.map (fun b -> Render.MeshBoundsInfo(b.Bone, finish b.LocalBounds))
+
+// merge bounding box information from several meshes
+let private mergeMeshBounds (bounds: Render.MeshBoundsInfo array array) =
+    bounds
+    |> Array.collect id
+    |> Seq.groupBy (fun b -> b.Bone)
+    |> Seq.toArray
+    |> Array.map (fun (bone, bounds) ->
+        let box =
+            bounds
+            |> Seq.map (fun b -> b.LocalBounds)
+            |> Seq.reduce (fun l r -> Math.AABB(Vector3.Minimize(l.Min, r.Min), Vector3.Maximize(l.Max, r.Max)))
+
+        Render.MeshBoundsInfo(bone, box))
+
 // build packed & optimized meshes from document
 let private buildPackedMeshes (doc: Document) conv skeleton =
     // use a constant FVF for now
@@ -76,13 +112,15 @@ let private buildPackedMeshes (doc: Document) conv skeleton =
         |> Array.map (fun (mesh, material) -> i, mesh, material))
 
     // build packed & optimized meshes
-    fatMeshes |> Array.map (fun (inst, mesh, material) -> inst, buildOptimizedMesh mesh format, material)
+    fatMeshes
+    |> Array.map (fun (inst, mesh, material) ->
+        inst, buildOptimizedMesh mesh format, material, buildMeshBounds mesh)
 
 // build mesh fragments
 let private buildMeshFragments meshes meshData materials skeleton =
     let dummyInvBindPose = [|Matrix34.Identity|]
 
-    meshes |> Array.mapi (fun idx (inst: XmlNode, mesh, _) ->
+    meshes |> Array.mapi (fun idx (inst: XmlNode, mesh, _, bounds) ->
         let (vertexOffset, indexOffset, indexFormat) = Array.get meshData idx
 
         // create dummy 1-bone skin binding for non-skinned meshes
@@ -90,6 +128,12 @@ let private buildMeshFragments meshes meshData materials skeleton =
             match mesh.skin with
             | Some binding -> binding
             | None -> Render.SkinBinding([| skeleton.nodeMap.[inst.ParentNode] |], dummyInvBindPose)
+
+        // create fragment bounds
+        let fbounds =
+            match mesh.skin with
+            | Some binding -> snd bounds
+            | None -> [| Render.MeshBoundsInfo(skin.Bones.[0], fst bounds) |]
         
         // build fragment structure
         { new Render.MeshFragment
@@ -100,7 +144,8 @@ let private buildMeshFragments meshes meshData materials skeleton =
           and indexFormat = indexFormat
           and vertexOffset = vertexOffset
           and indexOffset = indexOffset
-          and indexCount = mesh.indices.Length })
+          and indexCount = mesh.indices.Length
+          and bounds = fbounds })
 
 // build mesh file from dae file
 let private build source target = 
@@ -121,18 +166,19 @@ let private build source target =
     let meshes = buildPackedMeshes doc conv skeleton
 
     // build merged vertex & index buffers
-    let (vertices, indices, meshData) = mergeMeshGeometry (meshes |> Array.map (fun (_, mesh, _) -> mesh))
+    let (vertices, indices, meshData) = mergeMeshGeometry (meshes |> Array.map (fun (_, mesh, _, _) -> mesh))
     let vertexBuffer = Render.VertexBuffer(vertices)
     let indexBuffer = Render.IndexBuffer(indices)
 
     // build materials
-    let materials = meshes |> Array.map (fun (_, _, material) -> allMaterials.Get material)
+    let materials = meshes |> Array.map (fun (_, _, material, _) -> allMaterials.Get material)
 
     // build mesh fragments
     let fragments = buildMeshFragments meshes meshData materials skeleton
+    let bounds = fragments |> Array.map (fun f -> f.bounds) |> mergeMeshBounds
 
     // build & save mesh
-    let mesh = { new Render.Mesh with fragments = fragments and vertices = vertexBuffer and indices = indexBuffer and skeleton = skeleton.data }
+    let mesh = { new Render.Mesh with fragments = fragments and vertices = vertexBuffer and indices = indexBuffer and skeleton = skeleton.data and bounds = bounds }
 
     Core.Serialization.Save.toFile target mesh
 
