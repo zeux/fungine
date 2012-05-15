@@ -34,6 +34,9 @@
     <Compile Include="math\types.fs" />
     <Compile Include="math\camera.fs" />
     <Compile Include="math\pack.fs" />
+    <Compile Include="math\aabb.fs" />
+    <Compile Include="math\sphere.fs" />
+    <Compile Include="math\frustum.fs" />
     <Compile Include="asset\asset.fs" />
     <Compile Include="asset\database.fs" />
     <Compile Include="asset\loader.fs" />
