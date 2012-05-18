@@ -170,4 +170,4 @@ let builder = ActionBuilder("DaeExport", fun task ->
     let source = task.Sources.[0]
     let target = task.Targets.[0]
 
-    build source.Info.Extension source.Path target.Path)
+    build source.Info.Extension source.Info.FullName target.Info.FullName)

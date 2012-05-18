@@ -1,8 +1,31 @@
+proc setProjectForFile(string $path)
+{
+    string $paths[];
+
+    while ($path != dirname($path))
+    {
+        $path = dirname($path);
+        $paths[size($paths)] = $path;
+    }
+
+    string $ws = searchPathArray("workspace.mel", $paths);
+
+    if ($ws != "")
+    {
+        string $wspath = dirname($ws);
+
+        workspace -openWorkspace $wspath;
+    }
+}
+
 proc exportOpenCollada(string $source, string $target)
 {
     string $options = "relativePaths=0;exportTriangles=1;exportInvisibleNodes=1;exportNormalsPerVertex=0;exportTexTangents=1;exportReferencedMaterials=1";
 
     loadPlugin -quiet "COLLADAMaya.mll";
+
+    setProjectForFile $source;
+
     file -force -open $source;
     file -force -type "OpenCOLLADA exporter" -options $options -exportAll $target;
     file -force -new;
